@@ -1,0 +1,8 @@
+*.sdf
+*.opensdf
+[Dd]ebug/
+[Rr]etail/
+ipch/
+*.sln.cache
+*.suo
+*.user

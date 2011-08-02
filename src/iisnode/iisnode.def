@@ -1,0 +1,4 @@
+LIBRARY	"iisnode"
+
+EXPORTS
+    RegisterModule
