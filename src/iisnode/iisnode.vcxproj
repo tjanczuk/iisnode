@@ -68,6 +68,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cactiverequestpool.cpp" />
+    <ClCompile Include="chttpprotocol.cpp" />
+    <ClCompile Include="cnodeapplication.cpp" />
+    <ClCompile Include="cnodeapplicationmanager.cpp" />
+    <ClCompile Include="cnodeprocess.cpp" />
+    <ClCompile Include="cnodeprocessmanager.cpp" />
+    <ClCompile Include="cpendingrequestqueue.cpp" />
+    <ClCompile Include="cprotocolbridge.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="cnodehttpmodule.cpp" />
     <ClCompile Include="precomp.cpp">
@@ -78,8 +86,16 @@
     <None Include="iisnode.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cactiverequestpool.h" />
+    <ClInclude Include="chttpprotocol.h" />
+    <ClInclude Include="cnodeapplication.h" />
+    <ClInclude Include="cnodeapplicationmanager.h" />
     <ClInclude Include="cnodehttpmodule.h" />
     <ClInclude Include="cnodehttpmodulefactory.h" />
+    <ClInclude Include="cnodeprocess.h" />
+    <ClInclude Include="cnodeprocessmanager.h" />
+    <ClInclude Include="cpendingrequestqueue.h" />
+    <ClInclude Include="cprotocolbridge.h" />
     <ClInclude Include="precomp.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

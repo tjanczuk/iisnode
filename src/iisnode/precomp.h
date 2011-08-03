@@ -10,6 +10,14 @@
 //  Project header files
 #include "cnodehttpmodule.h"
 #include "cnodehttpmodulefactory.h"
+#include "cactiverequestpool.h"
+#include "chttpprotocol.h"
+#include "cnodeapplication.h"
+#include "cnodeapplicationmanager.h"
+#include "cnodeprocess.h"
+#include "cnodeprocessmanager.h"
+#include "cpendingrequestqueue.h"
+#include "cprotocolbridge.h"
 
 #endif
 
