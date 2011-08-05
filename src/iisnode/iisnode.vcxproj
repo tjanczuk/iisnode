@@ -72,6 +72,8 @@
     <ClCompile Include="chttpprotocol.cpp" />
     <ClCompile Include="cnodeapplication.cpp" />
     <ClCompile Include="cnodeapplicationmanager.cpp" />
+    <ClCompile Include="cnodehttpmodulefactory.cpp" />
+    <ClCompile Include="cnodehttpstoredcontext.cpp" />
     <ClCompile Include="cnodeprocess.cpp" />
     <ClCompile Include="cnodeprocessmanager.cpp" />
     <ClCompile Include="cpendingrequestqueue.cpp" />
@@ -92,11 +94,13 @@
     <ClInclude Include="cnodeapplicationmanager.h" />
     <ClInclude Include="cnodehttpmodule.h" />
     <ClInclude Include="cnodehttpmodulefactory.h" />
+    <ClInclude Include="cnodehttpstoredcontext.h" />
     <ClInclude Include="cnodeprocess.h" />
     <ClInclude Include="cnodeprocessmanager.h" />
     <ClInclude Include="cpendingrequestqueue.h" />
     <ClInclude Include="cprotocolbridge.h" />
     <ClInclude Include="precomp.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

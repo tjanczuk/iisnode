@@ -48,6 +48,12 @@
     <ClCompile Include="cprotocolbridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cnodehttpmodulefactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cnodehttpstoredcontext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h">
@@ -81,6 +87,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="chttpprotocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cnodehttpstoredcontext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

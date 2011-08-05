@@ -1,22 +1,23 @@
 #ifndef __CNODEHTTPMODULE_H__
 #define __CNODEHTTPMODULE_H__
 
-//  The module implementation.
-//  This class is responsible for implementing the 
-//  module functionality for each of the server events
-//  that it registers for.
+class CNodeApplicationManager;
+
+// TODO, tjanczuk, change CNodeHttpModule to a singleton
+
 class CNodeHttpModule : public CHttpModule
 {
+private:
+
+	CNodeApplicationManager* applicationManager;
+
 public:
 
-	//  Implementation of the AcquireRequestState event handler method.
-    REQUEST_NOTIFICATION_STATUS
-    OnAcquireRequestState(
-        IN IHttpContext *                       pHttpContext,
-        IN OUT IHttpEventProvider *             pProvider
-    );
+	// Caller owns applicationManagager.
+	CNodeHttpModule(CNodeApplicationManager* applicationManager);
 
-	//  TODO: override additional event handler methods below.
+	REQUEST_NOTIFICATION_STATUS OnExecuteRequestHandler(IN IHttpContext* pHttpContext, IN IHttpEventProvider* pProvider);
+
 };
 
 #endif

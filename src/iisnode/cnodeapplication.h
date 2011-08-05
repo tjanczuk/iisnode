@@ -3,10 +3,18 @@
 
 class CNodeApplication
 {
+private:
+
+	PWSTR scriptName;
+
 public:
 
-	CNodeApplication();
+	CNodeApplication();	
 	~CNodeApplication();
+
+	HRESULT Initialize(PCWSTR scriptName);
+
+	PCWSTR GetScriptName();
 };
 
 #endif

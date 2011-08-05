@@ -1,26 +1,19 @@
 #include "precomp.h"
 
-//  Implementation of the OnAcquireRequestState method
-REQUEST_NOTIFICATION_STATUS
-CNodeHttpModule::OnAcquireRequestState(
-    IN IHttpContext *                       pHttpContext,
-    IN OUT IHttpEventProvider *             pProvider
-)
+CNodeHttpModule::CNodeHttpModule(CNodeApplicationManager* applicationManager)
+	: applicationManager(applicationManager)
 {
-    HRESULT                         hr = S_OK;
-
-	// TODO: implement the AcquireRequestState module functionality
-
-Finished:
-
-    if ( FAILED( hr )  )
-    {
-        return RQ_NOTIFICATION_FINISH_REQUEST;
-    }
-    else
-    {
-        return RQ_NOTIFICATION_CONTINUE;
-    }
 }
 
-// TODO: implement other desired event handler methods below
+REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
+	IN IHttpContext* pHttpContext, 
+	IN IHttpEventProvider* pProvider)
+{
+	HRESULT hr;
+
+	CheckError(this->applicationManager->StartNewRequest(pHttpContext, pProvider));
+
+	return RQ_NOTIFICATION_CONTINUE;
+Error:
+	return RQ_NOTIFICATION_FINISH_REQUEST;
+}
