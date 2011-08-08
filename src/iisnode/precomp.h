@@ -5,12 +5,14 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <Windows.h>
+#include <queue>
 
 //  IIS7 Server API header file
 #include "httpserv.h"
 
 //  Project header files
 #include "utils.h"
+#include "cmoduleconfiguration.h"
 #include "cnodehttpmodule.h"
 #include "cnodehttpmodulefactory.h"
 #include "cactiverequestpool.h"

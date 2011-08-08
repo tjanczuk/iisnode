@@ -19,15 +19,23 @@ CNodeApplicationManager::~CNodeApplicationManager()
 	DeleteCriticalSection(&this->syncRoot);
 }
 
+IHttpServer* CNodeApplicationManager::GetHttpServer()
+{
+	return this->server;
+}
+
+HTTP_MODULE_ID CNodeApplicationManager::GetModuleId()
+{
+	return this->moduleId;
+}
+
 HRESULT CNodeApplicationManager::StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider)
 {
 	HRESULT hr;
-	CNodeHttpStoredContext* nodeContext;
+	CNodeApplication* application;
 
-	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(context)), ERROR_NOT_ENOUGH_MEMORY);
-
-	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
-	moduleContextContainer->SetModuleContext(nodeContext, this->moduleId);
+	CheckError(this->GetOrCreateNodeApplication(context, &application));
+	CheckError(application->StartNewRequest(context, pProvider));
 
 	return S_OK;
 Error:
@@ -53,7 +61,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 		if (NULL == (*application = this->TryGetExistingNodeApplication(physicalPath)))
 		{
 			ErrorIf(NULL == (newApplicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
-			ErrorIf(NULL == (newApplicationEntry->nodeApplication = new CNodeApplication()), ERROR_NOT_ENOUGH_MEMORY);
+			ErrorIf(NULL == (newApplicationEntry->nodeApplication = new CNodeApplication(this)), ERROR_NOT_ENOUGH_MEMORY);
 			CheckError(newApplicationEntry->nodeApplication->Initialize(physicalPath));
 
 			*application = newApplicationEntry->nodeApplication;

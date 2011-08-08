@@ -70,6 +70,7 @@
   <ItemGroup>
     <ClCompile Include="cactiverequestpool.cpp" />
     <ClCompile Include="chttpprotocol.cpp" />
+    <ClCompile Include="cmoduleconfiguration.cpp" />
     <ClCompile Include="cnodeapplication.cpp" />
     <ClCompile Include="cnodeapplicationmanager.cpp" />
     <ClCompile Include="cnodehttpmodulefactory.cpp" />
@@ -90,6 +91,7 @@
   <ItemGroup>
     <ClInclude Include="cactiverequestpool.h" />
     <ClInclude Include="chttpprotocol.h" />
+    <ClInclude Include="cmoduleconfiguration.h" />
     <ClInclude Include="cnodeapplication.h" />
     <ClInclude Include="cnodeapplicationmanager.h" />
     <ClInclude Include="cnodehttpmodule.h" />

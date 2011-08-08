@@ -16,7 +16,16 @@ CNodeHttpModuleFactory::~CNodeHttpModuleFactory()
 
 HRESULT CNodeHttpModuleFactory::Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId) 
 {
+	HRESULT hr;
+
+	ErrorIf(NULL == server, ERROR_INVALID_PARAMETER);
+	ErrorIf(NULL == moduleId, ERROR_INVALID_PARAMETER);
+
+	CModuleConfiguration::Initialize(server);
+
 	return (NULL == (applicationManager = new CNodeApplicationManager(server, moduleId))) ? ERROR_NOT_ENOUGH_MEMORY : S_OK;
+Error:
+	return hr;
 }
 
 HRESULT CNodeHttpModuleFactory::GetHttpModule(
