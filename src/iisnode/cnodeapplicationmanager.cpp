@@ -1,9 +1,22 @@
 #include "precomp.h"
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
-	: server(server), moduleId(moduleId), applications(NULL)
+	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL)
 {
 	InitializeCriticalSection(&this->syncRoot);
+}
+
+HRESULT CNodeApplicationManager::Initialize()
+{
+	HRESULT hr;
+
+	ErrorIf(NULL != this->asyncManager, ERROR_INVALID_OPERATION);
+	ErrorIf(NULL == (this->asyncManager = new CAsyncManager()), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->asyncManager->Initialize());
+
+	return S_OK;
+Error:
+	return hr;
 }
 
 CNodeApplicationManager::~CNodeApplicationManager()
@@ -14,6 +27,12 @@ CNodeApplicationManager::~CNodeApplicationManager()
 		NodeApplicationEntry* current = this->applications;
 		this->applications = this->applications->next;
 		delete current;
+	}
+
+	if (NULL != this->asyncManager)
+	{
+		delete this->asyncManager;
+		this->asyncManager = NULL;
 	}
 
 	DeleteCriticalSection(&this->syncRoot);
@@ -27,6 +46,11 @@ IHttpServer* CNodeApplicationManager::GetHttpServer()
 HTTP_MODULE_ID CNodeApplicationManager::GetModuleId()
 {
 	return this->moduleId;
+}
+
+CAsyncManager* CNodeApplicationManager::GetAsyncManager()
+{
+	return this->asyncManager;
 }
 
 HRESULT CNodeApplicationManager::StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider)

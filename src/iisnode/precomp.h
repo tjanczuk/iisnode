@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <Windows.h>
+#include <process.h>
 #include <queue>
 
 //  IIS7 Server API header file
@@ -12,6 +13,7 @@
 
 //  Project header files
 #include "utils.h"
+#include "casyncmanager.h"
 #include "cmoduleconfiguration.h"
 #include "cnodehttpmodule.h"
 #include "cnodehttpmodulefactory.h"

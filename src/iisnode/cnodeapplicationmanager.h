@@ -2,6 +2,7 @@
 #define __CNODEAPPLICATIONMANAGER_H__
 
 class CNodeApplication;
+class CAsyncManager;
 
 class CNodeApplicationManager
 {
@@ -16,6 +17,7 @@ private:
 	HTTP_MODULE_ID moduleId;
 	NodeApplicationEntry* applications;
 	CRITICAL_SECTION syncRoot;
+	CAsyncManager* asyncManager;
 
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
 	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath);
@@ -27,6 +29,9 @@ public:
 
 	IHttpServer* GetHttpServer();
 	HTTP_MODULE_ID GetModuleId();
+	CAsyncManager* GetAsyncManager();
+
+	HRESULT Initialize();
 	HRESULT StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider);
 };
 

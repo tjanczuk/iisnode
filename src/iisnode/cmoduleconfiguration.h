@@ -15,6 +15,7 @@ public:
 	static HRESULT Initialize(IHttpServer* server);
 
 	static DWORD GetMaxPendingRequestsPerApplication();
+	static DWORD GetAsyncCompletionThreadCount();
 };
 
 #endif

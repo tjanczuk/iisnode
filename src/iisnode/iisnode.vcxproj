@@ -69,6 +69,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cactiverequestpool.cpp" />
+    <ClCompile Include="casyncmanager.cpp" />
     <ClCompile Include="chttpprotocol.cpp" />
     <ClCompile Include="cmoduleconfiguration.cpp" />
     <ClCompile Include="cnodeapplication.cpp" />
@@ -90,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cactiverequestpool.h" />
+    <ClInclude Include="casyncmanager.h" />
     <ClInclude Include="chttpprotocol.h" />
     <ClInclude Include="cmoduleconfiguration.h" />
     <ClInclude Include="cnodeapplication.h" />

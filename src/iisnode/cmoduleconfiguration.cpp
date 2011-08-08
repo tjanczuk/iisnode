@@ -30,3 +30,8 @@ DWORD CModuleConfiguration::GetMaxPendingRequestsPerApplication()
 	return 1024;
 }
 
+DWORD CModuleConfiguration::GetAsyncCompletionThreadCount()
+{
+	return 2;
+}
+

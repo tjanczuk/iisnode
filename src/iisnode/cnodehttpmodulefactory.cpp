@@ -23,7 +23,10 @@ HRESULT CNodeHttpModuleFactory::Initialize(IHttpServer* server, HTTP_MODULE_ID m
 
 	CModuleConfiguration::Initialize(server);
 
-	return (NULL == (applicationManager = new CNodeApplicationManager(server, moduleId))) ? ERROR_NOT_ENOUGH_MEMORY : S_OK;
+	ErrorIf(NULL == (this->applicationManager = new CNodeApplicationManager(server, moduleId)), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->applicationManager->Initialize());
+
+	return S_OK;
 Error:
 	return hr;
 }

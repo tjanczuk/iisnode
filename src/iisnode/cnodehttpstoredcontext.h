@@ -9,6 +9,7 @@ private:
 
 	CNodeApplication* nodeApplication;
 	IHttpContext* context;
+	ASYNC_CONTEXT asyncContext;
 
 public:
 
@@ -18,6 +19,9 @@ public:
 
 	IHttpContext* GetHttpContext();
 	CNodeApplication* GetNodeApplication();
+	LPOVERLAPPED GetOverlapped();
+
+	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 
 	virtual void CleanupStoredContext();
 };
