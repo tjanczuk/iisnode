@@ -1,11 +1,16 @@
 #include "precomp.h"
 
 CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager)
-	: applicationManager(applicationManager), scriptName(NULL), pendingRequests(NULL)
+	: applicationManager(applicationManager), scriptName(NULL), pendingRequests(NULL), processManager(NULL)
 {
 }
 
 CNodeApplication::~CNodeApplication()
+{
+	this->Cleanup();
+}
+
+void CNodeApplication::Cleanup()
 {
 	if (NULL != this->scriptName)
 	{
@@ -17,6 +22,12 @@ CNodeApplication::~CNodeApplication()
 	{
 		delete this->pendingRequests;
 		this->pendingRequests = NULL;
+	}
+
+	if (NULL != this->processManager)
+	{
+		delete this->processManager;
+		this->processManager = NULL;
 	}
 }
 
@@ -31,10 +42,16 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName)
 	memcpy(this->scriptName, scriptName, sizeof(WCHAR) * len);
 	this->scriptName[sizeof(WCHAR) * len] = L'\0';
 
+	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this)), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->processManager->Initialize());
+
 	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);
 
 	return S_OK;
 Error:
+
+	this->Cleanup();
+
 	return hr;
 }
 
@@ -51,17 +68,28 @@ CNodeApplicationManager* CNodeApplication::GetApplicationManager()
 HRESULT CNodeApplication::StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider)
 {
 	HRESULT hr;
-	CNodeHttpStoredContext* nodeContext;
+	CNodeHttpStoredContext* nodeContext = NULL;
 
 	ErrorIf(NULL == context, ERROR_INVALID_PARAMETER);
 	ErrorIf(NULL == pProvider, ERROR_INVALID_PARAMETER);
 
 	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->pendingRequests->Push(nodeContext));
 
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 	moduleContextContainer->SetModuleContext(nodeContext, this->GetApplicationManager()->GetModuleId());
+	nodeContext = NULL;
+
+	this->processManager->OnNewPendingRequest();
 
 	return S_OK;
 Error:
+
+	if (NULL != nodeContext)
+	{
+		delete nodeContext;
+		nodeContext = NULL;
+	}
+
 	return hr;
 }

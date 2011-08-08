@@ -103,7 +103,7 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 			break;
 		}
 
-		if (NULL != ctx)
+		if (NULL != ctx && NULL != ctx->completionProcessor)
 		{
 			ctx->completionProcessor(error, bytesRead, (LPOVERLAPPED)&ctx);
 		}

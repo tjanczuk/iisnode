@@ -3,10 +3,19 @@
 
 class CNodeProcessManager
 {
+private:
+
+	CNodeApplication* application;
+
 public:
 
-	CNodeProcessManager();
+	CNodeProcessManager(CNodeApplication* application);
 	~CNodeProcessManager();
+
+	CNodeApplication* GetApplication();
+	HRESULT Initialize();
+
+	void OnNewPendingRequest();
 };
 
 #endif
