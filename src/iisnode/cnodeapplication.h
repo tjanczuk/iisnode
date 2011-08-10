@@ -23,6 +23,7 @@ public:
 	HRESULT Initialize(PCWSTR scriptName);
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
+	CPendingRequestQueue* GetPendingRequestQueue();
 	HRESULT StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider);
 };
 

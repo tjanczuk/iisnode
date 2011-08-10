@@ -5,8 +5,11 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <Windows.h>
+#include <tchar.h>
 #include <process.h>
+#include <Rpc.h>
 #include <queue>
+#include <list>
 
 //  IIS7 Server API header file
 #include "httpserv.h"

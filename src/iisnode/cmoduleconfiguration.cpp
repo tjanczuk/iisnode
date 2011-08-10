@@ -1,6 +1,6 @@
 #include "precomp.h"
 
-// TODO, tjanczuk, hook up the implementation the actual configuration system of the module
+// TODO, tjanczuk, hook up the implementation of the actual configuration system of the module
 
 IHttpServer* CModuleConfiguration::server = NULL;
 
@@ -35,3 +35,17 @@ DWORD CModuleConfiguration::GetAsyncCompletionThreadCount()
 	return 2;
 }
 
+DWORD CModuleConfiguration::GetMaxProcessCountPerApplication()
+{
+	return 2;
+}
+
+LPCTSTR CModuleConfiguration::GetNodeProcessCommandLine()
+{
+	return _T("node.exe");
+}
+
+DWORD CModuleConfiguration::GetMaxConcurrentRequestsPerProcess()
+{
+	return 1024;
+}

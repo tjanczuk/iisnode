@@ -65,6 +65,11 @@ CNodeApplicationManager* CNodeApplication::GetApplicationManager()
 	return this->applicationManager;
 }
 
+CPendingRequestQueue* CNodeApplication::GetPendingRequestQueue()
+{
+	return this->pendingRequests;
+}
+
 HRESULT CNodeApplication::StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider)
 {
 	HRESULT hr;
@@ -74,13 +79,14 @@ HRESULT CNodeApplication::StartNewRequest(IHttpContext* context, IHttpEventProvi
 	ErrorIf(NULL == pProvider, ERROR_INVALID_PARAMETER);
 
 	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);
+	// TODO, tjanczuk, return 503 if the pending requests quota has been reached
 	CheckError(this->pendingRequests->Push(nodeContext));
 
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 	moduleContextContainer->SetModuleContext(nodeContext, this->GetApplicationManager()->GetModuleId());
 	nodeContext = NULL;
 
-	this->processManager->OnNewPendingRequest();
+	CheckError(this->processManager->TryDispatchOneRequest());
 
 	return S_OK;
 Error:

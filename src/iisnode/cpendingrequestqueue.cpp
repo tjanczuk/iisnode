@@ -10,6 +10,11 @@ CPendingRequestQueue::~CPendingRequestQueue()
 	DeleteCriticalSection(&this->syncRoot);
 }
 
+BOOL CPendingRequestQueue::IsEmpty()
+{
+	return this->requests.empty();
+}
+
 HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
@@ -26,4 +31,25 @@ HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
 	return S_OK;
 Error:
 	return hr;
+}
+
+CNodeHttpStoredContext* CPendingRequestQueue::Peek()
+{
+	EnterCriticalSection(&this->syncRoot);
+
+	return this->requests.size() > 0 ? this->requests.front() : NULL;
+
+	LeaveCriticalSection(&this->syncRoot);
+}
+
+void CPendingRequestQueue::Pop()
+{
+	EnterCriticalSection(&this->syncRoot);
+
+	if (this->requests.size() > 0)
+	{
+		this->requests.pop();
+	}
+
+	LeaveCriticalSection(&this->syncRoot);
 }

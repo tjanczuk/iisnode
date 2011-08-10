@@ -17,7 +17,11 @@ public:
 	CPendingRequestQueue();
 	~CPendingRequestQueue();
 
+	BOOL IsEmpty();
 	HRESULT Push(CNodeHttpStoredContext* context);
+	CNodeHttpStoredContext* Peek();
+	void Pop();
+
 };
 
 #endif

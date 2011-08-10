@@ -16,6 +16,9 @@ public:
 
 	static DWORD GetMaxPendingRequestsPerApplication();
 	static DWORD GetAsyncCompletionThreadCount();
+	static DWORD GetMaxProcessCountPerApplication();
+	static LPCTSTR GetNodeProcessCommandLine();
+	static DWORD GetMaxConcurrentRequestsPerProcess();
 };
 
 #endif
