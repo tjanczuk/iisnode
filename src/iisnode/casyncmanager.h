@@ -12,8 +12,10 @@
 
 typedef struct {
 	OVERLAPPED overlapped; // this member must be first in the struct
-	LPOVERLAPPED_COMPLETION_ROUTINE completionProcessor;
+	LPOVERLAPPED_COMPLETION_ROUTINE completionProcessor;	
 	void* data;
+	HANDLE timer;
+	LARGE_INTEGER dueTime;
 } ASYNC_CONTEXT;
 
 class CAsyncManager
@@ -25,6 +27,7 @@ private:
 	int threadCount;
 
 	static unsigned int WINAPI Worker(void* arg);
+	static void APIENTRY OnTimer(LPVOID lpArgToCompletionRoutine, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
 
 public:
 
@@ -34,6 +37,7 @@ public:
 	HRESULT Initialize();
 	HRESULT AddAsyncCompletionHandle(HANDLE handle);
 	HRESULT Terminate();
+	HRESULT SetTimer(ASYNC_CONTEXT* context, LARGE_INTEGER* dueTime);
 };
 
 #endif

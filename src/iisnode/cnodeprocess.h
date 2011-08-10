@@ -22,7 +22,8 @@ public:
 
 	HRESULT Initialize();
 	CNodeProcessManager* GetProcessManager();
-	BOOL TryAcceptRequest(CNodeHttpStoredContext* context);
+	LPCTSTR GetNamedPipeName();
+	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
 };
 
 #endif

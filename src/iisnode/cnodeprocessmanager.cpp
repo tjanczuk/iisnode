@@ -105,7 +105,7 @@ HRESULT CNodeProcessManager::TryDispatchOneRequest()
 			{
 				CNodeProcess* newProcess;
 				CheckError(this->AddOneProcess(&newProcess));
-				requestDispatched = newProcess->TryAcceptRequest(request);
+				requestDispatched = S_OK == newProcess->AcceptRequest(request);
 			}
 			else 
 			{
@@ -132,7 +132,7 @@ BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContex
 
 	do {
 
-		if (this->processes[i]->TryAcceptRequest(context))
+		if (S_OK == this->processes[i]->AcceptRequest(context))
 		{
 			return true;
 		}

@@ -49,3 +49,18 @@ DWORD CModuleConfiguration::GetMaxConcurrentRequestsPerProcess()
 {
 	return 1024;
 }
+
+DWORD CModuleConfiguration::GetMaxNamedPipeConnectionRetry()
+{
+	return 3;
+}
+
+DWORD CModuleConfiguration::GetNamePipeConnectionRetryDelay()
+{
+	return 5 * 10000; // this is 5ms expressed in 100 nanosecond units
+}
+
+DWORD CModuleConfiguration::GetInitialRequestBufferSize()
+{
+	return 4 * 1024;
+}

@@ -19,6 +19,9 @@ public:
 	static DWORD GetMaxProcessCountPerApplication();
 	static LPCTSTR GetNodeProcessCommandLine();
 	static DWORD GetMaxConcurrentRequestsPerProcess();
+	static DWORD GetMaxNamedPipeConnectionRetry();
+	static DWORD GetNamePipeConnectionRetryDelay(); // this is in 100 nanosecond units
+	static DWORD GetInitialRequestBufferSize();
 };
 
 #endif

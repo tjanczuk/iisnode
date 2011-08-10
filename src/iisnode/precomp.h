@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <tchar.h>
 #include <process.h>
+#include <http.h>
 #include <Rpc.h>
 #include <queue>
 #include <list>

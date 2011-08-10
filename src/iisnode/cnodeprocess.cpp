@@ -124,7 +124,26 @@ CNodeProcessManager* CNodeProcess::GetProcessManager()
 	return this->processManager;
 }
 
-BOOL CNodeProcess::TryAcceptRequest(CNodeHttpStoredContext* context)
+HRESULT CNodeProcess::AcceptRequest(CNodeHttpStoredContext* context)
 {
-	return S_OK == this->activeRequestPool.Add(context);
+	HRESULT hr;
+
+	if (S_OK == (hr = this->activeRequestPool.Add(context)))
+	{
+		context->SetNodeProcess(this);
+		CheckError(CProtocolBridge::InitiateRequest(context));
+	}
+
+	return S_OK;
+Error:
+	
+	context->SetNodeProcess(NULL);
+	this->activeRequestPool.Remove(context);
+
+	return hr;
+}
+
+LPCTSTR CNodeProcess::GetNamedPipeName()
+{
+	return this->namedPipe;
 }
