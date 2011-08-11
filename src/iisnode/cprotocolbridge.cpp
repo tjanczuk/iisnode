@@ -291,10 +291,27 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 {
 	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+	PCSTR contentLength;
+	USHORT contentLengthLength;
 
 	CheckError(error);
 	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
 	CheckError(CHttpProtocol::ParseResponseHeaders(ctx));
+
+	contentLength = ctx->GetHttpContext()->GetResponse()->GetHeader(HttpHeaderContentLength, &contentLengthLength);
+	if (0 == contentLengthLength)
+	{
+		ctx->SetResponseContentLength(-1);
+	}
+	else
+	{
+		LONGLONG length = 0;
+		for (int i = 0; i < contentLengthLength; i++)
+		{
+			length = length * 10 + contentLength[i] - '0';
+		}
+		ctx->SetResponseContentLength(length);
+	}
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
 
@@ -315,5 +332,95 @@ Error:
 
 void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
+	HRESULT hr;
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+	HTTP_DATA_CHUNK* chunk;
+	BOOL completionExpected;
+
+	CheckError(error);
+	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
+
+	if (ctx->GetDataSize() > ctx->GetParsingOffset())
+	{
+		// send body data to client
+
+		ErrorIf(NULL == (chunk = (HTTP_DATA_CHUNK*) ctx->GetHttpContext()->AllocateRequestMemory(sizeof HTTP_DATA_CHUNK)), ERROR_NOT_ENOUGH_MEMORY);
+		chunk->DataChunkType = HttpDataChunkFromMemory;
+		chunk->FromMemory.BufferLength = ctx->GetDataSize() - ctx->GetParsingOffset();
+		ErrorIf(NULL == (chunk->FromMemory.pBuffer = ctx->GetHttpContext()->AllocateRequestMemory(chunk->FromMemory.BufferLength)), ERROR_NOT_ENOUGH_MEMORY);
+		memcpy(chunk->FromMemory.pBuffer, (char*)ctx->GetBuffer() + ctx->GetParsingOffset(), chunk->FromMemory.BufferLength);
+
+		ctx->SetDataSize(0);
+		ctx->SetParsingOffset(0);
+		ctx->SetNextProcessor(CProtocolBridge::SendResponseBodyCompleted);
+
+		CheckError(ctx->GetHttpContext()->GetResponse()->WriteEntityChunks(
+			chunk,
+			1,
+			TRUE,
+			ctx->GetResponseContentLength() == -1 || ctx->GetResponseContentLength() > (ctx->GetResponseContentTransmitted() + chunk->FromMemory.BufferLength),
+			NULL,
+			&completionExpected));
+		
+		if (!completionExpected)
+		{
+			CProtocolBridge::SendResponseBodyCompleted(S_OK, chunk->FromMemory.BufferLength, ctx->GetOverlapped());
+		}
+	}
+	else if (-1 == ctx->GetResponseContentLength() || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
+	{
+		// read more body data
+
+		CProtocolBridge::ContinueReadResponse(ctx);
+	}
+	else
+	{
+		// finish request
+
+		CProtocolBridge::FinalizeResponse(ctx);
+	}
+
+	return;
+Error:
+
+	if (ERROR_HANDLE_EOF == hr)
+	{
+		CProtocolBridge::FinalizeResponse(ctx);
+	}
+	else
+	{
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
+
+	return;
 }
 
+void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	HRESULT hr;
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	CheckError(error);
+	ctx->SetResponseContentTransmitted(ctx->GetResponseContentTransmitted() + bytesTransfered);
+
+	if (ctx->GetResponseContentLength() == -1 || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
+	{
+		ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+		CProtocolBridge::ContinueReadResponse(ctx);
+	}
+	else
+	{
+		CProtocolBridge::FinalizeResponse(ctx);
+	}
+
+	return;
+Error:
+
+	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+
+	return;
+}
+
+void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
+{
+}
