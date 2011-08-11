@@ -147,3 +147,9 @@ LPCTSTR CNodeProcess::GetNamedPipeName()
 {
 	return this->namedPipe;
 }
+
+void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
+{
+	this->activeRequestPool.Remove(context);
+	this->processManager->TryDispatchOneRequest();
+}

@@ -78,7 +78,6 @@ HRESULT CNodeApplication::StartNewRequest(IHttpContext* context, IHttpEventProvi
 	ErrorIf(NULL == pProvider, ERROR_INVALID_PARAMETER);
 
 	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);
-	// TODO, tjanczuk, return 503 if the pending requests quota has been reached
 	CheckError(this->pendingRequests->Push(nodeContext));
 
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
@@ -89,6 +88,15 @@ HRESULT CNodeApplication::StartNewRequest(IHttpContext* context, IHttpEventProvi
 
 	return S_OK;
 Error:
+
+	if (ERROR_NOT_ENOUGH_QUOTA == hr)
+	{
+		CProtocolBridge::SendEmptyResponse(nodeContext, 503, _T("Service Unavailable"), hr);
+	}
+	else
+	{
+		CProtocolBridge::SendEmptyResponse(nodeContext, 500, _T("Internal Server Error"), hr);
+	}
 
 	if (NULL != nodeContext)
 	{

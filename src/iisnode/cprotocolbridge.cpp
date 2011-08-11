@@ -11,7 +11,25 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 
 HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult)
 {
-	// TODO, tjanczuk, return an empty response and terminate request processing
+	IHttpContext* httpCtx = context->GetHttpContext();
+
+	if (NULL != context->GetPipe())
+	{
+		CloseHandle(context->GetPipe());
+		context->SetPipe(NULL);
+	}
+
+	if (httpCtx->GetResponseHeadersSent())
+	{
+		httpCtx->IndicateCompletion(RQ_NOTIFICATION_FINISH_REQUEST);
+	}
+	else
+	{
+		httpCtx->GetResponse()->Clear();
+		httpCtx->GetResponse()->SetStatus(status, reason, 0, hresult);
+		httpCtx->IndicateCompletion(RQ_NOTIFICATION_CONTINUE);
+	}
+
 	return S_OK;
 }
 
@@ -91,16 +109,18 @@ Error:
 
 void WINAPI CProtocolBridge::SendHttpRequestHeadersCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
+	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
-	if (S_OK == error)
-	{
-		CProtocolBridge::ReadRequestBody(ctx);
-	}
-	else
-	{
-		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
-	}
+	CheckError(error);
+	CProtocolBridge::ReadRequestBody(ctx);
+
+	return;
+Error:
+
+	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+
+	return;
 }
 
 void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
@@ -335,6 +355,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 	HTTP_DATA_CHUNK* chunk;
+	DWORD bytesSent;
 	BOOL completionExpected;
 
 	CheckError(error);
@@ -359,12 +380,12 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			1,
 			TRUE,
 			ctx->GetResponseContentLength() == -1 || ctx->GetResponseContentLength() > (ctx->GetResponseContentTransmitted() + chunk->FromMemory.BufferLength),
-			NULL,
+			&bytesSent,
 			&completionExpected));
 		
 		if (!completionExpected)
 		{
-			CProtocolBridge::SendResponseBodyCompleted(S_OK, chunk->FromMemory.BufferLength, ctx->GetOverlapped());
+			CProtocolBridge::SendResponseBodyCompleted(S_OK, bytesSent, ctx->GetOverlapped());
 		}
 	}
 	else if (-1 == ctx->GetResponseContentLength() || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
@@ -423,4 +444,10 @@ Error:
 
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 {
+	CloseHandle(context->GetPipe());
+	context->SetPipe(NULL);
+
+	context->GetNodeProcess()->OnRequestCompleted(context);
+
+	context->GetHttpContext()->IndicateCompletion(RQ_NOTIFICATION_CONTINUE);
 }

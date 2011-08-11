@@ -24,6 +24,7 @@ public:
 	CNodeProcessManager* GetProcessManager();
 	LPCTSTR GetNamedPipeName();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
+	void OnRequestCompleted(CNodeHttpStoredContext* context);
 };
 
 #endif

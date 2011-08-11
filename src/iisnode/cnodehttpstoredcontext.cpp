@@ -10,6 +10,11 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 
 CNodeHttpStoredContext::~CNodeHttpStoredContext()
 {
+	if (NULL != this->pipe)
+	{
+		CloseHandle(this->pipe);
+		this->pipe = NULL;
+	}
 }
 
 IHttpContext* CNodeHttpStoredContext::GetHttpContext() 

@@ -6,8 +6,7 @@ static class CProtocolBridge
 private:
 
 	// utility
-	static HRESULT PostponeProcessing(CNodeHttpStoredContext* context, DWORD dueTime);
-	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult = S_OK);
+	static HRESULT PostponeProcessing(CNodeHttpStoredContext* context, DWORD dueTime);	
 	static HRESULT EnsureBuffer(CNodeHttpStoredContext* context);
 
 	// processing stages
@@ -34,6 +33,7 @@ private:
 public:
 
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
+	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult = S_OK);
 };
 
 #endif
