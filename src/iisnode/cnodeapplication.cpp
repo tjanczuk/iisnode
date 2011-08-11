@@ -37,10 +37,9 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName)
 
 	ErrorIf(NULL == scriptName, ERROR_INVALID_PARAMETER);
 
-	DWORD len = wcslen(scriptName);
-	ErrorIf(NULL == (this->scriptName = new WCHAR[len + 1]), ERROR_NOT_ENOUGH_MEMORY);
+	DWORD len = wcslen(scriptName) + 1;
+	ErrorIf(NULL == (this->scriptName = new WCHAR[len]), ERROR_NOT_ENOUGH_MEMORY);
 	memcpy(this->scriptName, scriptName, sizeof(WCHAR) * len);
-	this->scriptName[sizeof(WCHAR) * len] = L'\0';
 
 	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this)), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->processManager->Initialize());
