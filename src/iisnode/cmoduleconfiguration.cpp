@@ -64,3 +64,8 @@ DWORD CModuleConfiguration::GetInitialRequestBufferSize()
 {
 	return 4 * 1024;
 }
+
+DWORD CModuleConfiguration::GetMaximumRequestBufferSize()
+{
+	return 64 * 1024;
+}

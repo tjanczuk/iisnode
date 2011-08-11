@@ -22,6 +22,7 @@ public:
 	static DWORD GetMaxNamedPipeConnectionRetry();
 	static DWORD GetNamePipeConnectionRetryDelay(); // this is in 100 nanosecond units
 	static DWORD GetInitialRequestBufferSize();
+	static DWORD GetMaximumRequestBufferSize();
 };
 
 #endif

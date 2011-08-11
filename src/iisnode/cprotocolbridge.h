@@ -8,6 +8,7 @@ private:
 	// utility
 	static HRESULT PostponeProcessing(CNodeHttpStoredContext* context, DWORD dueTime);
 	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult = S_OK);
+	static HRESULT EnsureBuffer(CNodeHttpStoredContext* context);
 
 	// processing stages
 	static void WINAPI CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
@@ -21,7 +22,11 @@ private:
 	static void SendRequestBody(CNodeHttpStoredContext* context, DWORD chunkLength);
 	static void WINAPI SendRequestBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 
-	static void ReadResponseHeaders(CNodeHttpStoredContext* context);
+	static void StartReadResponse(CNodeHttpStoredContext* context);
+	static void ContinueReadResponse(CNodeHttpStoredContext* context);
+	static void WINAPI ProcessResponseStatusLine(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
+	static void WINAPI ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
+	static void WINAPI ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 
 public:
 

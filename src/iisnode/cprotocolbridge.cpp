@@ -121,7 +121,7 @@ Error:
 
 	if (ERROR_HANDLE_EOF == hr)
 	{
-		CProtocolBridge::ReadResponseHeaders(context);
+		CProtocolBridge::StartReadResponse(context);
 	}
 	else
 	{
@@ -140,8 +140,8 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 		CProtocolBridge::SendRequestBody(ctx, bytesTransfered);
 	}
 	else if (ERROR_HANDLE_EOF == error)
-	{
-		CProtocolBridge::ReadResponseHeaders(ctx);
+	{		
+		CProtocolBridge::StartReadResponse(ctx);
 	}
 	else 
 	{
@@ -180,6 +180,118 @@ void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTr
 	}
 }
 
-void CProtocolBridge::ReadResponseHeaders(CNodeHttpStoredContext* context)
+void CProtocolBridge::StartReadResponse(CNodeHttpStoredContext* context)
+{
+	context->SetDataSize(0);
+	context->SetParsingOffset(0);
+	context->SetNextProcessor(CProtocolBridge::ProcessResponseStatusLine);
+	CProtocolBridge::ContinueReadResponse(context);
+}
+
+HRESULT CProtocolBridge::EnsureBuffer(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+
+	if (context->GetBufferSize() == context->GetDataSize())
+	{
+		// buffer is full
+
+		if (context->GetParsingOffset() > 0)
+		{
+			// remove already parsed data from buffer by moving unprocessed data to the front; this will free up space at the end
+
+			char* b = (char*)context->GetBuffer();
+			memcpy(b, b + context->GetParsingOffset(), context->GetDataSize() - context->GetParsingOffset());
+		}
+		else 
+		{
+			// allocate more buffer memory
+
+			DWORD* bufferLength = context->GetBufferSizeRef();
+			void** buffer = context->GetBufferRef();
+
+			DWORD quota = CModuleConfiguration::GetMaximumRequestBufferSize();
+			ErrorIf(*bufferLength >= quota, ERROR_NOT_ENOUGH_QUOTA);
+
+			void* newBuffer;
+			DWORD newBufferLength = *bufferLength * 2;
+			if (newBufferLength > quota)
+			{
+				newBufferLength = quota;
+			}
+
+			ErrorIf(NULL == (newBuffer = context->GetHttpContext()->AllocateRequestMemory(newBufferLength)), ERROR_NOT_ENOUGH_MEMORY);
+			memcpy(newBuffer, (char*)(*buffer) + context->GetParsingOffset(), context->GetDataSize() - context->GetParsingOffset());
+			*buffer = newBuffer;
+			*bufferLength = newBufferLength;
+		}
+
+		context->SetDataSize(context->GetDataSize() - context->GetParsingOffset());
+		context->SetParsingOffset(0);
+	}
+
+	return S_OK;
+Error:
+	return hr;
+
+}
+
+void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+
+	CheckError(CProtocolBridge::EnsureBuffer(context));
+
+	ErrorIf(FALSE == ReadFile(
+			context->GetPipe(), 
+			(char*)context->GetBuffer() + context->GetDataSize(), 
+			context->GetBufferSize() - context->GetDataSize(), 
+			NULL, 
+			context->GetOverlapped()),
+		GetLastError());
+
+	return;
+Error:
+
+	if (ERROR_IO_PENDING != hr)
+	{
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+	}
+
+	return;
+}
+
+void WINAPI CProtocolBridge::ProcessResponseStatusLine(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	HRESULT hr;
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	CheckError(error);
+	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
+	CheckError(CHttpProtocol::ParseResponseStatusLine(ctx));
+	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseHeaders);
+	CProtocolBridge::ProcessResponseHeaders(S_OK, 0, ctx->GetOverlapped());
+
+	return;
+Error:
+
+	if (ERROR_MORE_DATA == hr)
+	{
+		CProtocolBridge::ContinueReadResponse(ctx);
+	}
+	else
+	{
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
+
+	return;
+}
+
+void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
 }
+
+void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+}
+

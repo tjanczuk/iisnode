@@ -55,13 +55,22 @@ HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD 
 
 	if ((contentLength + *offset) > *bufferLength)
 	{
+		DWORD quota = CModuleConfiguration::GetMaximumRequestBufferSize();
+		ErrorIf(*bufferLength >= quota, ERROR_NOT_ENOUGH_QUOTA);
+
 		// buffer is too small, reallocate
 
 		void* newBuffer;
-		*bufferLength *= 2;
-		ErrorIf(NULL == (newBuffer = context->AllocateRequestMemory(*bufferLength)), ERROR_NOT_ENOUGH_MEMORY);
+		DWORD newBufferLength = *bufferLength * 2;
+		if (newBufferLength > quota)
+		{
+			newBufferLength = quota;
+		}
+
+		ErrorIf(NULL == (newBuffer = context->AllocateRequestMemory(newBufferLength)), ERROR_NOT_ENOUGH_MEMORY);
 		memcpy(newBuffer, *buffer, *offset);
 		*buffer = newBuffer;
+		*bufferLength = newBufferLength;
 	}
 
 	memcpy((char*)*buffer + *offset, content, contentLength);
@@ -96,7 +105,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 	CheckError(CHttpProtocol::Append(context, " ", 1, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, raw->pRawUrl, raw->RawUrlLength, result, &bufferLength, &offset));
 	request->GetHttpVersion(&major, &minor);
-	sprintf(tmp, " HTTP/%d.%d\n\r", major, minor);
+	sprintf(tmp, " HTTP/%d.%d\r\n", major, minor);
 	CheckError(CHttpProtocol::Append(context, tmp, -1, result, &bufferLength, &offset));
 
 	// Known headers
@@ -108,7 +117,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 			CheckError(CHttpProtocol::Append(context, CHttpProtocol::httpRequestHeaders[i], -1, result, &bufferLength, &offset));
 			CheckError(CHttpProtocol::Append(context, ": ", 2, result, &bufferLength, &offset));
 			CheckError(CHttpProtocol::Append(context, raw->Headers.KnownHeaders[i].pRawValue, raw->Headers.KnownHeaders[i].RawValueLength, result, &bufferLength, &offset));
-			CheckError(CHttpProtocol::Append(context, "\n\r", 2, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));
 		}
 	}
 
@@ -119,12 +128,12 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 		CheckError(CHttpProtocol::Append(context, raw->Headers.pUnknownHeaders[i].pName, raw->Headers.pUnknownHeaders[i].NameLength, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, ": ", 2, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, raw->Headers.pUnknownHeaders[i].pRawValue, raw->Headers.pUnknownHeaders[i].RawValueLength, result, &bufferLength, &offset));
-		CheckError(CHttpProtocol::Append(context, "\n\r", 2, result, &bufferLength, &offset));		
+		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
 	}
 
 	// CRLF
 
-	CheckError(CHttpProtocol::Append(context, "\n\r", 2, result, &bufferLength, &offset));
+	CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));
 
 	*resultSize = bufferLength;
 	*resultLength = offset;
@@ -144,6 +153,80 @@ Error:
 	{
 		*resultSize = 0;
 	}
+
+	return hr;
+}
+
+HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+
+	char* data = (char*)context->GetBuffer() + context->GetParsingOffset();
+	DWORD dataSize = context->GetDataSize() - context->GetParsingOffset();
+	DWORD offset = 0;	
+	USHORT major, minor;
+	DWORD count, newOffset;
+	char tmp[256];
+	USHORT statusCode, subStatusCode = 0;
+
+	// HTTP-Version SP
+
+	context->GetHttpContext()->GetRequest()->GetHttpVersion(&major, &minor);
+	sprintf(tmp, "HTTP/%d.%d ", major, minor);
+	count = strlen(tmp);
+	ErrorIf(count < dataSize, ERROR_MORE_DATA);
+	ErrorIf(0 != memcmp(tmp, data, count), ERROR_BAD_FORMAT);
+	offset += count;
+
+	// Status-Code[.Sub-Status-Code] SP
+
+	statusCode = 0;
+	while (offset < dataSize && data[offset] >= '0' && data[offset] <= '9')
+	{
+		statusCode = statusCode * 10 + data[offset++] - '0';
+	}
+	ErrorIf(offset == dataSize, ERROR_MORE_DATA);
+
+	if ('.' == data[offset])
+	{
+		// Sub-Status-Code
+
+		offset++;		
+
+		while (offset < dataSize && data[offset] >= '0' && data[offset] <= '9')
+		{
+			subStatusCode = subStatusCode * 10 + data[offset++] - '0';
+		}
+		ErrorIf(offset == dataSize, ERROR_MORE_DATA);
+	}
+
+	ErrorIf(' ' != data[offset], ERROR_BAD_FORMAT);
+	offset++;
+
+	// Reason-Phrase CRLF
+
+	newOffset = offset;
+	while (newOffset < (dataSize - 1) && data[newOffset] != 0x0A)
+	{
+		newOffset++;
+	}
+	ErrorIf(newOffset == dataSize - 1, ERROR_MORE_DATA);
+	ErrorIf(0x0D != data[newOffset + 1], ERROR_BAD_FORMAT);
+	
+	// set HTTP response status line
+
+	data[newOffset] = 0; // zero-terminate the reason phrase to reuse it without copying
+
+	IHttpResponse* response = context->GetHttpContext()->GetResponse();
+	response->Clear();
+	response->SetStatus(statusCode, data + offset, subStatusCode);
+	
+	// adjust buffers
+
+	context->SetParsingOffset(context->GetParsingOffset() + newOffset + 2);
+
+	return S_OK;
+Error:
 
 	return hr;
 }

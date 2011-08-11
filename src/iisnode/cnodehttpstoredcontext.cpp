@@ -1,7 +1,7 @@
 #include "precomp.h"
 
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
-	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0)
+	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0)
 {
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
 	this->asyncContext.data = this;
@@ -104,4 +104,24 @@ void CNodeHttpStoredContext::SetBuffer(void* buffer)
 void CNodeHttpStoredContext::SetBufferSize(DWORD bufferSize)
 {
 	this->bufferSize = bufferSize;
+}
+
+DWORD CNodeHttpStoredContext::GetDataSize()
+{
+	return this->dataSize;
+}
+
+DWORD CNodeHttpStoredContext::GetParsingOffset()
+{
+	return this->parsingOffset;
+}
+
+void CNodeHttpStoredContext::SetDataSize(DWORD dataSize)
+{
+	this->dataSize = dataSize;
+}
+
+void CNodeHttpStoredContext::SetParsingOffset(DWORD parsingOffet)
+{
+	this->parsingOffset = parsingOffset;
 }

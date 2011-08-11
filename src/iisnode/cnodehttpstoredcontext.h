@@ -16,6 +16,8 @@ private:
 	DWORD connectionRetryCount;
 	void* buffer;
 	DWORD bufferSize;
+	DWORD dataSize;
+	DWORD parsingOffset;
 
 public:
 
@@ -34,6 +36,8 @@ public:
 	DWORD GetBufferSize();
 	void** GetBufferRef();
 	DWORD* GetBufferSizeRef();
+	DWORD GetDataSize();
+	DWORD GetParsingOffset();
 
 	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 	void SetNodeProcess(CNodeProcess* process);
@@ -41,6 +45,8 @@ public:
 	void SetConnectionRetryCount(DWORD count);
 	void SetBuffer(void* buffer);
 	void SetBufferSize(DWORD bufferSize);
+	void SetDataSize(DWORD dataSize);
+	void SetParsingOffset(DWORD parsingOffet);
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 
