@@ -230,3 +230,53 @@ Error:
 
 	return hr;
 }
+
+HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+	char* data = (char*)context->GetBuffer() + context->GetParsingOffset();
+	DWORD dataSize = context->GetDataSize() - context->GetParsingOffset();
+	DWORD offset = 0;	
+	DWORD nameEndOffset, valueEndOffset;
+	IHttpResponse* response = context->GetHttpContext()->GetResponse();
+
+	while (offset < (dataSize - 1) && data[offset] != 0x0A)
+	{
+		// header name
+
+		nameEndOffset = offset;
+		while (nameEndOffset < dataSize && data[nameEndOffset] != ':')
+		{
+			nameEndOffset++;
+		}
+		ErrorIf(nameEndOffset == dataSize, ERROR_MORE_DATA);
+
+		// header value
+
+		valueEndOffset = nameEndOffset + 1;
+		while (valueEndOffset < (dataSize - 1) && data[valueEndOffset] != 0x0A)
+		{
+			valueEndOffset++;
+		}
+		ErrorIf(valueEndOffset >= dataSize - 1, ERROR_MORE_DATA);
+		ErrorIf(0x0D != data[valueEndOffset + 1], ERROR_BAD_FORMAT);
+
+		// set header on response
+		
+		data[nameEndOffset] = 0; // zero-terminate name to reuse without copying
+		CheckError(response->SetHeader(data + offset, data + nameEndOffset + 1, valueEndOffset - nameEndOffset - 1, TRUE));
+
+		// adjust offsets
+		
+		context->SetParsingOffset(context->GetParsingOffset() + valueEndOffset - offset + 2);
+		offset = valueEndOffset + 2;
+	}
+	ErrorIf(offset >= dataSize - 1, ERROR_MORE_DATA);
+	ErrorIf(0x0D != data[offset + 1], ERROR_BAD_FORMAT);
+
+	context->SetParsingOffset(context->GetParsingOffset() + 2);
+
+	return S_OK;
+Error:
+	return hr;
+}

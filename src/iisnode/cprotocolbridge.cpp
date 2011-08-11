@@ -289,6 +289,28 @@ Error:
 
 void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
+	HRESULT hr;
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	CheckError(error);
+	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
+	CheckError(CHttpProtocol::ParseResponseHeaders(ctx));
+	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
+
+	return;
+Error:
+
+	if (ERROR_MORE_DATA == hr)
+	{
+		CProtocolBridge::ContinueReadResponse(ctx);
+	}
+	else
+	{
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
+
+	return;
 }
 
 void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
