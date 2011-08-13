@@ -5,29 +5,33 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 	CAsyncManager* async = context->GetNodeApplication()->GetApplicationManager()->GetAsyncManager();
 	LARGE_INTEGER delay;
 	delay.QuadPart = dueTime;
+	delay.QuadPart *= -1;
 
 	return async->SetTimer(context->GetAsyncContext(), &delay);
 }
 
 HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult)
 {
-	IHttpContext* httpCtx = context->GetHttpContext();
-
-	if (NULL != context->GetPipe())
+	if (INVALID_HANDLE_VALUE != context->GetPipe())
 	{
 		CloseHandle(context->GetPipe());
-		context->SetPipe(NULL);
+		context->SetPipe(INVALID_HANDLE_VALUE);
 	}
 
-	if (httpCtx->GetResponseHeadersSent())
-	{
-		httpCtx->IndicateCompletion(RQ_NOTIFICATION_FINISH_REQUEST);
-	}
-	else
+	return CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);
+}
+
+HRESULT CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL notifyFinish)
+{
+	if (!httpCtx->GetResponseHeadersSent())
 	{
 		httpCtx->GetResponse()->Clear();
 		httpCtx->GetResponse()->SetStatus(status, reason, 0, hresult);
-		httpCtx->IndicateCompletion(RQ_NOTIFICATION_CONTINUE);
+	}
+
+	if (TRUE == notifyFinish)
+	{
+		httpCtx->IndicateCompletion(RQ_NOTIFICATION_FINISH_REQUEST);
 	}
 
 	return S_OK;
@@ -36,12 +40,17 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 {
 	context->SetNextProcessor(CProtocolBridge::CreateNamedPipeConnection);
-	CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->GetOverlapped());
+	CProtocolBridge::CreateNamedPipeConnectionImpl(S_OK, 0, context->GetOverlapped(), FALSE);
 
 	return S_OK;
 }
 
 void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	CProtocolBridge::CreateNamedPipeConnectionImpl(error, bytesTransfered, overlapped, TRUE);
+}
+
+void WINAPI CProtocolBridge::CreateNamedPipeConnectionImpl(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL asynchronous)
 {
 	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -66,22 +75,22 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 
 Error:
 
-	if (hr == ERROR_PIPE_BUSY)
+	DWORD retry = ctx->GetConnectionRetryCount();
+	if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry())
 	{
-		DWORD retry = ctx->GetConnectionRetryCount();
-		if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry())
+		if (hr == ERROR_PIPE_BUSY)
 		{
-			CProtocolBridge::SendEmptyResponse(ctx, 503, "Service Unavailable", hr);
+			CProtocolBridge::SendEmptyResponse(ctx->GetHttpContext(), 503, _T("Service Unavailable"), hr, asynchronous);
 		}
-		else 
+		else
 		{
-			ctx->SetConnectionRetryCount(retry + 1);
-			CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamePipeConnectionRetryDelay());
+			CProtocolBridge::SendEmptyResponse(ctx->GetHttpContext(), 500, _T("Internal Server Error"), hr, asynchronous);
 		}
 	}
 	else 
 	{
-		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+		ctx->SetConnectionRetryCount(retry + 1);
+		CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamePipeConnectionRetryDelay());
 	}
 
 	return;
@@ -445,7 +454,7 @@ Error:
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 {
 	CloseHandle(context->GetPipe());
-	context->SetPipe(NULL);
+	context->SetPipe(INVALID_HANDLE_VALUE);
 
 	context->GetNodeProcess()->OnRequestCompleted(context);
 

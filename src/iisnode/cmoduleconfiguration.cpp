@@ -42,7 +42,7 @@ DWORD CModuleConfiguration::GetMaxProcessCountPerApplication()
 
 LPCTSTR CModuleConfiguration::GetNodeProcessCommandLine()
 {
-	return _T("node.exe");
+	return _T("c:\\node\\node-vc\\debug\\node.exe");
 }
 
 DWORD CModuleConfiguration::GetMaxConcurrentRequestsPerProcess()

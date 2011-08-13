@@ -1,7 +1,7 @@
 #ifndef __CPROTOCOLBRIDGE_H__
 #define __CPROTOCOLBRIDGE_H__
 
-static class CProtocolBridge
+class CProtocolBridge
 {
 private:
 
@@ -11,6 +11,7 @@ private:
 
 	// processing stages
 	static void WINAPI CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
+	static void WINAPI CreateNamedPipeConnectionImpl(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL asynchronous);
 
 	static void SendHttpRequestHeaders(CNodeHttpStoredContext* context);
 	static void WINAPI SendHttpRequestHeadersCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
@@ -34,6 +35,8 @@ public:
 
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
 	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult = S_OK);
+	static HRESULT SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult = S_OK, BOOL notifyFinish = TRUE);
+
 };
 
 #endif

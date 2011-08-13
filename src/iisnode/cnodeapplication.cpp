@@ -91,11 +91,11 @@ Error:
 
 	if (ERROR_NOT_ENOUGH_QUOTA == hr)
 	{
-		CProtocolBridge::SendEmptyResponse(nodeContext, 503, _T("Service Unavailable"), hr);
+		CProtocolBridge::SendEmptyResponse(context, 503, _T("Service Unavailable"), hr, FALSE);
 	}
 	else
 	{
-		CProtocolBridge::SendEmptyResponse(nodeContext, 500, _T("Internal Server Error"), hr);
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr, FALSE);
 	}
 
 	if (NULL != nodeContext)

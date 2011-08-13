@@ -2,7 +2,7 @@
 
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
-	responseContentLength(0), responseContentTransmitted(0)
+	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE)
 {
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
 	this->asyncContext.data = this;
@@ -10,10 +10,10 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 
 CNodeHttpStoredContext::~CNodeHttpStoredContext()
 {
-	if (NULL != this->pipe)
+	if (INVALID_HANDLE_VALUE != this->pipe)
 	{
 		CloseHandle(this->pipe);
-		this->pipe = NULL;
+		this->pipe = INVALID_HANDLE_VALUE;
 	}
 }
 

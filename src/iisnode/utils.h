@@ -5,7 +5,7 @@
 
 #define CheckNull(expr) ErrorIf(NULL == expr, ERROR_INVALID_PARAMETER)
 
-#define CheckError(hresult) if (FAILED(hresult)) { hr = hresult; goto Error; }
+#define CheckError(hresult) { HRESULT tmp_hr = hresult; if (S_OK != tmp_hr) { hr = tmp_hr; goto Error; } }
 
 #define ENTER_CS(cs) EnterCriticalSection(&cs); __try {
 

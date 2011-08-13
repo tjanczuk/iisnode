@@ -3,7 +3,7 @@
 
 class CNodeHttpStoredContext;
 
-static class CHttpProtocol
+class CHttpProtocol
 {
 private:
 

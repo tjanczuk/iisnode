@@ -29,6 +29,7 @@ HRESULT CNodeProcess::Initialize()
 	TCHAR environment[256 + 5 + 1 + 1]; // max named pipe name, "PORT=", terminating null, and an extra block terminating null
 	STARTUPINFO startupInfo;
 	PROCESS_INFORMATION processInformation;
+	DWORD exitCode = S_OK;
 
 	// generate the name for the named pipe to communicate with the node.js process
 	
@@ -63,7 +64,7 @@ HRESULT CNodeProcess::Initialize()
 	GetStartupInfo(&startupInfo);
 	// TODO, tjanczuk, capture stderr and stdout of the newly created node.js process
 	startupInfo.dwFlags = STARTF_USESTDHANDLES;
-	startupInfo.hStdError = startupInfo.hStdInput = startupInfo.hStdOutput = NULL;
+	startupInfo.hStdError = startupInfo.hStdInput = startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 
 	// create the node.js process
 
@@ -73,13 +74,17 @@ HRESULT CNodeProcess::Initialize()
 			fullCommandLine,
 			NULL,
 			NULL,
-			FALSE,
-			CREATE_NO_WINDOW | DETACHED_PROCESS,
+			TRUE,
+			DETACHED_PROCESS | CREATE_SUSPENDED,
 			environment,
 			NULL,
 			&startupInfo,
 			&processInformation
 		), GetLastError());
+
+	ErrorIf((DWORD) -1 == ResumeThread(processInformation.hThread), GetLastError());
+
+	ErrorIf(GetExitCodeProcess(processInformation.hProcess, &exitCode) && STILL_ACTIVE != exitCode, exitCode);
 
 	delete [] fullCommandLine;
 	fullCommandLine = NULL;

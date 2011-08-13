@@ -15,6 +15,9 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 
 	return RQ_NOTIFICATION_PENDING;
 Error:
+
+	CProtocolBridge::SendEmptyResponse(pHttpContext, 500, _T("Internal Server Error"), hr, FALSE);
+
 	return RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
