@@ -26,10 +26,12 @@ HRESULT CNodeProcess::Initialize()
 	LPCTSTR coreCommandLine;
 	PCWSTR scriptName;
 	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW;
-	TCHAR environment[256 + 5 + 1 + 1]; // max named pipe name, "PORT=", terminating null, and an extra block terminating null
 	STARTUPINFO startupInfo;
 	PROCESS_INFORMATION processInformation;
 	DWORD exitCode = S_OK;
+	LPCH currentEnvironment = NULL;
+	LPCH newEnvironment = NULL;
+	DWORD environmentSize;
 
 	// generate the name for the named pipe to communicate with the node.js process
 	
@@ -55,15 +57,23 @@ HRESULT CNodeProcess::Initialize()
 	// create the environment block for the node.js process - pass in the named pipe name; 
 	// this is a zero terminated list of zero terminated strings of the form <var>=<value>
 
-	RtlZeroMemory(environment, sizeof environment);
-	_tcscpy(environment, _T("PORT="));
-	_tcscat(environment, this->namedPipe);
+	ErrorIf(NULL == (currentEnvironment = GetEnvironmentStrings()), GetLastError());
+	environmentSize = 0;
+	do {
+		while (*(currentEnvironment + environmentSize++) != 0);
+	} while (*(currentEnvironment + environmentSize++) != 0);
+	ErrorIf(NULL == (newEnvironment = (LPCH)new char[environmentSize + 256 + 1 + 1]), ERROR_NOT_ENOUGH_MEMORY);	
+	_tcscpy(newEnvironment, _T("PORT="));
+	_tcscat(newEnvironment, this->namedPipe);
+	memcpy(newEnvironment + 6 + strlen(this->namedPipe), currentEnvironment, environmentSize);
+	FreeEnvironmentStrings(currentEnvironment);
+	currentEnvironment = NULL;
 
 	// create startup info for the node.js process
 
 	GetStartupInfo(&startupInfo);
 	// TODO, tjanczuk, capture stderr and stdout of the newly created node.js process
-	startupInfo.dwFlags = STARTF_USESTDHANDLES;
+	startupInfo.dwFlags = 0; //STARTF_USESTDHANDLES;
 	startupInfo.hStdError = startupInfo.hStdInput = startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 
 	// create the node.js process
@@ -76,7 +86,7 @@ HRESULT CNodeProcess::Initialize()
 			NULL,
 			TRUE,
 			DETACHED_PROCESS | CREATE_SUSPENDED,
-			environment,
+			newEnvironment,
 			NULL,
 			&startupInfo,
 			&processInformation
@@ -86,6 +96,8 @@ HRESULT CNodeProcess::Initialize()
 
 	ErrorIf(GetExitCodeProcess(processInformation.hProcess, &exitCode) && STILL_ACTIVE != exitCode, exitCode);
 
+	delete [] newEnvironment;
+	newEnvironment = NULL;
 	delete [] fullCommandLine;
 	fullCommandLine = NULL;
 	CloseHandle(processInformation.hThread);
@@ -119,6 +131,18 @@ Error:
 		TerminateProcess(processInformation.hProcess, 1);
 		CloseHandle(processInformation.hProcess);
 		processInformation.hProcess = NULL;
+	}
+
+	if (NULL != currentEnvironment)
+	{
+		FreeEnvironmentStrings(currentEnvironment);
+		currentEnvironment = NULL;
+	}
+
+	if (NULL != newEnvironment)
+	{
+		delete[] newEnvironment;
+		newEnvironment = NULL;
 	}
 
 	return hr;
