@@ -48,7 +48,7 @@ HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD 
 {
 	HRESULT hr;
 
-	if (contentLength < 0)
+	if (contentLength == 0)
 	{
 		contentLength = strlen(content);
 	}
@@ -101,12 +101,12 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 	
 	// Request-Line
 
-	CheckError(CHttpProtocol::Append(context, request->GetHttpMethod(), -1, result, &bufferLength, &offset));
+	CheckError(CHttpProtocol::Append(context, request->GetHttpMethod(), 0, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, " ", 1, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, raw->pRawUrl, raw->RawUrlLength, result, &bufferLength, &offset));
 	request->GetHttpVersion(&major, &minor);
 	sprintf(tmp, " HTTP/%d.%d\r\n", major, minor);
-	CheckError(CHttpProtocol::Append(context, tmp, -1, result, &bufferLength, &offset));
+	CheckError(CHttpProtocol::Append(context, tmp, 0, result, &bufferLength, &offset));
 
 	// Known headers
 
@@ -114,7 +114,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 	{
 		if (raw->Headers.KnownHeaders[i].RawValueLength > 0)
 		{
-			CheckError(CHttpProtocol::Append(context, CHttpProtocol::httpRequestHeaders[i], -1, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, CHttpProtocol::httpRequestHeaders[i], 0, result, &bufferLength, &offset));
 			CheckError(CHttpProtocol::Append(context, ": ", 2, result, &bufferLength, &offset));
 			CheckError(CHttpProtocol::Append(context, raw->Headers.KnownHeaders[i].pRawValue, raw->Headers.KnownHeaders[i].RawValueLength, result, &bufferLength, &offset));
 			CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));

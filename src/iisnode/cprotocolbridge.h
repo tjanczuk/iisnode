@@ -11,7 +11,6 @@ private:
 
 	// processing stages
 	static void WINAPI CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
-	static void WINAPI CreateNamedPipeConnectionImpl(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL asynchronous);
 
 	static void SendHttpRequestHeaders(CNodeHttpStoredContext* context);
 	static void WINAPI SendHttpRequestHeadersCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);

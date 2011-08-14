@@ -118,6 +118,7 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 		if (removed == 1)
 		{
 			ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
+			ctx->asynchronous = TRUE;
 
 			if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
 			{

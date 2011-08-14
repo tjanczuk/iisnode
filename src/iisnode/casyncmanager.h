@@ -16,6 +16,7 @@ typedef struct {
 	void* data;
 	HANDLE timer;
 	LARGE_INTEGER dueTime;
+	BOOL asynchronous;
 } ASYNC_CONTEXT;
 
 class CAsyncManager
