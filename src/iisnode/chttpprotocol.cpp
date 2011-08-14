@@ -174,7 +174,7 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	context->GetHttpContext()->GetRequest()->GetHttpVersion(&major, &minor);
 	sprintf(tmp, "HTTP/%d.%d ", major, minor);
 	count = strlen(tmp);
-	ErrorIf(count < dataSize, ERROR_MORE_DATA);
+	ErrorIf(count >= dataSize, ERROR_MORE_DATA);
 	ErrorIf(0 != memcmp(tmp, data, count), ERROR_BAD_FORMAT);
 	offset += count;
 
@@ -206,12 +206,12 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	// Reason-Phrase CRLF
 
 	newOffset = offset;
-	while (newOffset < (dataSize - 1) && data[newOffset] != 0x0A)
+	while (newOffset < (dataSize - 1) && data[newOffset] != 0x0D)
 	{
 		newOffset++;
 	}
 	ErrorIf(newOffset == dataSize - 1, ERROR_MORE_DATA);
-	ErrorIf(0x0D != data[newOffset + 1], ERROR_BAD_FORMAT);
+	ErrorIf(0x0A != data[newOffset + 1], ERROR_BAD_FORMAT);
 	
 	// set HTTP response status line
 
@@ -240,7 +240,7 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 	DWORD nameEndOffset, valueEndOffset;
 	IHttpResponse* response = context->GetHttpContext()->GetResponse();
 
-	while (offset < (dataSize - 1) && data[offset] != 0x0A)
+	while (offset < (dataSize - 1) && data[offset] != 0x0D)
 	{
 		// header name
 
@@ -254,17 +254,19 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 		// header value
 
 		valueEndOffset = nameEndOffset + 1;
-		while (valueEndOffset < (dataSize - 1) && data[valueEndOffset] != 0x0A)
+		while (valueEndOffset < (dataSize - 1) && data[valueEndOffset] != 0x0D)
 		{
 			valueEndOffset++;
 		}
 		ErrorIf(valueEndOffset >= dataSize - 1, ERROR_MORE_DATA);
-		ErrorIf(0x0D != data[valueEndOffset + 1], ERROR_BAD_FORMAT);
+		ErrorIf(0x0A != data[valueEndOffset + 1], ERROR_BAD_FORMAT);
 
 		// set header on response
 		
 		data[nameEndOffset] = 0; // zero-terminate name to reuse without copying
+		data[valueEndOffset] = 0; // zero-terminate header value because this is what IHttpResponse::SetHeader expects
 		CheckError(response->SetHeader(data + offset, data + nameEndOffset + 1, valueEndOffset - nameEndOffset - 1, TRUE));
+		//CheckError(response->SetHeader(data + offset, data + nameEndOffset + 2, valueEndOffset - nameEndOffset - 2, TRUE));
 
 		// adjust offsets
 		
@@ -272,7 +274,7 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 		offset = valueEndOffset + 2;
 	}
 	ErrorIf(offset >= dataSize - 1, ERROR_MORE_DATA);
-	ErrorIf(0x0D != data[offset + 1], ERROR_BAD_FORMAT);
+	ErrorIf(0x0A != data[offset + 1], ERROR_BAD_FORMAT);
 
 	context->SetParsingOffset(context->GetParsingOffset() + 2);
 

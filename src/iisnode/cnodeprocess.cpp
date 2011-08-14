@@ -160,7 +160,7 @@ HRESULT CNodeProcess::AcceptRequest(CNodeHttpStoredContext* context)
 	if (S_OK == (hr = this->activeRequestPool.Add(context)))
 	{
 		context->SetNodeProcess(this);
-		CheckError(CProtocolBridge::InitiateRequest(context));
+		CProtocolBridge::InitiateRequest(context);
 	}
 
 	return S_OK;

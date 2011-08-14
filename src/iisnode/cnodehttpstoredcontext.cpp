@@ -2,7 +2,7 @@
 
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
-	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE)
+	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE), result(S_OK)
 {
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
 	this->asyncContext.data = this;
@@ -127,7 +127,7 @@ void CNodeHttpStoredContext::SetDataSize(DWORD dataSize)
 	this->dataSize = dataSize;
 }
 
-void CNodeHttpStoredContext::SetParsingOffset(DWORD parsingOffet)
+void CNodeHttpStoredContext::SetParsingOffset(DWORD parsingOffset)
 {
 	this->parsingOffset = parsingOffset;
 }
@@ -150,4 +150,14 @@ void CNodeHttpStoredContext::SetResponseContentTransmitted(LONGLONG length)
 void CNodeHttpStoredContext::SetResponseContentLength(LONGLONG length)
 {
 	this->responseContentLength = length;
+}
+
+HRESULT CNodeHttpStoredContext::GetHresult()
+{
+	return this->result;
+}
+
+void CNodeHttpStoredContext::SetHresult(HRESULT result)
+{
+	this->result = result;
 }

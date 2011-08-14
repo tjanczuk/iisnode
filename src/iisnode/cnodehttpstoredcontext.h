@@ -20,6 +20,7 @@ private:
 	DWORD parsingOffset;
 	LONGLONG responseContentTransmitted;
 	LONGLONG responseContentLength;
+	HRESULT result;
 
 public:
 
@@ -42,6 +43,7 @@ public:
 	DWORD GetParsingOffset();
 	LONGLONG GetResponseContentTransmitted();
 	LONGLONG GetResponseContentLength();
+	HRESULT GetHresult();
 
 	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 	void SetNodeProcess(CNodeProcess* process);
@@ -53,6 +55,7 @@ public:
 	void SetParsingOffset(DWORD parsingOffet);
 	void SetResponseContentTransmitted(LONGLONG length);
 	void SetResponseContentLength(LONGLONG length);
+	void SetHresult(HRESULT result);
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

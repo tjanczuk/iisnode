@@ -57,7 +57,7 @@ DWORD CModuleConfiguration::GetMaxNamedPipeConnectionRetry()
 
 DWORD CModuleConfiguration::GetNamePipeConnectionRetryDelay()
 {
-	return 5 * 10000; // this is 5ms expressed in 100 nanosecond units
+	return 2 * 1000 * 10000; // this is 2s expressed in 100 nanosecond units
 }
 
 DWORD CModuleConfiguration::GetInitialRequestBufferSize()

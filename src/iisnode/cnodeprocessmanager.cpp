@@ -90,31 +90,22 @@ Error:
 HRESULT CNodeProcessManager::TryDispatchOneRequest()
 {
 	HRESULT hr;
-
+	CNodeHttpStoredContext* request = NULL;
 	CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
 
 	if (!queue->IsEmpty())
 	{
 		EnterCriticalSection(&this->syncRoot);
 
-		CNodeHttpStoredContext* request = queue->Peek();
-		BOOL requestDispatched = false;
+		request = queue->Peek();		
 		if (NULL != request)
 		{
+			queue->Pop();
 			if (!this->TryRouteRequestToExistingProcess(request))
 			{
 				CNodeProcess* newProcess;
 				CheckError(this->AddOneProcess(&newProcess));
-				requestDispatched = S_OK == newProcess->AcceptRequest(request);
-			}
-			else 
-			{
-				requestDispatched = TRUE;
-			}
-
-			if (requestDispatched)
-			{
-				queue->Pop();
+				CheckError(newProcess->AcceptRequest(request));
 			}
 		}
 
@@ -123,6 +114,12 @@ HRESULT CNodeProcessManager::TryDispatchOneRequest()
 
 	return S_OK;
 Error:
+
+	if (request != NULL)
+	{
+		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
+	}
+
 	return hr;
 }
 

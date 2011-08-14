@@ -18,6 +18,8 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 		context->SetPipe(INVALID_HANDLE_VALUE);
 	}
 
+	context->SetHresult(hresult);
+
 	return CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult, context->GetAsyncContext()->asynchronous);
 }
 
@@ -42,7 +44,7 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 	context->SetNextProcessor(CProtocolBridge::CreateNamedPipeConnection);
 	CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->GetOverlapped());
 
-	return S_OK;
+	return context->GetHresult(); // synchronous completion HRESULT
 }
 
 void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
@@ -57,8 +59,16 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 		0,
 		NULL,
 		OPEN_EXISTING,
-		0,
+		FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH,
 		NULL)), 
+		GetLastError());
+
+	DWORD mode = PIPE_READMODE_BYTE | PIPE_NOWAIT;
+	ErrorIf(!SetNamedPipeHandleState(
+		pipe, 
+		&mode,
+		NULL,
+		NULL), 
 		GetLastError());
 
 	ctx->SetPipe(pipe);
@@ -99,14 +109,20 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	CheckError(CHttpProtocol::SerializeRequestHeaders(context->GetHttpContext(), context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
 	context->SetNextProcessor(CProtocolBridge::SendHttpRequestHeadersCompleted);
-	hr = WriteFile(context->GetPipe(), context->GetBuffer(), length, NULL, context->GetOverlapped()) ? S_OK : GetLastError();
-	ErrorIf(hr != S_OK && hr != ERROR_IO_PENDING, hr);
+	ErrorIf(!WriteFile(context->GetPipe(), context->GetBuffer(), length, NULL, context->GetOverlapped()), GetLastError());
+
+	// completed synchronously
+
+	CProtocolBridge::SendHttpRequestHeadersCompleted(S_OK, length, context->GetOverlapped());
 
 	return;
 
 Error:
 
-	CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+	if (hr != ERROR_IO_PENDING)
+	{
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+	}
 
 	return;
 }
@@ -143,13 +159,13 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 	return;
 Error:
 
-	if (ERROR_HANDLE_EOF == hr)
+	if (HRESULT_FROM_WIN32(ERROR_HANDLE_EOF) == hr)
 	{
 		CProtocolBridge::StartReadResponse(context);
 	}
 	else
 	{
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), HRESULT_FROM_WIN32(hr));
 	}
 
 	return;
@@ -178,14 +194,20 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 	HRESULT hr;
 
 	context->SetNextProcessor(CProtocolBridge::SendRequestBodyCompleted);
-	hr = WriteFile(context->GetPipe(), context->GetBuffer(), chunkLength, NULL, context->GetOverlapped()) ? S_OK : GetLastError();
-	ErrorIf(hr != S_OK && hr != ERROR_IO_PENDING, hr);
+	ErrorIf(!WriteFile(context->GetPipe(), context->GetBuffer(), chunkLength, NULL, context->GetOverlapped()) ? S_OK : GetLastError(), GetLastError());
+	
+	// completed synchronously
+
+	CProtocolBridge::SendRequestBodyCompleted(S_OK, chunkLength, context->GetOverlapped());
 
 	return;
 
 Error:
 
-	CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+	if (ERROR_IO_PENDING != hr)
+	{
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+	}
 
 	return;
 }
@@ -263,21 +285,32 @@ Error:
 void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
+	DWORD bytesRead;
 
 	CheckError(CProtocolBridge::EnsureBuffer(context));
 
-	ErrorIf(FALSE == ReadFile(
+	ErrorIf(!ReadFile(
 			context->GetPipe(), 
 			(char*)context->GetBuffer() + context->GetDataSize(), 
-			context->GetBufferSize() - context->GetDataSize(), 
-			NULL, 
+			context->GetBufferSize() - context->GetDataSize(),
+			&bytesRead,
 			context->GetOverlapped()),
 		GetLastError());
+
+	// completed synchronously
+
+	context->GetAsyncContext()->completionProcessor(S_OK, bytesRead, context->GetOverlapped());
 
 	return;
 Error:
 
-	if (ERROR_IO_PENDING != hr)
+	if (/*(ERROR_NO_DATA == hr || ERROR_BROKEN_PIPE == hr) && */context->GetResponseContentLength() == -1)
+	{
+		// connection termination with chunked transfer encoding indicates end of response
+
+		CProtocolBridge::FinalizeResponse(context);
+	}
+	else if (ERROR_IO_PENDING != hr)
 	{
 		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
 	}
@@ -389,7 +422,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 		
 		if (!completionExpected)
 		{
-			CProtocolBridge::SendResponseBodyCompleted(S_OK, bytesSent, ctx->GetOverlapped());
+			CProtocolBridge::SendResponseBodyCompleted(S_OK, chunk->FromMemory.BufferLength, ctx->GetOverlapped());
 		}
 	}
 	else if (-1 == ctx->GetResponseContentLength() || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
@@ -453,5 +486,5 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 
 	context->GetNodeProcess()->OnRequestCompleted(context);
 
-	context->GetHttpContext()->IndicateCompletion(RQ_NOTIFICATION_CONTINUE);
+	context->GetHttpContext()->IndicateCompletion(RQ_NOTIFICATION_FINISH_REQUEST);
 }
