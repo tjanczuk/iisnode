@@ -69,40 +69,26 @@ CPendingRequestQueue* CNodeApplication::GetPendingRequestQueue()
 	return this->pendingRequests;
 }
 
-HRESULT CNodeApplication::StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider)
+HRESULT CNodeApplication::Enqueue(IHttpContext* context, IHttpEventProvider* pProvider)
 {
 	HRESULT hr;
-	CNodeHttpStoredContext* nodeContext = NULL;
+	CNodeHttpStoredContext* nodeContext;
 
-	ErrorIf(NULL == context, ERROR_INVALID_PARAMETER);
-	ErrorIf(NULL == pProvider, ERROR_INVALID_PARAMETER);
+	CheckNull(context);
+	CheckNull(pProvider);
 
-	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(this->pendingRequests->Push(nodeContext));
-
+	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);	
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 	moduleContextContainer->SetModuleContext(nodeContext, this->GetApplicationManager()->GetModuleId());
-	nodeContext = NULL;
 
-	CheckError(this->processManager->TryDispatchOneRequest());
+	CheckError(this->pendingRequests->Push(nodeContext));
+	
+	this->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this->processManager);
 
 	return S_OK;
 Error:
 
-	if (ERROR_NOT_ENOUGH_QUOTA == hr)
-	{
-		CProtocolBridge::SendEmptyResponse(context, 503, _T("Service Unavailable"), hr, FALSE);
-	}
-	else
-	{
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr, FALSE);
-	}
-
-	if (NULL != nodeContext)
-	{
-		delete nodeContext;
-		nodeContext = NULL;
-	}
+	// nodeContext need not be freed here as it will be deallocated through IHttpStoredContext when the request is finished
 
 	return hr;
 }

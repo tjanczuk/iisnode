@@ -19,11 +19,12 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 	}
 
 	context->SetHresult(hresult);
+	context->SetRequestNotificationStatus(RQ_NOTIFICATION_FINISH_REQUEST);
 
-	return CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult, context->GetAsyncContext()->asynchronous);
+	return CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult, !context->GetSynchronous());
 }
 
-HRESULT CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL notifyFinish)
+HRESULT CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL indicateCompletion)
 {
 	if (!httpCtx->GetResponseHeadersSent())
 	{
@@ -31,7 +32,7 @@ HRESULT CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status,
 		httpCtx->GetResponse()->SetStatus(status, reason, 0, hresult);
 	}
 
-	if (TRUE == notifyFinish)
+	if (indicateCompletion)
 	{
 		httpCtx->IndicateCompletion(RQ_NOTIFICATION_FINISH_REQUEST);
 	}
@@ -481,10 +482,16 @@ Error:
 
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 {
+	DWORD bytesSent = 0;
+
 	CloseHandle(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
 
+	context->GetHttpContext()->GetResponse()->Flush(FALSE, FALSE, &bytesSent);
 	context->GetNodeProcess()->OnRequestCompleted(context);
-
-	context->GetHttpContext()->IndicateCompletion(RQ_NOTIFICATION_FINISH_REQUEST);
+	context->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
+	if (!context->GetSynchronous())
+	{
+		context->GetHttpContext()->IndicateCompletion(RQ_NOTIFICATION_CONTINUE);
+	}
 }

@@ -2,7 +2,8 @@
 
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
-	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE), result(S_OK)
+	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE), result(S_OK), 
+	requestNotificationStatus(RQ_NOTIFICATION_PENDING)
 {
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
 	this->asyncContext.data = this;
@@ -160,4 +161,24 @@ HRESULT CNodeHttpStoredContext::GetHresult()
 void CNodeHttpStoredContext::SetHresult(HRESULT result)
 {
 	this->result = result;
+}
+
+REQUEST_NOTIFICATION_STATUS CNodeHttpStoredContext::GetRequestNotificationStatus()
+{
+	return this->requestNotificationStatus;
+}
+
+void CNodeHttpStoredContext::SetRequestNotificationStatus(REQUEST_NOTIFICATION_STATUS status)
+{
+	this->requestNotificationStatus = status;
+}
+
+BOOL CNodeHttpStoredContext::GetSynchronous()
+{
+	return this->asyncContext.synchronous;
+}
+
+void CNodeHttpStoredContext::SetSynchronous(BOOL synchronous)
+{
+	this->asyncContext.synchronous = synchronous;
 }

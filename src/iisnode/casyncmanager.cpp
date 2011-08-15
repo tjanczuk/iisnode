@@ -117,20 +117,23 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 
 		if (removed == 1)
 		{
-			ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-			ctx->asynchronous = TRUE;
-
 			if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
 			{
 				break;
 			}
 			else if (-2L == entry.lpCompletionKey) // setup of an alertable wait state timer from SetTimer
 			{
+				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
 				SetWaitableTimer(ctx->timer, &ctx->dueTime, 0, CAsyncManager::OnTimer, ctx, FALSE);
-				continue;
+			}
+			else if (-3L == entry.lpCompletionKey) // continuation initiated form PostContinuation
+			{
+				((ContinuationCallback)entry.lpOverlapped)((void*)entry.dwNumberOfBytesTransferred);
 			}
 			else if (NULL != ctx && NULL != ctx->completionProcessor) // other IO completion - invoke custom processor
 			{
+				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
+				ctx->synchronous = FALSE;
 				ctx->completionProcessor(error, entry.dwNumberOfBytesTransferred, (LPOVERLAPPED)ctx);
 			}
 		}
@@ -148,6 +151,19 @@ void APIENTRY CAsyncManager::OnTimer(LPVOID lpArgToCompletionRoutine, DWORD dwTi
 
 	if (NULL != ctx && NULL != ctx->completionProcessor)
 	{
+		ctx->synchronous = FALSE;
 		ctx->completionProcessor(S_OK, 0, (LPOVERLAPPED)ctx);
 	}
+}
+
+HRESULT CAsyncManager::PostContinuation(ContinuationCallback continuation, void* data)
+{
+	HRESULT hr;
+
+	CheckNull(continuation);
+	ErrorIf(0 == PostQueuedCompletionStatus(this->completionPort, (DWORD)data, -3L, (LPOVERLAPPED)continuation), ERROR_OPERATION_ABORTED);
+
+	return S_OK;
+Error:
+	return hr;
 }

@@ -53,16 +53,47 @@ CAsyncManager* CNodeApplicationManager::GetAsyncManager()
 	return this->asyncManager;
 }
 
-HRESULT CNodeApplicationManager::StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider)
+HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvider* pProvider)
 {
 	HRESULT hr;
 	CNodeApplication* application;
 
 	CheckError(this->GetOrCreateNodeApplication(context, &application));
-	CheckError(application->StartNewRequest(context, pProvider));
+	CheckError(application->Enqueue(context, pProvider));
 
 	return S_OK;
 Error:
+	return hr;
+}
+
+HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalPath, CNodeApplication** application)
+{
+	HRESULT hr;	
+	NodeApplicationEntry* applicationEntry = NULL;
+
+	if (NULL == (*application = this->TryGetExistingNodeApplication(physicalPath)))
+	{
+		ErrorIf(NULL == (applicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this)), ERROR_NOT_ENOUGH_MEMORY);
+		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath));
+
+		*application = applicationEntry->nodeApplication;
+		applicationEntry->next = this->applications;
+		this->applications = applicationEntry;
+	}	
+
+	return S_OK;
+Error:
+
+	if (NULL != applicationEntry)
+	{
+		if (NULL != applicationEntry->nodeApplication)
+		{
+			delete applicationEntry->nodeApplication;
+		}
+		delete applicationEntry;
+	}
+
 	return hr;
 }
 
@@ -80,33 +111,15 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 
 	if (NULL == (*application = this->TryGetExistingNodeApplication(physicalPath)))
 	{
-		EnterCriticalSection(&this->syncRoot);
+		ENTER_CS(this->syncRoot)
 
-		if (NULL == (*application = this->TryGetExistingNodeApplication(physicalPath)))
-		{
-			ErrorIf(NULL == (newApplicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
-			ErrorIf(NULL == (newApplicationEntry->nodeApplication = new CNodeApplication(this)), ERROR_NOT_ENOUGH_MEMORY);
-			CheckError(newApplicationEntry->nodeApplication->Initialize(physicalPath));
+		CheckError(this->GetOrCreateNodeApplicationCore(physicalPath, application));
 
-			*application = newApplicationEntry->nodeApplication;
-			newApplicationEntry->next = this->applications;
-			this->applications = newApplicationEntry;
-		}
-
-		LeaveCriticalSection(&this->syncRoot);
+		LEAVE_CS(this->syncRoot)
 	}
 
 	return S_OK;
 Error:
-
-	if (NULL != newApplicationEntry)
-	{
-		if (NULL != newApplicationEntry->nodeApplication)
-		{
-			delete newApplicationEntry->nodeApplication;
-		}
-		delete newApplicationEntry;
-	}
 
 	return hr;
 }

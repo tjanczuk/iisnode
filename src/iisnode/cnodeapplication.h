@@ -24,7 +24,7 @@ public:
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
 	CPendingRequestQueue* GetPendingRequestQueue();
-	HRESULT StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider);
+	HRESULT Enqueue(IHttpContext* context, IHttpEventProvider* pProvider);
 };
 
 #endif

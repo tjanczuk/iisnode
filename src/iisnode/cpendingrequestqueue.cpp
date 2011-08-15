@@ -21,12 +21,12 @@ HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
 
 	CheckNull(context);
 
-	EnterCriticalSection(&this->syncRoot);
+	ENTER_CS(this->syncRoot)
 
 	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxPendingRequestsPerApplication(), ERROR_NOT_ENOUGH_QUOTA);
 	this->requests.push(context);
 
-	LeaveCriticalSection(&this->syncRoot);
+	LEAVE_CS(this->syncRoot)
 
 	return S_OK;
 Error:
@@ -35,21 +35,21 @@ Error:
 
 CNodeHttpStoredContext* CPendingRequestQueue::Peek()
 {
-	EnterCriticalSection(&this->syncRoot);
+	ENTER_CS(this->syncRoot)
 
 	return this->requests.size() > 0 ? this->requests.front() : NULL;
 
-	LeaveCriticalSection(&this->syncRoot);
+	LEAVE_CS(this->syncRoot)
 }
 
 void CPendingRequestQueue::Pop()
 {
-	EnterCriticalSection(&this->syncRoot);
+	ENTER_CS(this->syncRoot)
 
 	if (this->requests.size() > 0)
 	{
 		this->requests.pop();
 	}
 
-	LeaveCriticalSection(&this->syncRoot);
+	LEAVE_CS(this->syncRoot)
 }

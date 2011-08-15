@@ -20,6 +20,7 @@ private:
 	CAsyncManager* asyncManager;
 
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
+	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, CNodeApplication** application);
 	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath);
 
 public:
@@ -32,7 +33,7 @@ public:
 	CAsyncManager* GetAsyncManager();
 
 	HRESULT Initialize();
-	HRESULT StartNewRequest(IHttpContext* context, IHttpEventProvider* pProvider);
+	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider);
 };
 
 #endif

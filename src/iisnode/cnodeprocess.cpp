@@ -157,17 +157,12 @@ HRESULT CNodeProcess::AcceptRequest(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
 
-	if (S_OK == (hr = this->activeRequestPool.Add(context)))
-	{
-		context->SetNodeProcess(this);
-		CProtocolBridge::InitiateRequest(context);
-	}
+	CheckError(this->activeRequestPool.Add(context));
+	context->SetNodeProcess(this);
+	CProtocolBridge::InitiateRequest(context);
 
 	return S_OK;
 Error:
-	
-	context->SetNodeProcess(NULL);
-	this->activeRequestPool.Remove(context);
 
 	return hr;
 }
@@ -180,5 +175,5 @@ LPCTSTR CNodeProcess::GetNamedPipeName()
 void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
 {
 	this->activeRequestPool.Remove(context);
-	this->processManager->TryDispatchOneRequest();
+	this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this->GetProcessManager());
 }

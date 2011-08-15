@@ -51,6 +51,31 @@ Error:
 	return hr;
 }
 
+HRESULT CNodeProcessManager::AddOneProcessCore(CNodeProcess** process)
+{
+	HRESULT hr;
+
+	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
+	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this)), ERROR_NOT_ENOUGH_MEMORY);	
+	CheckError(this->processes[this->processCount]->Initialize());
+	if (NULL != process)
+	{
+		*process = this->processes[this->processCount];
+	}
+	this->processCount++;
+
+	return S_OK;
+Error:
+
+	if (NULL != this->processes[this->processCount])
+	{
+		delete this->processes[this->processCount];
+		this->processes[this->processCount] = NULL;
+	}
+
+	return hr;
+}
+
 HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process)
 {
 	HRESULT hr;
@@ -62,32 +87,24 @@ HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process)
 
 	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
 
-	EnterCriticalSection(&this->syncRoot);
+	ENTER_CS(this->syncRoot)
 
-	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
-	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this)), ERROR_NOT_ENOUGH_MEMORY);	
-	CheckError(this->processes[this->processCount]->Initialize());
-	if (NULL != process)
-	{
-		*process = this->processes[this->processCount];
-	}
-	this->processCount++;
+	CheckError(this->AddOneProcessCore(process));
 
-	LeaveCriticalSection(&this->syncRoot);
+	LEAVE_CS(this->syncRoot)
 
 	return S_OK;
 Error:
 
-	if (NULL != this->processes[this->processCount])
-	{
-		delete this->processes[this->processCount];
-		this->processes[this->processCount] = NULL;
-	}
-
 	return hr;	
 }
 
-HRESULT CNodeProcessManager::TryDispatchOneRequest()
+void CNodeProcessManager::TryDispatchOneRequest(void* data)
+{
+	((CNodeProcessManager*)data)->TryDispatchOneRequestImpl();
+}
+
+void CNodeProcessManager::TryDispatchOneRequestImpl()
 {
 	HRESULT hr;
 	CNodeHttpStoredContext* request = NULL;
@@ -95,12 +112,13 @@ HRESULT CNodeProcessManager::TryDispatchOneRequest()
 
 	if (!queue->IsEmpty())
 	{
-		EnterCriticalSection(&this->syncRoot);
+		ENTER_CS(this->syncRoot)
 
 		request = queue->Peek();		
 		if (NULL != request)
 		{
 			queue->Pop();
+
 			if (!this->TryRouteRequestToExistingProcess(request))
 			{
 				CNodeProcess* newProcess;
@@ -109,10 +127,10 @@ HRESULT CNodeProcessManager::TryDispatchOneRequest()
 			}
 		}
 
-		LeaveCriticalSection(&this->syncRoot);
+		LEAVE_CS(this->syncRoot)
 	}
 
-	return S_OK;
+	return;
 Error:
 
 	if (request != NULL)
@@ -120,7 +138,7 @@ Error:
 		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
 	}
 
-	return hr;
+	return;
 }
 
 BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context)

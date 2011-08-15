@@ -33,8 +33,8 @@ private:
 public:
 
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
-	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult = S_OK);
-	static HRESULT SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult = S_OK, BOOL notifyFinish = TRUE);
+	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult);
+	static HRESULT SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL indicateCompletion);
 
 };
 

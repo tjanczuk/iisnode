@@ -16,12 +16,12 @@ HRESULT CActiveRequestPool::Add(CNodeHttpStoredContext* context)
 
 	CheckNull(context);
 
-	EnterCriticalSection(&this->syncRoot);
+	ENTER_CS(this->syncRoot)
 
 	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(), ERROR_NOT_ENOUGH_QUOTA);
 	this->requests.push_back(context);
 
-	LeaveCriticalSection(&this->syncRoot);
+	LEAVE_CS(this->syncRoot)
 
 	return S_OK;
 Error:
@@ -34,11 +34,11 @@ HRESULT CActiveRequestPool::Remove(CNodeHttpStoredContext* context)
 
 	CheckNull(context);
 
-	EnterCriticalSection(&this->syncRoot);
+	ENTER_CS(this->syncRoot)
 
 	this->requests.remove(context);
 
-	LeaveCriticalSection(&this->syncRoot);
+	LEAVE_CS(this->syncRoot)
 
 	return S_OK;
 Error:

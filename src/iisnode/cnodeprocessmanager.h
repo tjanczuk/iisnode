@@ -15,8 +15,10 @@ private:
 	DWORD currentProcess;
 	CRITICAL_SECTION syncRoot;
 
+	HRESULT AddOneProcessCore(CNodeProcess** process);
 	HRESULT AddOneProcess(CNodeProcess** process);
 	BOOL TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context);
+	void TryDispatchOneRequestImpl();
 
 public:
 
@@ -26,7 +28,7 @@ public:
 	CNodeApplication* GetApplication();
 	HRESULT Initialize();
 
-	HRESULT TryDispatchOneRequest();
+	static void TryDispatchOneRequest(void* data);
 };
 
 #endif

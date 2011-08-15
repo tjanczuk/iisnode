@@ -21,6 +21,7 @@ private:
 	LONGLONG responseContentTransmitted;
 	LONGLONG responseContentLength;
 	HRESULT result;
+	REQUEST_NOTIFICATION_STATUS requestNotificationStatus;
 
 public:
 
@@ -44,6 +45,8 @@ public:
 	LONGLONG GetResponseContentTransmitted();
 	LONGLONG GetResponseContentLength();
 	HRESULT GetHresult();
+	REQUEST_NOTIFICATION_STATUS GetRequestNotificationStatus();
+	BOOL GetSynchronous();
 
 	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 	void SetNodeProcess(CNodeProcess* process);
@@ -56,6 +59,8 @@ public:
 	void SetResponseContentTransmitted(LONGLONG length);
 	void SetResponseContentLength(LONGLONG length);
 	void SetHresult(HRESULT result);
+	void SetRequestNotificationStatus(REQUEST_NOTIFICATION_STATUS status);
+	void SetSynchronous(BOOL synchronous);
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

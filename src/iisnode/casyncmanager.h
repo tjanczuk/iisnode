@@ -16,8 +16,10 @@ typedef struct {
 	void* data;
 	HANDLE timer;
 	LARGE_INTEGER dueTime;
-	BOOL asynchronous;
+	BOOL synchronous; // TRUE means we are executing on a thread provided by IIS
 } ASYNC_CONTEXT;
+
+typedef void (*ContinuationCallback)(void* data);
 
 class CAsyncManager
 {
@@ -39,6 +41,7 @@ public:
 	HRESULT AddAsyncCompletionHandle(HANDLE handle);
 	HRESULT Terminate();
 	HRESULT SetTimer(ASYNC_CONTEXT* context, LARGE_INTEGER* dueTime);
+	HRESULT PostContinuation(ContinuationCallback continuation, void* data);
 };
 
 #endif
