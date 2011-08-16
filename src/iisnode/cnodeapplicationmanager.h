@@ -18,6 +18,8 @@ private:
 	NodeApplicationEntry* applications;
 	CRITICAL_SECTION syncRoot;
 	CAsyncManager* asyncManager;
+	HANDLE jobObject;
+	BOOL breakAwayFromJobObject;
 
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
 	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, CNodeApplication** application);
@@ -31,6 +33,8 @@ public:
 	IHttpServer* GetHttpServer();
 	HTTP_MODULE_ID GetModuleId();
 	CAsyncManager* GetAsyncManager();
+	HANDLE GetJobObject();
+	BOOL GetBreakAwayFromJobObject();
 
 	HRESULT Initialize();
 	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider);

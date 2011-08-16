@@ -1,7 +1,8 @@
 #include "precomp.h"
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
-	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL)
+	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
+	breakAwayFromJobObject(FALSE)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -9,13 +10,70 @@ CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODUL
 HRESULT CNodeApplicationManager::Initialize()
 {
 	HRESULT hr;
+	BOOL isInJob, createJob;
+	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
 
 	ErrorIf(NULL != this->asyncManager, ERROR_INVALID_OPERATION);
 	ErrorIf(NULL == (this->asyncManager = new CAsyncManager()), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->asyncManager->Initialize());
 
+	// determine whether node processes should be created in a new job object
+	// or whether current job object is adequate; the goal is to kill node processes when
+	// the IIS worker process is killed while preserving current job limits, if any
+	
+	ErrorIf(!IsProcessInJob(GetCurrentProcess(), NULL, &isInJob), HRESULT_FROM_WIN32(GetLastError()));
+	if (!isInJob)
+	{
+		createJob = TRUE;
+	}
+	else
+	{
+		ErrorIf(!QueryInformationJobObject(NULL, JobObjectExtendedLimitInformation, &jobInfo, sizeof jobInfo, NULL), 
+			HRESULT_FROM_WIN32(GetLastError()));
+
+        if (jobInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK )
+        {
+            createJob = TRUE;
+        }
+        else if(jobInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE )
+        {
+            createJob = FALSE;
+        }
+        else if(jobInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK )
+        {
+            createJob = TRUE;
+			this->breakAwayFromJobObject = TRUE;
+        }
+        else
+        {
+            createJob = TRUE;
+        }
+	}
+
+	if (createJob)
+	{
+		ErrorIf(NULL == (this->jobObject = CreateJobObject(NULL, NULL)), HRESULT_FROM_WIN32(GetLastError()));
+		RtlZeroMemory(&jobInfo, sizeof jobInfo);
+		jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+		ErrorIf(!SetInformationJobObject(this->jobObject, JobObjectExtendedLimitInformation, &jobInfo, sizeof jobInfo), 
+			HRESULT_FROM_WIN32(GetLastError()));
+	}
+
 	return S_OK;
 Error:
+
+	if (NULL != this->asyncManager)
+	{
+		delete this->asyncManager;
+		this->asyncManager = NULL;
+	}
+
+	if (NULL != this->jobObject)
+	{
+		CloseHandle(this->jobObject);
+		this->jobObject = NULL;
+	}
+
 	return hr;
 }
 
@@ -33,6 +91,12 @@ CNodeApplicationManager::~CNodeApplicationManager()
 	{
 		delete this->asyncManager;
 		this->asyncManager = NULL;
+	}
+
+	if (NULL != this->jobObject)
+	{
+		CloseHandle(this->jobObject);
+		this->jobObject = NULL;
 	}
 
 	DeleteCriticalSection(&this->syncRoot);
@@ -138,4 +202,14 @@ CNodeApplication* CNodeApplicationManager::TryGetExistingNodeApplication(PCWSTR 
 	}
 
 	return application;
+}
+
+HANDLE CNodeApplicationManager::GetJobObject()
+{
+	return this->jobObject;
+}
+
+BOOL CNodeApplicationManager::GetBreakAwayFromJobObject()
+{
+	return this->breakAwayFromJobObject;
 }

@@ -32,6 +32,8 @@ HRESULT CNodeProcess::Initialize()
 	LPCH currentEnvironment = NULL;
 	LPCH newEnvironment = NULL;
 	DWORD environmentSize;
+	DWORD flags;
+	HANDLE job;
 
 	// generate the name for the named pipe to communicate with the node.js process
 	
@@ -76,7 +78,13 @@ HRESULT CNodeProcess::Initialize()
 	startupInfo.dwFlags = 0; //STARTF_USESTDHANDLES;
 	startupInfo.hStdError = startupInfo.hStdInput = startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 
-	// create the node.js process
+	// create the node.exe process
+
+	flags = DETACHED_PROCESS | CREATE_SUSPENDED;
+	if (this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetBreakAwayFromJobObject())
+	{
+		flags |= CREATE_BREAKAWAY_FROM_JOB;
+	}
 
 	RtlZeroMemory(&processInformation, sizeof processInformation);
 	ErrorIf(FALSE == CreateProcess(
@@ -85,16 +93,25 @@ HRESULT CNodeProcess::Initialize()
 			NULL,
 			NULL,
 			TRUE,
-			DETACHED_PROCESS | CREATE_SUSPENDED,
+			flags,
 			newEnvironment,
 			NULL,
 			&startupInfo,
 			&processInformation
 		), GetLastError());
 
-	ErrorIf((DWORD) -1 == ResumeThread(processInformation.hThread), GetLastError());
+	// join a job object if needed, then resume the process
 
+	job = this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetJobObject();
+	if (NULL != job)
+	{
+		ErrorIf(!AssignProcessToJobObject(job, processInformation.hProcess), HRESULT_FROM_WIN32(GetLastError()));
+	}
+
+	ErrorIf((DWORD) -1 == ResumeThread(processInformation.hThread), GetLastError());
 	ErrorIf(GetExitCodeProcess(processInformation.hProcess, &exitCode) && STILL_ACTIVE != exitCode, exitCode);
+
+	// clean up
 
 	delete [] newEnvironment;
 	newEnvironment = NULL;
