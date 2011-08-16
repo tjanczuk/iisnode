@@ -38,6 +38,13 @@ LPOVERLAPPED CNodeHttpStoredContext::GetOverlapped()
 	return &this->asyncContext.overlapped;
 }
 
+LPOVERLAPPED CNodeHttpStoredContext::InitializeOverlapped()
+{
+	RtlZeroMemory(&this->asyncContext.overlapped, sizeof(OVERLAPPED));
+
+	return &this->asyncContext.overlapped;
+}
+
 void CNodeHttpStoredContext::CleanupStoredContext()
 {
 	delete this;

@@ -130,11 +130,14 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 			{
 				((ContinuationCallback)entry.lpOverlapped)((void*)entry.dwNumberOfBytesTransferred);
 			}
-			else if (NULL != ctx && NULL != ctx->completionProcessor) // other IO completion - invoke custom processor
+			else if (NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) && NULL != ctx->completionProcessor) // other IO completion - invoke custom processor
 			{
 				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
 				ctx->synchronous = FALSE;
-				ctx->completionProcessor(error, entry.dwNumberOfBytesTransferred, (LPOVERLAPPED)ctx);
+				ctx->completionProcessor(
+					(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
+					entry.dwNumberOfBytesTransferred, 
+					(LPOVERLAPPED)ctx);
 			}
 		}
 	}

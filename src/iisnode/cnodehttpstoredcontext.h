@@ -61,6 +61,7 @@ public:
 	void SetHresult(HRESULT result);
 	void SetRequestNotificationStatus(REQUEST_NOTIFICATION_STATUS status);
 	void SetSynchronous(BOOL synchronous);
+	LPOVERLAPPED InitializeOverlapped();
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 
