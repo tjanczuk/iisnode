@@ -35,7 +35,7 @@ public:
 
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
 	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult);
-	static HRESULT SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL indicateCompletion);
+	static void SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult);
 
 };
 
