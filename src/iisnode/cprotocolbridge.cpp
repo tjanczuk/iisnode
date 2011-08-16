@@ -457,6 +457,7 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 	DWORD bytesSent;
+	BOOL completionExpected = FALSE;
 
 	CheckError(error);
 	ctx->SetResponseContentTransmitted(ctx->GetResponseContentTransmitted() + bytesTransfered);
@@ -468,12 +469,14 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 			// Flush chunked responses. Since we rely on a named pipe timeout to detect closing of a connection by the 
 			// server, we don't want to delay a chunked response until such timeout. 
 
-			// TODO, tjanczuk, consider calling Flush asynchronously
-			ctx->GetHttpContext()->GetResponse()->Flush(FALSE, FALSE, &bytesSent);
+			ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
+			ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
 		}
 
-		ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
-		CProtocolBridge::ContinueReadResponse(ctx);
+		if (!completionExpected)
+		{
+			CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped());
+		}
 	}
 	else
 	{
@@ -488,6 +491,23 @@ Error:
 	return;
 }
 
+void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	HRESULT hr;
+
+	CheckError(error);
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+	CProtocolBridge::ContinueReadResponse(ctx);
+
+	return;
+Error:
+
+	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	
+	return;
+}
+
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 {
 	DWORD bytesSent = 0;
@@ -495,8 +515,6 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 	CloseHandle(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
 
-	// TODO, tjanczuk, consider calling Flush asynchronously
-	context->GetHttpContext()->GetResponse()->Flush(FALSE, FALSE, &bytesSent);
 	context->GetNodeProcess()->OnRequestCompleted(context);
 	context->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
 	if (!context->GetSynchronous())
