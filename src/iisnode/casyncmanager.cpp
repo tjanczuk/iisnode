@@ -114,10 +114,21 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 		{
 			error = GetLastError();
 		}
-
+		
 		if (removed == 1)
 		{
-			if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
+			if (0L == entry.lpCompletionKey 
+				&& NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) 
+				&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
+			{
+				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
+				ctx->synchronous = FALSE;
+				ctx->completionProcessor(
+					(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
+					entry.dwNumberOfBytesTransferred, 
+					(LPOVERLAPPED)ctx);
+			}
+			else if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
 			{
 				break;
 			}
@@ -129,15 +140,6 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 			else if (-3L == entry.lpCompletionKey) // continuation initiated form PostContinuation
 			{
 				((ContinuationCallback)entry.lpOverlapped)((void*)entry.dwNumberOfBytesTransferred);
-			}
-			else if (NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) && NULL != ctx->completionProcessor) // other IO completion - invoke custom processor
-			{
-				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-				ctx->synchronous = FALSE;
-				ctx->completionProcessor(
-					(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
-					entry.dwNumberOfBytesTransferred, 
-					(LPOVERLAPPED)ctx);
 			}
 		}
 	}

@@ -1,8 +1,5 @@
 #include "precomp.h"
 
-// TODO, tjanczuk, add detection of premature process termination
-// TODO, tjanczuk, add support for job objects
-
 CNodeProcessManager::CNodeProcessManager(CNodeApplication* application)
 	: application(application), processes(NULL), processCount(0), currentProcess(0)
 {
@@ -37,7 +34,6 @@ HRESULT CNodeProcessManager::Initialize()
 
 	ErrorIf(NULL == (this->processes = new CNodeProcess* [this->maxProcessCount]), ERROR_NOT_ENOUGH_MEMORY);
 	RtlZeroMemory(this->processes, this->maxProcessCount * sizeof(CNodeProcess*));
-	CheckError(this->AddOneProcess(NULL));
 
 	return S_OK;
 Error:
@@ -143,6 +139,11 @@ Error:
 
 BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context)
 {
+	if (this->processCount == 0)
+	{
+		return false;
+	}
+
 	DWORD i = this->currentProcess;
 
 	do {
@@ -157,4 +158,37 @@ BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContex
 	} while (i != this->currentProcess);
 
 	return false;
+}
+
+void CNodeProcessManager::RecycleProcess(CNodeProcess* process)
+{
+	// remove the process from the process pool
+
+	ENTER_CS(this->syncRoot)
+
+	int i;
+	for (i = 0; i < this->processCount; i++)
+	{
+		if (this->processes[i] == process)
+		{
+			break;
+		}
+	}
+
+	if (i == this->processCount)
+	{
+		// process not found in the active process list
+
+		return;
+	}
+
+	if (i < (this->processCount - 1))
+	{
+		memcpy(this->processes + i, this->processes + i + 1, sizeof (CNodeProcess*) * (this->processCount - i - 1));
+	}
+
+	this->processCount--;
+	this->currentProcess = 0;
+
+	LEAVE_CS(this->syncRoot)
 }

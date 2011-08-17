@@ -11,6 +11,7 @@ private:
 	
 	CNodeHttpStoredContextList requests;
 	CRITICAL_SECTION syncRoot;
+	HANDLE drainHandle;
 
 public:
 
@@ -19,6 +20,7 @@ public:
 
 	HRESULT Add(CNodeHttpStoredContext* context);
 	HRESULT Remove(CNodeHttpStoredContext* context);
+	void SignalWhenDrained(HANDLE drainHandle);
 };
 
 #endif

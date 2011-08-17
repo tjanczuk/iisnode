@@ -29,6 +29,8 @@ public:
 	HRESULT Initialize();
 
 	static void TryDispatchOneRequest(void* data);
+
+	void RecycleProcess(CNodeProcess* process);
 };
 
 #endif

@@ -69,3 +69,8 @@ DWORD CModuleConfiguration::GetMaximumRequestBufferSize()
 {
 	return 64 * 1024;
 }
+
+DWORD CModuleConfiguration::GetNodeProcessWarmupTimeout()
+{
+	return 10 * 1000; // this is in milliseconds
+}

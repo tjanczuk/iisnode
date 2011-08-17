@@ -1,15 +1,6 @@
 #ifndef __CASYNCMANAGER_H__
 #define __CASYNCMANAGER_H__
 
-/*
-* All async requests against Win32 APIs must use the ASYNC_CONTEXT structure as the OVERLAPPED parameter of the async call
-* in order to use AsyncManager. 
-* On async completion, the ASYNC_CONTEXT::completionProcessor will be called with following parameters:
-* - context: the ASYNC_CONTEXT structure containing the OVERLAPPED property that caused the completion,
-* - result: ERROR_SUCCESS when GetQueuedCompletionStatus returns true, or GetLastError() value otherwise,
-* - bytesRead: as reported from GetQueuedCompletionStatus.
-*/
-
 typedef struct {
 	OVERLAPPED overlapped; // this member must be first in the struct
 	LPOVERLAPPED_COMPLETION_ROUTINE completionProcessor;	

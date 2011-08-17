@@ -1,6 +1,7 @@
 #include "precomp.h"
 
 CActiveRequestPool::CActiveRequestPool()
+	: drainHandle(NULL)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -31,6 +32,7 @@ Error:
 HRESULT CActiveRequestPool::Remove(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
+	BOOL signal = FALSE;
 
 	CheckNull(context);
 
@@ -38,9 +40,35 @@ HRESULT CActiveRequestPool::Remove(CNodeHttpStoredContext* context)
 
 	this->requests.remove(context);
 
+	if (NULL != this->drainHandle && this->requests.empty())
+	{
+		signal = TRUE;
+	}
+
 	LEAVE_CS(this->syncRoot)
+
+	if (signal)
+	{
+		SetEvent(this->drainHandle);
+	}
 
 	return S_OK;
 Error:
 	return hr;
+}
+
+void CActiveRequestPool::SignalWhenDrained(HANDLE drainHandle)
+{
+	ENTER_CS(this->syncRoot)
+
+	if (this->requests.empty())
+	{
+		SetEvent(drainHandle);
+	}
+	else
+	{
+		this->drainHandle = drainHandle;
+	}
+
+	LEAVE_CS(this->syncRoot)
 }

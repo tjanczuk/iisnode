@@ -20,6 +20,7 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 
 	context->SetHresult(hresult);
 	context->SetRequestNotificationStatus(RQ_NOTIFICATION_FINISH_REQUEST);
+	context->GetNodeProcess()->OnRequestCompleted(context);
 
 	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);
 
@@ -495,9 +496,9 @@ Error:
 void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
 	HRESULT hr;
-
-	CheckError(error);
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	CheckError(error);	
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ContinueReadResponse(ctx);
 

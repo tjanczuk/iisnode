@@ -13,7 +13,12 @@ private:
 	CActiveRequestPool activeRequestPool;
 	TCHAR namedPipe[256];
 	HANDLE process;
+	HANDLE processWatcher;
 	DWORD maxConcurrentRequestsPerProcess;
+	BOOL isClosing;
+
+	static unsigned int WINAPI ProcessTerminationWatcher(void* arg);
+	void OnProcessExited();
 
 public:
 
@@ -24,7 +29,7 @@ public:
 	CNodeProcessManager* GetProcessManager();
 	LPCTSTR GetNamedPipeName();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
-	void OnRequestCompleted(CNodeHttpStoredContext* context);
+	void OnRequestCompleted(CNodeHttpStoredContext* context);	
 };
 
 #endif

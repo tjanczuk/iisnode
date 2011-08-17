@@ -1,7 +1,7 @@
 #include "precomp.h"
 
 CNodeProcess::CNodeProcess(CNodeProcessManager* processManager)
-	: processManager(processManager), process(NULL)
+	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	this->maxConcurrentRequestsPerProcess = CModuleConfiguration::GetMaxConcurrentRequestsPerProcess();
@@ -9,11 +9,19 @@ CNodeProcess::CNodeProcess(CNodeProcessManager* processManager)
 
 CNodeProcess::~CNodeProcess()
 {
+	this->isClosing = TRUE;
+
 	if (NULL != this->process)
 	{
 		TerminateProcess(this->process, 2);
 		CloseHandle(this->process);
 		this->process = NULL;
+	}
+
+	if (NULL != this->processWatcher)
+	{
+		CloseHandle(this->processWatcher);
+		this->processWatcher = NULL;
 	}
 }
 
@@ -78,6 +86,17 @@ HRESULT CNodeProcess::Initialize()
 	startupInfo.dwFlags = 0; //STARTF_USESTDHANDLES;
 	startupInfo.hStdError = startupInfo.hStdInput = startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 
+	// create process watcher thread in a suspended state
+
+	ErrorIf(NULL == (this->processWatcher = (HANDLE)_beginthreadex(
+		NULL, 
+		4096, 
+		CNodeProcess::ProcessTerminationWatcher, 
+		this, 
+		CREATE_SUSPENDED, 
+		NULL)), 
+		ERROR_NOT_ENOUGH_MEMORY);
+
 	// create the node.exe process
 
 	flags = DETACHED_PROCESS | CREATE_SUSPENDED;
@@ -110,6 +129,16 @@ HRESULT CNodeProcess::Initialize()
 
 	ErrorIf((DWORD) -1 == ResumeThread(processInformation.hThread), GetLastError());
 	ErrorIf(GetExitCodeProcess(processInformation.hProcess, &exitCode) && STILL_ACTIVE != exitCode, exitCode);
+	this->process = processInformation.hProcess;
+
+	// start process watcher thread to get notified of premature node process termination in CNodeProcess::OnProcessExited		
+
+	ResumeThread(this->processWatcher);
+
+	// grace period for the new node process to create the named pipe to listen for requests
+	// this is meant to reduce the latency of the activating message by avoiding named pipe connection retries
+
+	WaitNamedPipe(this->namedPipe, CModuleConfiguration::GetNodeProcessWarmupTimeout());	
 
 	// clean up
 
@@ -118,9 +147,7 @@ HRESULT CNodeProcess::Initialize()
 	delete [] fullCommandLine;
 	fullCommandLine = NULL;
 	CloseHandle(processInformation.hThread);
-	processInformation.hThread = NULL;
-
-	this->process = processInformation.hProcess;
+	processInformation.hThread = NULL;	
 
 	return S_OK;
 Error:
@@ -162,7 +189,28 @@ Error:
 		newEnvironment = NULL;
 	}
 
+	if (NULL != this->processWatcher)
+	{
+		ResumeThread(this->processWatcher);
+		WaitForSingleObject(this->processWatcher, INFINITE);
+		CloseHandle(this->processWatcher);
+		this->processWatcher = NULL;
+	}
+
 	return hr;
+}
+
+unsigned int WINAPI CNodeProcess::ProcessTerminationWatcher(void* arg)
+{
+	CNodeProcess* process = (CNodeProcess*)arg;
+
+	if (NULL != process->process)
+	{
+		WaitForSingleObject(process->process, INFINITE);
+		process->OnProcessExited();
+	}
+
+	return 0;
 }
 
 CNodeProcessManager* CNodeProcess::GetProcessManager()
@@ -191,6 +239,37 @@ LPCTSTR CNodeProcess::GetNamedPipeName()
 
 void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
 {
+	// capture asyncManager and processManager before call to Remove, since Remove may cause a race condition 
+	// with 'delete this' in CNodeProcess::OnProcessExited which executes on a different thread
+
+	CAsyncManager* asyncManager = this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetAsyncManager();
+	CNodeProcessManager* processManager = this->GetProcessManager();
+	
 	this->activeRequestPool.Remove(context);
-	this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this->GetProcessManager());
+	
+	asyncManager->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, processManager);
+}
+
+void CNodeProcess::OnProcessExited()
+{
+	if (!this->isClosing)
+	{
+		this->isClosing = TRUE;
+
+		this->GetProcessManager()->RecycleProcess(this);
+
+		// at this point no new requests will be dispatched to this process;
+		// wait for active requests to gracefully drain, then destruct itself
+		// this should be reasonably prompt since all named pipes are broken
+		
+		HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
+		if (NULL != drainHandle)
+		{
+			this->activeRequestPool.SignalWhenDrained(drainHandle);
+			WaitForSingleObject(drainHandle, INFINITE);
+			CloseHandle(drainHandle);
+		}
+
+		delete this;
+	}
 }
