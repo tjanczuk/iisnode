@@ -1,7 +1,7 @@
 #include "precomp.h"
 
 CNodeProcess::CNodeProcess(CNodeProcessManager* processManager)
-	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE)
+	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(0)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	this->maxConcurrentRequestsPerProcess = CModuleConfiguration::GetMaxConcurrentRequestsPerProcess();
@@ -9,7 +9,7 @@ CNodeProcess::CNodeProcess(CNodeProcessManager* processManager)
 
 CNodeProcess::~CNodeProcess()
 {
-	this->isClosing = TRUE;
+	this->isClosing = 1;
 
 	if (NULL != this->process)
 	{
@@ -20,6 +20,7 @@ CNodeProcess::~CNodeProcess()
 
 	if (NULL != this->processWatcher)
 	{
+		WaitForSingleObject(this->processWatcher, INFINITE);
 		CloseHandle(this->processWatcher);
 		this->processWatcher = NULL;
 	}
@@ -203,11 +204,16 @@ Error:
 unsigned int WINAPI CNodeProcess::ProcessTerminationWatcher(void* arg)
 {
 	CNodeProcess* process = (CNodeProcess*)arg;
+	DWORD exitCode;
 
-	if (NULL != process->process)
+	while (process->process)
 	{
 		WaitForSingleObject(process->process, INFINITE);
-		process->OnProcessExited();
+		if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
+		{
+			process->OnProcessExited();
+			return exitCode;
+		}
 	}
 
 	return 0;
@@ -252,10 +258,17 @@ void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
 
 void CNodeProcess::OnProcessExited()
 {
-	if (!this->isClosing)
-	{
-		this->isClosing = TRUE;
+	CloseHandle(this->process);
+	this->process = NULL;
+	CloseHandle(this->processWatcher);
+	this->processWatcher = NULL;
 
+	// OnProcessExited should be mutually exclusive with CreateDrainHandle
+	// Both will eventually recycle the process, and only one of them may execute in the 
+	// lifetime of CNodeProcess.
+
+	if (0 == InterlockedExchange(&this->isClosing, 1))
+	{
 		this->GetProcessManager()->RecycleProcess(this);
 
 		// at this point no new requests will be dispatched to this process;
@@ -271,5 +284,24 @@ void CNodeProcess::OnProcessExited()
 		}
 
 		delete this;
+	}
+}
+
+HANDLE CNodeProcess::CreateDrainHandle()
+{
+	// OnProcessExited should be mutually exclusive with CreateDrainHandle
+	// Both will eventually recycle the process, and only one of them may execute in the 
+	// lifetime of CNodeProcess.
+
+	if (0 == InterlockedExchange(&this->isClosing, 1))
+	{
+		HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
+		this->activeRequestPool.SignalWhenDrained(drainHandle);
+
+		return drainHandle;
+	}
+	else
+	{
+		return NULL;
 	}
 }

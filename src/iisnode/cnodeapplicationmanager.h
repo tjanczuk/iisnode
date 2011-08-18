@@ -3,6 +3,7 @@
 
 class CNodeApplication;
 class CAsyncManager;
+class CFileWatcher;
 
 class CNodeApplicationManager
 {
@@ -20,6 +21,7 @@ private:
 	CAsyncManager* asyncManager;
 	HANDLE jobObject;
 	BOOL breakAwayFromJobObject;
+	CFileWatcher* fileWatcher;
 
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
 	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, CNodeApplication** application);

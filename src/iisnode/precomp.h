@@ -30,6 +30,7 @@
 #include "cpendingrequestqueue.h"
 #include "cprotocolbridge.h"
 #include "cnodehttpstoredcontext.h"
+#include "cfilewatcher.h"
 
 #endif
 

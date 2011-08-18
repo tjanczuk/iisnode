@@ -3,6 +3,7 @@
 
 class CPendingRequestQueue;
 class CNodeProcessManager;
+class CFileWatcher;
 
 class CNodeApplication
 {
@@ -14,13 +15,14 @@ private:
 	CNodeProcessManager* processManager;
 
 	void Cleanup();
+	static void OnScriptModified(PCWSTR fileName, void* data);
 
 public:
 
 	CNodeApplication(CNodeApplicationManager* applicationManager);	
 	~CNodeApplication();
 
-	HRESULT Initialize(PCWSTR scriptName);
+	HRESULT Initialize(PCWSTR scriptName, CFileWatcher* fileWatcher);
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
 	CPendingRequestQueue* GetPendingRequestQueue();

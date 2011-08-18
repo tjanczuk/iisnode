@@ -74,3 +74,13 @@ DWORD CModuleConfiguration::GetNodeProcessWarmupTimeout()
 {
 	return 10 * 1000; // this is in milliseconds
 }
+
+DWORD CModuleConfiguration::GetUNCFileChangesPollingInterval()
+{
+	return 5 * 1000;
+}
+
+DWORD CModuleConfiguration::GetGracefulShutdownTimeout()
+{
+	return 60 * 1000;
+}

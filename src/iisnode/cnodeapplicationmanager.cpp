@@ -2,7 +2,7 @@
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
 	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
-	breakAwayFromJobObject(FALSE)
+	breakAwayFromJobObject(FALSE), fileWatcher(NULL)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -16,6 +16,8 @@ HRESULT CNodeApplicationManager::Initialize()
 	ErrorIf(NULL != this->asyncManager, ERROR_INVALID_OPERATION);
 	ErrorIf(NULL == (this->asyncManager = new CAsyncManager()), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->asyncManager->Initialize());
+	ErrorIf(NULL == (this->fileWatcher = new CFileWatcher()), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->fileWatcher->Initialize());
 
 	// determine whether node processes should be created in a new job object
 	// or whether current job object is adequate; the goal is to kill node processes when
@@ -74,6 +76,12 @@ Error:
 		this->jobObject = NULL;
 	}
 
+	if (NULL != this->fileWatcher)
+	{
+		delete this->fileWatcher;
+		this->fileWatcher = NULL;
+	}
+
 	return hr;
 }
 
@@ -97,6 +105,12 @@ CNodeApplicationManager::~CNodeApplicationManager()
 	{
 		CloseHandle(this->jobObject);
 		this->jobObject = NULL;
+	}
+
+	if (NULL != this->fileWatcher)
+	{
+		delete this->fileWatcher;
+		this->fileWatcher = NULL;
 	}
 
 	DeleteCriticalSection(&this->syncRoot);
@@ -139,7 +153,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalP
 	{
 		ErrorIf(NULL == (applicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this)), ERROR_NOT_ENOUGH_MEMORY);
-		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath));
+		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, this->fileWatcher));
 
 		*application = applicationEntry->nodeApplication;
 		applicationEntry->next = this->applications;

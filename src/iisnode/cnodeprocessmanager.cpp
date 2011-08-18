@@ -192,3 +192,96 @@ void CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 
 	LEAVE_CS(this->syncRoot)
 }
+
+void CNodeProcessManager::RecycleAllProcesses()
+{
+	HRESULT hr;
+	ProcessRecycleArgs* args;
+	HANDLE recycler;
+
+	ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
+	RtlZeroMemory(args, sizeof ProcessRecycleArgs);
+
+	ENTER_CS(this->syncRoot)
+
+	ErrorIf(0 == this->processCount, S_OK); // bail out if there is no process to recycle
+
+	args->count = this->processCount;
+	ErrorIf(NULL == (args->processes = new CNodeProcess* [args->count]), ERROR_NOT_ENOUGH_MEMORY);
+	memcpy(args->processes, this->processes, args->count * sizeof (CNodeProcess*));
+	this->processCount = 0;
+	this->currentProcess = 0;
+
+	LEAVE_CS(this->syncRoot)
+
+	// perform actual recycling on a diffrent thread to free up the file watcher thread
+
+	ErrorIf((HANDLE)-1L == (recycler = (HANDLE) _beginthreadex(NULL, 0, CNodeProcessManager::GracefulShutdown, args, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
+	CloseHandle(recycler);
+
+	return;
+Error:
+
+	if (NULL != args)
+	{
+		if (NULL != args->processes)
+		{			
+			// fallback to ungraceful shutdown
+			for (int i = 0; i < args->count; i++)
+			{
+				delete args->processes[i];
+			}
+
+			delete [] args->processes;
+		}
+
+		delete args;
+	}
+
+	// if lack of memory is preventing us from initiating shutdown, we will just not provide auto update
+
+	return;
+}
+
+unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
+{
+	ProcessRecycleArgs* args = (ProcessRecycleArgs*)arg;
+	HRESULT hr;
+	HANDLE* drainHandles;
+	DWORD drainHandleCount = 0;
+
+	ErrorIf(NULL == (drainHandles = new HANDLE[args->count]), ERROR_NOT_ENOUGH_MEMORY);
+	RtlZeroMemory(drainHandles, args->count * sizeof HANDLE);
+	for (int i = 0; i < args->count; i++)
+	{
+		drainHandles[drainHandleCount] = args->processes[i]->CreateDrainHandle();
+		if (INVALID_HANDLE_VALUE != drainHandles[drainHandleCount])
+		{
+			drainHandleCount++;
+		}
+	}
+	
+	DWORD timeout = CModuleConfiguration::GetGracefulShutdownTimeout();
+	if (timeout > 0)
+	{
+		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, timeout);
+	}
+
+	for (int i = 0; i < drainHandleCount; i++)
+	{
+		CloseHandle(drainHandles[i]);
+	}
+	delete[] drainHandles;
+
+	for (int i = 0; i < args->count; i++)
+	{
+		delete args->processes[i];
+	}
+	delete args->processes;
+
+	delete args;
+
+	return S_OK;
+Error:
+	return hr;
+}

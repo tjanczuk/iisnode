@@ -8,6 +8,11 @@ class CNodeProcessManager
 {
 private:
 
+	typedef struct {
+		CNodeProcess** processes;
+		DWORD count;
+	} ProcessRecycleArgs;
+
 	CNodeApplication* application;
 	CNodeProcess** processes;
 	DWORD processCount;
@@ -19,6 +24,7 @@ private:
 	HRESULT AddOneProcess(CNodeProcess** process);
 	BOOL TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context);
 	void TryDispatchOneRequestImpl();
+	static unsigned int WINAPI GracefulShutdown(void* arg);
 
 public:
 
@@ -31,6 +37,7 @@ public:
 	static void TryDispatchOneRequest(void* data);
 
 	void RecycleProcess(CNodeProcess* process);
+	void RecycleAllProcesses();
 };
 
 #endif

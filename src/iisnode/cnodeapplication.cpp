@@ -31,11 +31,12 @@ void CNodeApplication::Cleanup()
 	}
 }
 
-HRESULT CNodeApplication::Initialize(PCWSTR scriptName)
+HRESULT CNodeApplication::Initialize(PCWSTR scriptName, CFileWatcher* fileWatcher)
 {
 	HRESULT hr;
 
-	ErrorIf(NULL == scriptName, ERROR_INVALID_PARAMETER);
+	CheckNull(scriptName);
+	CheckNull(fileWatcher);
 
 	DWORD len = wcslen(scriptName) + 1;
 	ErrorIf(NULL == (this->scriptName = new WCHAR[len]), ERROR_NOT_ENOUGH_MEMORY);
@@ -45,6 +46,8 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName)
 	CheckError(this->processManager->Initialize());
 
 	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);
+
+	CheckError(fileWatcher->WatchFile(scriptName, CNodeApplication::OnScriptModified, this));
 
 	return S_OK;
 Error:
@@ -91,4 +94,9 @@ Error:
 	// nodeContext need not be freed here as it will be deallocated through IHttpStoredContext when the request is finished
 
 	return hr;
+}
+
+void CNodeApplication::OnScriptModified(PCWSTR fileName, void* data)
+{
+	((CNodeApplication*)data)->processManager->RecycleAllProcesses();
 }

@@ -15,7 +15,7 @@ private:
 	HANDLE process;
 	HANDLE processWatcher;
 	DWORD maxConcurrentRequestsPerProcess;
-	BOOL isClosing;
+	unsigned int isClosing;
 
 	static unsigned int WINAPI ProcessTerminationWatcher(void* arg);
 	void OnProcessExited();
@@ -30,6 +30,7 @@ public:
 	LPCTSTR GetNamedPipeName();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
 	void OnRequestCompleted(CNodeHttpStoredContext* context);	
+	HANDLE CreateDrainHandle();
 };
 
 #endif

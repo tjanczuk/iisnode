@@ -24,6 +24,8 @@ public:
 	static DWORD GetInitialRequestBufferSize();
 	static DWORD GetMaximumRequestBufferSize();
 	static DWORD GetNodeProcessWarmupTimeout();
+	static DWORD GetUNCFileChangesPollingInterval();
+	static DWORD GetGracefulShutdownTimeout();
 };
 
 #endif
