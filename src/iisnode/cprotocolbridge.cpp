@@ -109,6 +109,13 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	HRESULT hr;
 	DWORD length;
 
+	// request the named pipe to be closed by the server after the response is sent
+	// since we are not reusing named pipe connections anyway, requesting the server 
+	// to close it after sending the response allows the module to avoid parsing chunked responses
+	// to detect end of response
+
+	CheckError(context->GetHttpContext()->GetRequest()->SetHeader("Connection", "close", 5, TRUE));
+
 	CheckError(CHttpProtocol::SerializeRequestHeaders(context->GetHttpContext(), context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
 	context->SetNextProcessor(CProtocolBridge::SendHttpRequestHeadersCompleted);
@@ -299,6 +306,7 @@ Error:
 		if (context->GetResponseContentLength() == -1)
 		{
 			// connection termination with chunked transfer encoding indicates end of response
+			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
 
 			CProtocolBridge::FinalizeResponse(context);
 		}
@@ -393,6 +401,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 		if (ctx->GetResponseContentLength() == -1)
 		{
 			// connection termination with chunked transfer encoding indicates end of response
+			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
 
 			CProtocolBridge::FinalizeResponse(ctx);
 		}
@@ -468,8 +477,8 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	{
 		if (ctx->GetResponseContentLength() == -1)
 		{
-			// Flush chunked responses. Since we rely on a named pipe timeout to detect closing of a connection by the 
-			// server, we don't want to delay a chunked response until such timeout. 
+			// Flush chunked responses. 
+			// TODO, tjanczuk, is flushing chunked responses requried
 
 			ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
 			ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
