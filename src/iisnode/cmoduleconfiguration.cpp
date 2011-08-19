@@ -42,7 +42,8 @@ DWORD CModuleConfiguration::GetMaxProcessCountPerApplication()
 
 LPCTSTR CModuleConfiguration::GetNodeProcessCommandLine()
 {
-	return _T("c:\\node\\node-vc\\debug\\node.exe");
+	//return _T("c:\\node\\node-vc\\debug\\node.exe");
+	return _T("c:\\node\\v0.5.3\\node.exe");
 }
 
 DWORD CModuleConfiguration::GetMaxConcurrentRequestsPerProcess()
@@ -68,11 +69,6 @@ DWORD CModuleConfiguration::GetInitialRequestBufferSize()
 DWORD CModuleConfiguration::GetMaximumRequestBufferSize()
 {
 	return 64 * 1024;
-}
-
-DWORD CModuleConfiguration::GetNodeProcessWarmupTimeout()
-{
-	return 10 * 1000; // this is in milliseconds
 }
 
 DWORD CModuleConfiguration::GetUNCFileChangesPollingInterval()

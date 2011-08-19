@@ -23,7 +23,6 @@ public:
 	static DWORD GetNamePipeConnectionRetryDelay(); // this is in 100 nanosecond units
 	static DWORD GetInitialRequestBufferSize();
 	static DWORD GetMaximumRequestBufferSize();
-	static DWORD GetNodeProcessWarmupTimeout();
 	static DWORD GetUNCFileChangesPollingInterval();
 	static DWORD GetGracefulShutdownTimeout();
 };

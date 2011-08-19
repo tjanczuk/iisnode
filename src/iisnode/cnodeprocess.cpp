@@ -136,11 +136,6 @@ HRESULT CNodeProcess::Initialize()
 
 	ResumeThread(this->processWatcher);
 
-	// grace period for the new node process to create the named pipe to listen for requests
-	// this is meant to reduce the latency of the activating message by avoiding named pipe connection retries
-
-	WaitNamedPipe(this->namedPipe, CModuleConfiguration::GetNodeProcessWarmupTimeout());	
-
 	// clean up
 
 	delete [] newEnvironment;
