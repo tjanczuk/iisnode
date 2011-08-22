@@ -20,6 +20,10 @@ Error:
 	{
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 503, _T("Service Unavailable"), hr);
 	}
+	else if (ERROR_FILE_NOT_FOUND == hr)
+	{
+		CProtocolBridge::SendEmptyResponse(pHttpContext, 404, _T("Not Found"), hr);
+	}
 	else
 	{
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 500, _T("Internal Server Error"), hr);

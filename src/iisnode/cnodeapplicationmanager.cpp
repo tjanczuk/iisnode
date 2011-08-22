@@ -189,6 +189,8 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 
 	if (NULL == (*application = this->TryGetExistingNodeApplication(physicalPath)))
 	{
+		ErrorIf(INVALID_FILE_ATTRIBUTES == GetFileAttributesW(physicalPath), GetLastError());
+
 		ENTER_CS(this->syncRoot)
 
 		CheckError(this->GetOrCreateNodeApplicationCore(physicalPath, application));
