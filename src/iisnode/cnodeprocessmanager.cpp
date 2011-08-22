@@ -52,7 +52,7 @@ HRESULT CNodeProcessManager::AddOneProcessCore(CNodeProcess** process)
 	HRESULT hr;
 
 	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
-	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this)), ERROR_NOT_ENOUGH_MEMORY);	
+	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this, this->processCount)), ERROR_NOT_ENOUGH_MEMORY);	
 	CheckError(this->processes[this->processCount]->Initialize());
 	if (NULL != process)
 	{

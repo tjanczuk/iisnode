@@ -25,6 +25,11 @@ public:
 	static DWORD GetMaximumRequestBufferSize();
 	static DWORD GetUNCFileChangesPollingInterval();
 	static DWORD GetGracefulShutdownTimeout();
+	static LPWSTR GetLogDirectoryNameSuffix();
+	static DWORD GetLogFileFlushInterval();
+	static DWORD GetMaxLogFileSizeInKB();
+	static BOOL GetLoggingEnabled();
+	static BOOL GetAppendToExistingLog();
 };
 
 #endif

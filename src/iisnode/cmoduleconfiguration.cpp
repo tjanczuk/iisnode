@@ -80,3 +80,28 @@ DWORD CModuleConfiguration::GetGracefulShutdownTimeout()
 {
 	return 60 * 1000;
 }
+
+LPWSTR CModuleConfiguration::GetLogDirectoryNameSuffix()
+{
+	return L"logs";
+}
+
+DWORD CModuleConfiguration::GetLogFileFlushInterval()
+{
+	return 5 * 1000; // ms
+}
+
+DWORD CModuleConfiguration::GetMaxLogFileSizeInKB()
+{
+	return 128;
+}
+
+BOOL CModuleConfiguration::GetLoggingEnabled()
+{
+	return TRUE;
+}
+
+BOOL CModuleConfiguration::GetAppendToExistingLog()
+{
+	return FALSE;
+}

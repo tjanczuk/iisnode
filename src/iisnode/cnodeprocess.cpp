@@ -1,9 +1,10 @@
 #include "precomp.h"
 
-CNodeProcess::CNodeProcess(CNodeProcessManager* processManager)
-	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(0)
+CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, DWORD ordinal)
+	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(0), ordinal(ordinal)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
+	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
 	this->maxConcurrentRequestsPerProcess = CModuleConfiguration::GetMaxConcurrentRequestsPerProcess();
 }
 
@@ -24,6 +25,19 @@ CNodeProcess::~CNodeProcess()
 		CloseHandle(this->processWatcher);
 		this->processWatcher = NULL;
 	}
+
+	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
+	{
+		CloseHandle(this->startupInfo.hStdOutput);		
+	}
+
+	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdError && this->startupInfo.hStdError != this->startupInfo.hStdOutput)
+	{
+		CloseHandle(this->startupInfo.hStdError);
+		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
+	}
+
+	this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 }
 
 HRESULT CNodeProcess::Initialize()
@@ -34,8 +48,7 @@ HRESULT CNodeProcess::Initialize()
 	LPTSTR fullCommandLine = NULL;
 	LPCTSTR coreCommandLine;
 	PCWSTR scriptName;
-	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW;
-	STARTUPINFO startupInfo;
+	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW;	
 	PROCESS_INFORMATION processInformation;
 	DWORD exitCode = S_OK;
 	LPCH currentEnvironment = NULL;
@@ -43,6 +56,9 @@ HRESULT CNodeProcess::Initialize()
 	DWORD environmentSize;
 	DWORD flags;
 	HANDLE job;
+
+	RtlZeroMemory(&processInformation, sizeof processInformation);
+	RtlZeroMemory(&startupInfo, sizeof startupInfo);
 
 	// generate the name for the named pipe to communicate with the node.js process
 	
@@ -82,17 +98,16 @@ HRESULT CNodeProcess::Initialize()
 
 	// create startup info for the node.js process
 
+	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
 	GetStartupInfo(&startupInfo);
-	// TODO, tjanczuk, capture stderr and stdout of the newly created node.js process
-	startupInfo.dwFlags = 0; //STARTF_USESTDHANDLES;
-	startupInfo.hStdError = startupInfo.hStdInput = startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+	CheckError(this->CreateStdHandles());
 
 	// create process watcher thread in a suspended state
 
 	ErrorIf(NULL == (this->processWatcher = (HANDLE)_beginthreadex(
 		NULL, 
 		4096, 
-		CNodeProcess::ProcessTerminationWatcher, 
+		CNodeProcess::ProcessWatcher, 
 		this, 
 		CREATE_SUSPENDED, 
 		NULL)), 
@@ -105,8 +120,7 @@ HRESULT CNodeProcess::Initialize()
 	{
 		flags |= CREATE_BREAKAWAY_FROM_JOB;
 	}
-
-	RtlZeroMemory(&processInformation, sizeof processInformation);
+	
 	ErrorIf(FALSE == CreateProcess(
 			NULL,
 			fullCommandLine,
@@ -193,18 +207,59 @@ Error:
 		this->processWatcher = NULL;
 	}
 
+	if (NULL != this->startupInfo.hStdOutput && INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
+	{
+		CloseHandle(this->startupInfo.hStdOutput);		
+	}
+
+	if (NULL != this->startupInfo.hStdError && INVALID_HANDLE_VALUE != this->startupInfo.hStdError && this->startupInfo.hStdError != this->startupInfo.hStdOutput)
+	{
+		CloseHandle(this->startupInfo.hStdError);
+		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
+	}
+
+	this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+
 	return hr;
 }
 
-unsigned int WINAPI CNodeProcess::ProcessTerminationWatcher(void* arg)
+void CNodeProcess::FlushStdHandles()
+{
+	LARGE_INTEGER fileSize;
+
+	// truncate the log file back to 0 if the max size is exceeded
+
+	if (GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
+	{
+		if (fileSize.QuadPart > ((LONGLONG)1024 * (LONGLONG)CModuleConfiguration::GetMaxLogFileSizeInKB()))
+		{
+			fileSize.QuadPart = 0;
+			if (SetFilePointerEx(this->startupInfo.hStdOutput, fileSize, NULL, FILE_BEGIN))
+			{
+				SetEndOfFile(this->startupInfo.hStdOutput);
+			}
+		}
+	}
+
+	// flush the file
+
+	FlushFileBuffers(this->startupInfo.hStdOutput);
+}
+
+unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 {
 	CNodeProcess* process = (CNodeProcess*)arg;
 	DWORD exitCode;
+	BOOL loggingEnabled = CModuleConfiguration::GetLoggingEnabled();
+	DWORD logFlushInterval = CModuleConfiguration::GetLogFileFlushInterval();
 
 	while (process->process)
 	{
-		WaitForSingleObject(process->process, INFINITE);
-		if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
+		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, loggingEnabled ? logFlushInterval : INFINITE))
+		{
+			process->FlushStdHandles();
+		}
+		else if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
 		{
 			process->OnProcessExited();
 			return exitCode;
@@ -299,4 +354,82 @@ HANDLE CNodeProcess::CreateDrainHandle()
 	{
 		return NULL;
 	}
+}
+
+HRESULT CNodeProcess::CreateStdHandles()
+{
+	this->startupInfo.hStdError = this->startupInfo.hStdInput = this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+	if (!CModuleConfiguration::GetLoggingEnabled())
+	{
+		this->startupInfo.dwFlags = 0;
+		return S_OK;
+	}
+	else
+	{
+		this->startupInfo.dwFlags = STARTF_USESTDHANDLES;
+	}
+
+	HRESULT hr;
+	PCWSTR scriptName;
+	LPWSTR logComponentName = CModuleConfiguration::GetLogDirectoryNameSuffix();
+	WCHAR* logName = NULL;
+	SECURITY_ATTRIBUTES security;
+	DWORD creationDisposition;
+
+	CheckNull(logComponentName);	
+
+	// allocate enough memory to store log file name of the form <scriptName>.<logComponentName>\<ordinalProcessNumber>.txt
+
+	scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
+	ErrorIf(NULL == (logName = new WCHAR[wcslen(scriptName) + 1 + wcslen(logComponentName) + 10 + 4 + 1]), ERROR_NOT_ENOUGH_MEMORY); 
+
+	// ensure a directory for storing the log file exists; the directory name is of the form <scriptName>.<logComponentName>
+
+	swprintf(logName, L"%s.%s", scriptName, logComponentName);
+	if (!CreateDirectoryW(logName, NULL))
+	{
+		hr = GetLastError();
+		ErrorIf(ERROR_ALREADY_EXISTS != hr, hr);
+	}
+
+	// create log file name
+
+	swprintf(logName, L"%s.%s\\%d.txt", scriptName, logComponentName, this->ordinal);
+
+	// stdout == stderr
+
+	RtlZeroMemory(&security, sizeof SECURITY_ATTRIBUTES);
+	security.bInheritHandle = TRUE;
+	security.nLength = sizeof SECURITY_ATTRIBUTES;
+	
+	creationDisposition = CModuleConfiguration::GetAppendToExistingLog() ? OPEN_ALWAYS : CREATE_ALWAYS;
+	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdError = this->startupInfo.hStdOutput = CreateFileW(
+		logName,
+		GENERIC_READ | /*GENERIC_WRITE |*/ FILE_APPEND_DATA,
+		FILE_SHARE_READ | FILE_SHARE_WRITE,
+		&security,
+		creationDisposition,
+		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
+		NULL)), 
+		GetLastError());
+
+	delete[] logName;
+	logName = NULL;
+
+	return S_OK;
+Error:
+
+	if (NULL != logName)
+	{
+		delete [] logName;
+		logName = NULL;
+	}
+
+	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
+	{
+		CloseHandle(this->startupInfo.hStdOutput);
+		this->startupInfo.hStdError = this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+	}
+
+	return hr;
 }

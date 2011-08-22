@@ -16,13 +16,17 @@ private:
 	HANDLE processWatcher;
 	DWORD maxConcurrentRequestsPerProcess;
 	unsigned int isClosing;
+	DWORD ordinal;
+	STARTUPINFO startupInfo;
 
-	static unsigned int WINAPI ProcessTerminationWatcher(void* arg);
+	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();
+	HRESULT CreateStdHandles();
+	void FlushStdHandles();	
 
 public:
 
-	CNodeProcess(CNodeProcessManager* processManager);
+	CNodeProcess(CNodeProcessManager* processManager, DWORD ordinal);
 	~CNodeProcess();
 
 	HRESULT Initialize();
