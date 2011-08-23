@@ -30,7 +30,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="maxPendingRequestsPerApplication" type="uint" allowInfinite="true" defaultValue="1024"/>
     <attribute name="asyncCompletionThreadCount" type="uint" defaultValue="4"/>
     <attribute name="maxProcessCountPerApplication" type="uint" defaultValue="4"/>
-    <attribute name="nodeProcessCommandLine" type="string" expanded="true" defaultValue="%systemdrive%\node\v0.5.3\node.exe"/>
+    <attribute name="nodeProcessCommandLine" type="string" expanded="true" defaultValue="%systemdrive%\node\node.exe"/>
     <attribute name="maxConcurrentRequestsPerProcess" type="uint" allowInfitnite="true" defaultValue="1024"/>
     <attribute name="maxNamedPipeConnectionRetry" type="uint" defaultValue="3"/>
     <attribute name="namedPipeConnectionRetryDelay" type="uint" defaultValue="2000"/>

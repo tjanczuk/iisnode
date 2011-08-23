@@ -222,6 +222,8 @@ CNodeApplication* CNodeApplicationManager::TryGetExistingNodeApplication(PCWSTR 
 			application = current->nodeApplication;
 			break;
 		}
+
+		current = current->next;
 	}
 
 	return application;
