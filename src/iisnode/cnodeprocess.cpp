@@ -26,18 +26,17 @@ CNodeProcess::~CNodeProcess()
 		this->processWatcher = NULL;
 	}
 
-	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
+	if (NULL != this->startupInfo.hStdOutput && INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
 	{
 		CloseHandle(this->startupInfo.hStdOutput);		
+		this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 	}
 
-	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdError && this->startupInfo.hStdError != this->startupInfo.hStdOutput)
+	if (NULL != this->startupInfo.hStdError && INVALID_HANDLE_VALUE != this->startupInfo.hStdError)
 	{
 		CloseHandle(this->startupInfo.hStdError);
 		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
-	}
-
-	this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+	}	
 }
 
 HRESULT CNodeProcess::Initialize(IHttpContext* context)
@@ -138,9 +137,38 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 			flags,
 			newEnvironment,
 			NULL,
-			&startupInfo,
+			&this->startupInfo,
 			&processInformation
 		), GetLastError());
+
+	// duplicate stdout and stderr handles to allow flushing without regard for whether the node process exited
+	// closing of the original handles will be taken care of by the newly started process
+
+	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput && NULL != this->startupInfo.hStdOutput)
+	{
+		ErrorIf(0 == DuplicateHandle(
+			GetCurrentProcess(), 
+			this->startupInfo.hStdOutput, 
+			GetCurrentProcess(), 
+			&this->startupInfo.hStdOutput, 
+			0, 
+			TRUE, 
+			DUPLICATE_SAME_ACCESS),
+			GetLastError());
+	}
+
+	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdError && NULL != this->startupInfo.hStdError)
+	{
+		ErrorIf(0 == DuplicateHandle(
+			GetCurrentProcess(), 
+			this->startupInfo.hStdError, 
+			GetCurrentProcess(), 
+			&this->startupInfo.hStdError, 
+			0, 
+			TRUE, 
+			DUPLICATE_SAME_ACCESS),
+			GetLastError());
+	}
 
 	// join a job object if needed, then resume the process
 
@@ -218,15 +246,14 @@ Error:
 	if (NULL != this->startupInfo.hStdOutput && INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
 	{
 		CloseHandle(this->startupInfo.hStdOutput);		
+		this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 	}
 
-	if (NULL != this->startupInfo.hStdError && INVALID_HANDLE_VALUE != this->startupInfo.hStdError && this->startupInfo.hStdError != this->startupInfo.hStdOutput)
+	if (NULL != this->startupInfo.hStdError && INVALID_HANDLE_VALUE != this->startupInfo.hStdError)
 	{
 		CloseHandle(this->startupInfo.hStdError);
 		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
-	}
-
-	this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+	}	
 
 	return hr;
 }
@@ -409,14 +436,24 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	security.nLength = sizeof SECURITY_ATTRIBUTES;
 	
 	creationDisposition = CModuleConfiguration::GetAppendToExistingLog(context) ? OPEN_ALWAYS : CREATE_ALWAYS;
-	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdError = this->startupInfo.hStdOutput = CreateFileW(
+	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
 		logName,
-		GENERIC_READ | /*GENERIC_WRITE |*/ FILE_APPEND_DATA,
+		GENERIC_READ | FILE_APPEND_DATA,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		&security,
 		creationDisposition,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
 		NULL)), 
+		GetLastError());
+
+	ErrorIf(0 == DuplicateHandle(
+		GetCurrentProcess(),
+		this->startupInfo.hStdOutput, 
+		GetCurrentProcess(),
+		&this->startupInfo.hStdError,
+		0,
+		TRUE,
+		DUPLICATE_SAME_ACCESS),
 		GetLastError());
 
 	delete[] logName;
@@ -434,7 +471,13 @@ Error:
 	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
 	{
 		CloseHandle(this->startupInfo.hStdOutput);
-		this->startupInfo.hStdError = this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+		this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+	}
+
+	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdError)
+	{
+		CloseHandle(this->startupInfo.hStdError);
+		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
 	}
 
 	return hr;
