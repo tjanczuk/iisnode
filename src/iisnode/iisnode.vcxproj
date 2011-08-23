@@ -91,6 +91,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\config\iisnode_schema.xml" />
+    <None Include="..\samples\configuration\hello.js" />
+    <None Include="..\samples\configuration\readme.txt" />
+    <None Include="..\samples\configuration\web.config" />
+    <None Include="..\samples\defaultdocument\index.js" />
+    <None Include="..\samples\defaultdocument\readme.txt" />
+    <None Include="..\samples\defaultdocument\web.config" />
+    <None Include="..\samples\helloworld\hello.js" />
+    <None Include="..\samples\helloworld\readme.txt" />
+    <None Include="..\samples\helloworld\web.config" />
+    <None Include="..\samples\logging\hello.js" />
+    <None Include="..\samples\logging\readme.txt" />
+    <None Include="..\samples\logging\web.config" />
     <None Include="iisnode.def" />
   </ItemGroup>
   <ItemGroup>

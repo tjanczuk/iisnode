@@ -16,6 +16,21 @@
     <Filter Include="Config">
       <UniqueIdentifier>{2b36376a-4b5a-424d-a0b0-6c8d3da4fb72}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Samples">
+      <UniqueIdentifier>{3618da7b-2bb0-4a0a-a4b4-2832b6311a4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Samples\helloworld">
+      <UniqueIdentifier>{48ac4939-8c79-4589-a6d3-666e7beb2dae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Samples\defaultdocument">
+      <UniqueIdentifier>{a03bb42f-f23f-4af6-93e8-998401231a7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Samples\logging">
+      <UniqueIdentifier>{43f3d8e0-aecd-4f50-8d4e-37998bb1e257}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Samples\configuration">
+      <UniqueIdentifier>{f07a5931-154f-4980-a9ed-245f530c1110}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -123,6 +138,42 @@
     </None>
     <None Include="..\config\iisnode_schema.xml">
       <Filter>Config</Filter>
+    </None>
+    <None Include="..\samples\helloworld\hello.js">
+      <Filter>Samples\helloworld</Filter>
+    </None>
+    <None Include="..\samples\helloworld\web.config">
+      <Filter>Samples\helloworld</Filter>
+    </None>
+    <None Include="..\samples\defaultdocument\index.js">
+      <Filter>Samples\defaultdocument</Filter>
+    </None>
+    <None Include="..\samples\defaultdocument\web.config">
+      <Filter>Samples\defaultdocument</Filter>
+    </None>
+    <None Include="..\samples\helloworld\readme.txt">
+      <Filter>Samples\helloworld</Filter>
+    </None>
+    <None Include="..\samples\defaultdocument\readme.txt">
+      <Filter>Samples\defaultdocument</Filter>
+    </None>
+    <None Include="..\samples\logging\hello.js">
+      <Filter>Samples\logging</Filter>
+    </None>
+    <None Include="..\samples\logging\readme.txt">
+      <Filter>Samples\logging</Filter>
+    </None>
+    <None Include="..\samples\logging\web.config">
+      <Filter>Samples\logging</Filter>
+    </None>
+    <None Include="..\samples\configuration\hello.js">
+      <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\samples\configuration\readme.txt">
+      <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\samples\configuration\web.config">
+      <Filter>Samples\configuration</Filter>
     </None>
   </ItemGroup>
 </Project>
