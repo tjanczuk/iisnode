@@ -1,7 +1,7 @@
 #include "precomp.h"
 
 CFileWatcher::CFileWatcher()
-	: completionPort(NULL), worker(NULL), directories(NULL)
+	: completionPort(NULL), worker(NULL), directories(NULL), uncFileSharePollingInterval(0)
 {
 }
 
@@ -38,11 +38,12 @@ CFileWatcher::~CFileWatcher()
 	}
 }
 
-HRESULT CFileWatcher::Initialize()
+HRESULT CFileWatcher::Initialize(IHttpContext* context)
 {
 	HRESULT hr;
 
 	ErrorIf(NULL == (this->completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1)), GetLastError());		
+	this->uncFileSharePollingInterval = CModuleConfiguration::GetUNCFileChangesPollingInterval(context);
 
 	return S_OK;
 Error:
@@ -239,7 +240,7 @@ unsigned int CFileWatcher::Worker(void* arg)
 	{
 		error = S_OK;
 		if (!GetQueuedCompletionStatus(
-			watcher->completionPort, &bytes, &key, &overlapped, CModuleConfiguration::GetUNCFileChangesPollingInterval()))
+			watcher->completionPort, &bytes, &key, &overlapped, watcher->uncFileSharePollingInterval))
 		{
 			error = GetLastError();
 		}

@@ -19,7 +19,7 @@ HRESULT CActiveRequestPool::Add(CNodeHttpStoredContext* context)
 
 	ENTER_CS(this->syncRoot)
 
-	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(), ERROR_NOT_ENOUGH_QUOTA);
+	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
 	this->requests.push_back(context);
 
 	LEAVE_CS(this->syncRoot)

@@ -28,7 +28,7 @@ public:
 	CAsyncManager();
 	~CAsyncManager();
 
-	HRESULT Initialize();
+	HRESULT Initialize(IHttpContext* context);
 	HRESULT AddAsyncCompletionHandle(HANDLE handle);
 	HRESULT Terminate();
 	HRESULT SetTimer(ASYNC_CONTEXT* context, LARGE_INTEGER* dueTime);

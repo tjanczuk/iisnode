@@ -90,6 +90,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\config\iisnode_schema.xml" />
     <None Include="iisnode.def" />
   </ItemGroup>
   <ItemGroup>

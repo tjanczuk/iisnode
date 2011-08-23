@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="Config">
+      <UniqueIdentifier>{2b36376a-4b5a-424d-a0b0-6c8d3da4fb72}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -117,6 +120,9 @@
   <ItemGroup>
     <None Include="iisnode.def">
       <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\config\iisnode_schema.xml">
+      <Filter>Config</Filter>
     </None>
   </ItemGroup>
 </Project>

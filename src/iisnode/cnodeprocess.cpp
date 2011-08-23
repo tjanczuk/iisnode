@@ -1,11 +1,11 @@
 #include "precomp.h"
 
-CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, DWORD ordinal)
+CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal)
 	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(0), ordinal(ordinal)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
-	this->maxConcurrentRequestsPerProcess = CModuleConfiguration::GetMaxConcurrentRequestsPerProcess();
+	this->maxConcurrentRequestsPerProcess = CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(context);
 }
 
 CNodeProcess::~CNodeProcess()
@@ -40,7 +40,7 @@ CNodeProcess::~CNodeProcess()
 	this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
 }
 
-HRESULT CNodeProcess::Initialize()
+HRESULT CNodeProcess::Initialize(IHttpContext* context)
 {
 	HRESULT hr;
 	UUID uuid;
@@ -60,6 +60,14 @@ HRESULT CNodeProcess::Initialize()
 	RtlZeroMemory(&processInformation, sizeof processInformation);
 	RtlZeroMemory(&startupInfo, sizeof startupInfo);
 
+	// configure logging
+
+	if (TRUE == (this->loggingEnabled = CModuleConfiguration::GetLoggingEnabled(context)))
+	{
+		this->logFlushInterval = CModuleConfiguration::GetLogFileFlushInterval(context);
+		this->maxLogSizeInBytes = (LONGLONG)CModuleConfiguration::GetMaxLogFileSizeInKB(context) * (LONGLONG)1024;
+	}
+
 	// generate the name for the named pipe to communicate with the node.js process
 	
 	ErrorIf(RPC_S_OK != UuidCreate(&uuid), ERROR_CAN_NOT_COMPLETE);
@@ -71,7 +79,7 @@ HRESULT CNodeProcess::Initialize()
 
 	// build the full command line for the node.js process
 
-	coreCommandLine = CModuleConfiguration::GetNodeProcessCommandLine();
+	coreCommandLine = CModuleConfiguration::GetNodeProcessCommandLine(context);
 	scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
 	coreCommandLineLength = _tcslen(coreCommandLine);
 	scriptNameLengthW = wcslen(scriptName) + 1;
@@ -100,7 +108,7 @@ HRESULT CNodeProcess::Initialize()
 
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
 	GetStartupInfo(&startupInfo);
-	CheckError(this->CreateStdHandles());
+	CheckError(this->CreateStdHandles(context));
 
 	// create process watcher thread in a suspended state
 
@@ -231,7 +239,7 @@ void CNodeProcess::FlushStdHandles()
 
 	if (GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
 	{
-		if (fileSize.QuadPart > ((LONGLONG)1024 * (LONGLONG)CModuleConfiguration::GetMaxLogFileSizeInKB()))
+		if (fileSize.QuadPart > this->maxLogSizeInBytes)
 		{
 			fileSize.QuadPart = 0;
 			if (SetFilePointerEx(this->startupInfo.hStdOutput, fileSize, NULL, FILE_BEGIN))
@@ -250,12 +258,10 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 {
 	CNodeProcess* process = (CNodeProcess*)arg;
 	DWORD exitCode;
-	BOOL loggingEnabled = CModuleConfiguration::GetLoggingEnabled();
-	DWORD logFlushInterval = CModuleConfiguration::GetLogFileFlushInterval();
 
 	while (process->process)
 	{
-		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, loggingEnabled ? logFlushInterval : INFINITE))
+		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE))
 		{
 			process->FlushStdHandles();
 		}
@@ -356,10 +362,10 @@ HANDLE CNodeProcess::CreateDrainHandle()
 	}
 }
 
-HRESULT CNodeProcess::CreateStdHandles()
+HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 {
 	this->startupInfo.hStdError = this->startupInfo.hStdInput = this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
-	if (!CModuleConfiguration::GetLoggingEnabled())
+	if (!this->loggingEnabled)
 	{
 		this->startupInfo.dwFlags = 0;
 		return S_OK;
@@ -371,7 +377,7 @@ HRESULT CNodeProcess::CreateStdHandles()
 
 	HRESULT hr;
 	PCWSTR scriptName;
-	LPWSTR logComponentName = CModuleConfiguration::GetLogDirectoryNameSuffix();
+	LPWSTR logComponentName = CModuleConfiguration::GetLogDirectoryNameSuffix(context);
 	WCHAR* logName = NULL;
 	SECURITY_ATTRIBUTES security;
 	DWORD creationDisposition;
@@ -402,7 +408,7 @@ HRESULT CNodeProcess::CreateStdHandles()
 	security.bInheritHandle = TRUE;
 	security.nLength = sizeof SECURITY_ATTRIBUTES;
 	
-	creationDisposition = CModuleConfiguration::GetAppendToExistingLog() ? OPEN_ALWAYS : CREATE_ALWAYS;
+	creationDisposition = CModuleConfiguration::GetAppendToExistingLog(context) ? OPEN_ALWAYS : CREATE_ALWAYS;
 	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdError = this->startupInfo.hStdOutput = CreateFileW(
 		logName,
 		GENERIC_READ | /*GENERIC_WRITE |*/ FILE_APPEND_DATA,

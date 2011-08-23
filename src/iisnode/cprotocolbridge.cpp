@@ -5,7 +5,7 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 	CAsyncManager* async = context->GetNodeApplication()->GetApplicationManager()->GetAsyncManager();
 	LARGE_INTEGER delay;
 	delay.QuadPart = dueTime;
-	delay.QuadPart *= -1;
+	delay.QuadPart *= -10000; // convert from ms to 100ns units
 
 	return async->SetTimer(context->GetAsyncContext(), &delay);
 }
@@ -84,7 +84,7 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 Error:
 
 	DWORD retry = ctx->GetConnectionRetryCount();
-	if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry())
+	if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry(ctx->GetHttpContext()))
 	{
 		if (hr == ERROR_PIPE_BUSY)
 		{
@@ -98,7 +98,7 @@ Error:
 	else 
 	{
 		ctx->SetConnectionRetryCount(retry + 1);
-		CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamePipeConnectionRetryDelay());
+		CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamedPipeConnectionRetryDelay(ctx->GetHttpContext()));
 	}
 
 	return;
@@ -258,7 +258,7 @@ HRESULT CProtocolBridge::EnsureBuffer(CNodeHttpStoredContext* context)
 			DWORD* bufferLength = context->GetBufferSizeRef();
 			void** buffer = context->GetBufferRef();
 
-			DWORD quota = CModuleConfiguration::GetMaximumRequestBufferSize();
+			DWORD quota = CModuleConfiguration::GetMaxRequestBufferSize(context->GetHttpContext());
 			ErrorIf(*bufferLength >= quota, ERROR_NOT_ENOUGH_QUOTA);
 
 			void* newBuffer;

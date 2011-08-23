@@ -28,6 +28,7 @@ private:
 	HANDLE worker;
 	HANDLE completionPort;
 	WatchedDirectory* directories;
+	DWORD uncFileSharePollingInterval;
 
 	static unsigned int WINAPI Worker(void* arg);
 	void ScanDirectory(WatchedDirectory* directory, BOOL unc);
@@ -37,7 +38,7 @@ public:
 	CFileWatcher();
 	~CFileWatcher();
 
-	HRESULT Initialize();
+	HRESULT Initialize(IHttpContext* context);
 	HRESULT WatchFile(PCWSTR fileName, FileModifiedCallback callback, void* data);
 };
 

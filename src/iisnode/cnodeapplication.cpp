@@ -31,7 +31,7 @@ void CNodeApplication::Cleanup()
 	}
 }
 
-HRESULT CNodeApplication::Initialize(PCWSTR scriptName, CFileWatcher* fileWatcher)
+HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context, CFileWatcher* fileWatcher)
 {
 	HRESULT hr;
 
@@ -42,7 +42,7 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, CFileWatcher* fileWatche
 	ErrorIf(NULL == (this->scriptName = new WCHAR[len]), ERROR_NOT_ENOUGH_MEMORY);
 	memcpy(this->scriptName, scriptName, sizeof(WCHAR) * len);
 
-	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this)), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this, context)), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->processManager->Initialize());
 
 	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);

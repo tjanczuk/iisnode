@@ -2,22 +2,27 @@
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
 	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
-	breakAwayFromJobObject(FALSE), fileWatcher(NULL)
+	breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
 
-HRESULT CNodeApplicationManager::Initialize()
+HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 {
 	HRESULT hr;
 	BOOL isInJob, createJob;
 	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
 
+	if (this->initialized)
+	{
+		return S_OK;
+	}
+
 	ErrorIf(NULL != this->asyncManager, ERROR_INVALID_OPERATION);
 	ErrorIf(NULL == (this->asyncManager = new CAsyncManager()), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(this->asyncManager->Initialize());
+	CheckError(this->asyncManager->Initialize(context));
 	ErrorIf(NULL == (this->fileWatcher = new CFileWatcher()), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(this->fileWatcher->Initialize());
+	CheckError(this->fileWatcher->Initialize(context));
 
 	// determine whether node processes should be created in a new job object
 	// or whether current job object is adequate; the goal is to kill node processes when
@@ -60,6 +65,8 @@ HRESULT CNodeApplicationManager::Initialize()
 		ErrorIf(!SetInformationJobObject(this->jobObject, JobObjectExtendedLimitInformation, &jobInfo, sizeof jobInfo), 
 			HRESULT_FROM_WIN32(GetLastError()));
 	}
+
+	this->initialized = TRUE;
 
 	return S_OK;
 Error:
@@ -144,7 +151,7 @@ Error:
 	return hr;
 }
 
-HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalPath, CNodeApplication** application)
+HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalPath, IHttpContext* context, CNodeApplication** application)
 {
 	HRESULT hr;	
 	NodeApplicationEntry* applicationEntry = NULL;
@@ -153,7 +160,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalP
 	{
 		ErrorIf(NULL == (applicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this)), ERROR_NOT_ENOUGH_MEMORY);
-		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, this->fileWatcher));
+		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context, this->fileWatcher));
 
 		*application = applicationEntry->nodeApplication;
 		applicationEntry->next = this->applications;
@@ -193,7 +200,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 
 		ENTER_CS(this->syncRoot)
 
-		CheckError(this->GetOrCreateNodeApplicationCore(physicalPath, application));
+		CheckError(this->GetOrCreateNodeApplicationCore(physicalPath, context, application));
 
 		LEAVE_CS(this->syncRoot)
 	}

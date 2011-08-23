@@ -18,18 +18,21 @@ private:
 	unsigned int isClosing;
 	DWORD ordinal;
 	STARTUPINFO startupInfo;
+	BOOL loggingEnabled;
+	DWORD logFlushInterval;
+	LONGLONG maxLogSizeInBytes;
 
 	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();
-	HRESULT CreateStdHandles();
+	HRESULT CreateStdHandles(IHttpContext* context);
 	void FlushStdHandles();	
 
 public:
 
-	CNodeProcess(CNodeProcessManager* processManager, DWORD ordinal);
+	CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal);
 	~CNodeProcess();
 
-	HRESULT Initialize();
+	HRESULT Initialize(IHttpContext* context);
 	CNodeProcessManager* GetProcessManager();
 	LPCTSTR GetNamedPipeName();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);

@@ -11,6 +11,7 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 {
 	HRESULT hr;
 
+	CheckError(this->applicationManager->Initialize(pHttpContext));
 	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider));
 
 	return RQ_NOTIFICATION_PENDING;

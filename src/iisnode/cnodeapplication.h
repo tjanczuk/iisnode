@@ -22,7 +22,7 @@ public:
 	CNodeApplication(CNodeApplicationManager* applicationManager);	
 	~CNodeApplication();
 
-	HRESULT Initialize(PCWSTR scriptName, CFileWatcher* fileWatcher);
+	HRESULT Initialize(PCWSTR scriptName, IHttpContext* context, CFileWatcher* fileWatcher);
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
 	CPendingRequestQueue* GetPendingRequestQueue();

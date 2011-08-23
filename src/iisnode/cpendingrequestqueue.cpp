@@ -23,7 +23,7 @@ HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
 
 	ENTER_CS(this->syncRoot)
 
-	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxPendingRequestsPerApplication(), ERROR_NOT_ENOUGH_QUOTA);
+	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxPendingRequestsPerApplication(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
 	this->requests.push(context);
 
 	LEAVE_CS(this->syncRoot)

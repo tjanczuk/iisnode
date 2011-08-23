@@ -1,9 +1,10 @@
 #include "precomp.h"
 
-CNodeProcessManager::CNodeProcessManager(CNodeApplication* application)
+CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpContext* context)
 	: application(application), processes(NULL), processCount(0), currentProcess(0)
 {
-	this->maxProcessCount = CModuleConfiguration::GetMaxProcessCountPerApplication();
+	this->maxProcessCount = CModuleConfiguration::GetMaxProcessCountPerApplication(context);
+	this->gracefulShutdownTimeout = CModuleConfiguration::GetGracefulShutdownTimeout(context);
 	InitializeCriticalSection(&this->syncRoot);
 }
 
@@ -47,13 +48,13 @@ Error:
 	return hr;
 }
 
-HRESULT CNodeProcessManager::AddOneProcessCore(CNodeProcess** process)
+HRESULT CNodeProcessManager::AddOneProcessCore(CNodeProcess** process, IHttpContext* context)
 {
 	HRESULT hr;
 
 	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
-	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this, this->processCount)), ERROR_NOT_ENOUGH_MEMORY);	
-	CheckError(this->processes[this->processCount]->Initialize());
+	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this, context, this->processCount)), ERROR_NOT_ENOUGH_MEMORY);	
+	CheckError(this->processes[this->processCount]->Initialize(context));
 	if (NULL != process)
 	{
 		*process = this->processes[this->processCount];
@@ -72,7 +73,7 @@ Error:
 	return hr;
 }
 
-HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process)
+HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process, IHttpContext* context)
 {
 	HRESULT hr;
 
@@ -85,7 +86,7 @@ HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process)
 
 	ENTER_CS(this->syncRoot)
 
-	CheckError(this->AddOneProcessCore(process));
+	CheckError(this->AddOneProcessCore(process, context));
 
 	LEAVE_CS(this->syncRoot)
 
@@ -118,7 +119,7 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 			if (!this->TryRouteRequestToExistingProcess(request))
 			{
 				CNodeProcess* newProcess;
-				CheckError(this->AddOneProcess(&newProcess));
+				CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
 				CheckError(newProcess->AcceptRequest(request));
 			}
 		}
@@ -201,6 +202,7 @@ void CNodeProcessManager::RecycleAllProcesses()
 
 	ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
 	RtlZeroMemory(args, sizeof ProcessRecycleArgs);
+	args->gracefulShutdownTimeout = this->gracefulShutdownTimeout;
 
 	ENTER_CS(this->syncRoot)
 
@@ -261,10 +263,9 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 		}
 	}
 	
-	DWORD timeout = CModuleConfiguration::GetGracefulShutdownTimeout();
-	if (timeout > 0)
+	if (args->gracefulShutdownTimeout > 0)
 	{
-		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, timeout);
+		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, args->gracefulShutdownTimeout);
 	}
 
 	for (int i = 0; i < drainHandleCount; i++)

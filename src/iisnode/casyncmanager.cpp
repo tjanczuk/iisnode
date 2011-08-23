@@ -10,14 +10,14 @@ CAsyncManager::~CAsyncManager()
 	this->Terminate();
 }
 
-HRESULT CAsyncManager::Initialize()
+HRESULT CAsyncManager::Initialize(IHttpContext* context)
 {
 	HRESULT hr;
 	DWORD initializedThreads = 0;
 
 	ErrorIf(NULL != this->threads, ERROR_INVALID_OPERATION);
 
-	this->threadCount = CModuleConfiguration::GetAsyncCompletionThreadCount();
+	this->threadCount = CModuleConfiguration::GetAsyncCompletionThreadCount(context);
 
 	ErrorIf(NULL == (this->completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, this->threadCount)), GetLastError());		
 	

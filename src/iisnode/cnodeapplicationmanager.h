@@ -22,9 +22,10 @@ private:
 	HANDLE jobObject;
 	BOOL breakAwayFromJobObject;
 	CFileWatcher* fileWatcher;
+	BOOL initialized;
 
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
-	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, CNodeApplication** application);
+	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, IHttpContext* context, CNodeApplication** application);
 	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath);
 
 public:
@@ -38,7 +39,7 @@ public:
 	HANDLE GetJobObject();
 	BOOL GetBreakAwayFromJobObject();
 
-	HRESULT Initialize();
+	HRESULT Initialize(IHttpContext* context);
 	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider);
 };
 

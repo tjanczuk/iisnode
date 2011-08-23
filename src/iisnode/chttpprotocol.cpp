@@ -55,7 +55,7 @@ HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD 
 
 	if ((contentLength + *offset) > *bufferLength)
 	{
-		DWORD quota = CModuleConfiguration::GetMaximumRequestBufferSize();
+		DWORD quota = CModuleConfiguration::GetMaxRequestBufferSize(context);
 		ErrorIf(*bufferLength >= quota, ERROR_NOT_ENOUGH_QUOTA);
 
 		// buffer is too small, reallocate
@@ -90,7 +90,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 	CheckNull(resultSize);
 	CheckNull(resultLength);
 
-	DWORD bufferLength = CModuleConfiguration::GetInitialRequestBufferSize();
+	DWORD bufferLength = CModuleConfiguration::GetInitialRequestBufferSize(context);
 	DWORD offset = 0;
 	IHttpRequest* request = context->GetRequest();
 	HTTP_REQUEST* raw = request->GetRawHttpRequest();
