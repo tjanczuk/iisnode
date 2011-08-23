@@ -135,6 +135,8 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 			directoryName = NULL;
 			break;
 		}
+
+		directory = directory->next;
 	}
 
 	// if directory watcher not found, create one
