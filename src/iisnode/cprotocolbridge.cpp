@@ -20,7 +20,13 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 
 	context->SetHresult(hresult);
 	context->SetRequestNotificationStatus(RQ_NOTIFICATION_FINISH_REQUEST);
-	context->GetNodeProcess()->OnRequestCompleted(context);
+	if (NULL != context->GetNodeProcess())
+	{
+		// there is no CNodeProcess assigned to the request yet - something failed before it was moved from the pending queue
+		// to an active request queue of a specific process
+
+		context->GetNodeProcess()->OnRequestCompleted(context);
+	}
 
 	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);
 
