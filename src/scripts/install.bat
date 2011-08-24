@@ -12,7 +12,7 @@ set path=node
 set site="%siteName%/%path%"
 set node=%systemdrive%\node\node.exe
 
-echo iisnode module installer - hosting of node.js applications in IIS
+echo IIS module installer for iisnode - hosting of node.js applications in IIS
 
 if not exist %appcmd% (
 	echo Installation failed. The appcmd.exe IIS management tool was not found at %appcmd%. Make sure you have both IIS7 as well as IIS7 Management Tools installed.
@@ -37,6 +37,20 @@ if not exist %schema% (
 if not exist %addsection% (
 	echo Installation failed. The %addsection% script required to install iisnode configuration not found. Make sure you are running this script from the pre-built installation package rather than from the source tree.
 	exit /b -1
+)
+
+if "%1" neq "/s" (
+	echo This installer will perform the following tasks to provide a quick :
+	echo * unregister existing "iisnode" global module from your installation of IIS if such registration exists
+	echo * register %iisnode% as a native module with your installation of IIS
+	echo * install configuration schema for the "iisnode" module
+	echo * remove existing "iisnode" section from system.webServer section group in applicationHost.config
+	echo * add the "iisnode" section within the system.webServer section group in applicationHost.config
+	echo * delete the %site% web application if it exists
+	echo * add a new site %site% to IIS with physical path pointing to %www%
+	echo This script does not provide means to revert these actions. If something fails in the middle you are on your own.
+	echo Press ENTER to continue or Ctrl-C to terminate.
+	pause 
 )
 
 echo Ensuring any existing registration of 'iisnode' native module is removed...
