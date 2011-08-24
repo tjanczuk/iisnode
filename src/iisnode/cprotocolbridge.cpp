@@ -314,6 +314,7 @@ Error:
 			// connection termination with chunked transfer encoding indicates end of response
 			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
 
+			// CR: narrow down this condition to orderly pipe closure
 			CProtocolBridge::FinalizeResponse(context);
 		}
 		else
@@ -409,6 +410,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			// connection termination with chunked transfer encoding indicates end of response
 			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
 
+			// CR: check the other commend for finalizing response
 			CProtocolBridge::FinalizeResponse(ctx);
 		}
 		else
@@ -424,6 +426,8 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	if (ctx->GetDataSize() > ctx->GetParsingOffset())
 	{
 		// send body data to client
+
+		// CR: consider using malloc here (memory can be released after Flush)
 
 		ErrorIf(NULL == (chunk = (HTTP_DATA_CHUNK*) ctx->GetHttpContext()->AllocateRequestMemory(sizeof HTTP_DATA_CHUNK)), ERROR_NOT_ENOUGH_MEMORY);
 		chunk->DataChunkType = HttpDataChunkFromMemory;
@@ -497,6 +501,7 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	}
 	else
 	{
+		// CR: will this terminate the response after the first chunk of response?
 		CProtocolBridge::FinalizeResponse(ctx);
 	}
 

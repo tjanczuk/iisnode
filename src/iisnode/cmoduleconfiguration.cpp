@@ -47,7 +47,7 @@ HRESULT CModuleConfiguration::GetConfigSection(IHttpContext* context, IAppHostEl
 
 	CheckNull(section);
 	*section = NULL;
-    ErrorIf(NULL == (path = SysAllocString(context->GetApplication()->GetAppConfigPath())), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(NULL == (path = SysAllocString(context->GetMetadata()->GetMetaPath())), ERROR_NOT_ENOUGH_MEMORY);
     ErrorIf(NULL == (elementName = SysAllocString(L"system.webServer/iisnode")), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(server->GetAdminManager()->GetAdminSection(elementName, path, section));
 
@@ -186,7 +186,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 
 	CheckNull(config);
 
-	*config = (CModuleConfiguration*)context->GetApplication()->GetModuleContextContainer()->GetModuleContext(moduleId);
+	*config = (CModuleConfiguration*)context->GetMetadata()->GetModuleContextContainer()->GetModuleContext(moduleId);
 
 	if (NULL == *config)
 	{
@@ -217,7 +217,9 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		section->Release();
 		section = NULL;
 		
-		context->GetApplication()->GetModuleContextContainer()->SetModuleContext(c, moduleId);
+		// CR: check for ERROR_ALREADY_ASSIGNED to detect a race in creation of this section 
+		// CR: refcounting may be needed if synchronous code paths proove too long (race with config changes)
+		context->GetMetadata()->GetModuleContextContainer()->SetModuleContext(c, moduleId);
 		*config = c;
 		c = NULL;
 	}

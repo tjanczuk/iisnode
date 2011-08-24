@@ -301,3 +301,5 @@ void CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
 		file = file->next;
 	}
 }
+
+// CR: watched files should be unregistered if the file is deleted (CNodeApplication should also be removed)

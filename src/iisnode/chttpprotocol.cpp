@@ -1,5 +1,7 @@
 #include "precomp.h"
 
+//CR: use my own heap buffer as opposed to AllocRequestMemory (IIS max buffer is 6KB anyway)
+
 PCSTR CHttpProtocol::httpRequestHeaders[] = {
 	"Cache-Control",
 	"Connection",

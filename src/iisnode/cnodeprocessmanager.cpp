@@ -118,7 +118,7 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 
 			if (!this->TryRouteRequestToExistingProcess(request))
 			{
-				CNodeProcess* newProcess;
+				CNodeProcess* newProcess = NULL;
 				CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
 				CheckError(newProcess->AcceptRequest(request));
 			}
