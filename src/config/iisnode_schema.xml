@@ -38,7 +38,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="maxRequestBufferSize" type="uint" defaultValue="65536"/>
     <attribute name="uncFileChangesPollingInterval" type="uint" defaultValue="5000"/>
     <attribute name="gracefulShutdownTimeout" type="uint" defaultValue="60000"/>
-    <attribute name="logDirectoryNameSuffix" type="string" defaultValue="logs"/>
+    <attribute name="logDirectoryNameSuffix" type="string" expanded="true" defaultValue="logs"/>
     <attribute name="logFileFlushInterval" type="uint" defaultValue="5000"/>
     <attribute name="maxLogFileSizeInKB" type="uint" defaultValue="128"/>
     <attribute name="loggingEnabled" type="bool" defaultValue="true"/>
