@@ -63,6 +63,8 @@
       <Command>rmdir /s /q $(SolutionDir)\..\..\build\$(Configuration)
 mkdir $(SolutionDir)\..\..\build\$(Configuration)
 if not exist $(SolutionDir)\..\..\build\$(Configuration)\www\null mkdir $(SolutionDir)\..\..\build\$(Configuration)\www
+copy /y $(SolutionDir)\..\..\license.txt $(SolutionDir)\..\..\build\$(Configuration)
+copy /y $(SolutionDir)\..\..\readme.md $(SolutionDir)\..\..\build\$(Configuration)
 copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)
 copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)
 xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\www
@@ -83,6 +85,7 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)
       <Command>rmdir /s /q $(SolutionDir)\..\..\build\$(Configuration)
 mkdir $(SolutionDir)\..\..\build\$(Configuration)
 if not exist $(SolutionDir)\..\..\build\$(Configuration)\www\null mkdir $(SolutionDir)\..\..\build\$(Configuration)\www
+copy /y $(SolutionDir)\..\..\license.txt $(SolutionDir)\..\..\build\$(Configuration)
 copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)
 copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)
 xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\www
