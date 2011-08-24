@@ -501,7 +501,6 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	}
 	else
 	{
-		// CR: will this terminate the response after the first chunk of response?
 		CProtocolBridge::FinalizeResponse(ctx);
 	}
 
