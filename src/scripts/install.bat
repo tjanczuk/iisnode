@@ -10,7 +10,7 @@ set addsection=%~dp0\addiisnodesectiongroup.js
 set siteName=Default Web Site
 set path=node
 set site="%siteName%/%path%"
-set node=%systemdrive%\node\node.exes
+set node=%systemdrive%\node\node.exe
 
 echo iisnode module installer - hosting of node.js applications in IIS
 
@@ -93,7 +93,7 @@ if not exist %node% (
 	echo *************************       WARNING      ********************************
 	echo   The node.exe is not found at %node%.
 	echo   IIS cannot serve node.js applications without node.exe.
-	echo   Please get a latest node.exe build from http://nodejs.org and 
+	echo   Please get the latest node.exe build from http://nodejs.org and 
 	echo   install it to %node% [you can also adjust this location 
 	echo   through iisnode module configuration - check the samples]
 	echo *****************************************************************************
@@ -102,6 +102,6 @@ if not exist %node% (
 	echo ...success
 )
 
-echo INSTALLATION SUCCESSFUL. Check the samples at http://localhost/node.
+echo INSTALLATION SUCCESSFUL. Check out the samples at http://localhost/node.
 
 endlocal
