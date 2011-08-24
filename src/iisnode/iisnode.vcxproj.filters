@@ -31,6 +31,9 @@
     <Filter Include="Samples\configuration">
       <UniqueIdentifier>{f07a5931-154f-4980-a9ed-245f530c1110}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{08cdec16-3583-4ae0-8fd2-2ae9209a9f27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -171,6 +174,15 @@
     </None>
     <None Include="..\samples\configuration\readme.txt">
       <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\samples\index.htm">
+      <Filter>Samples</Filter>
+    </None>
+    <None Include="..\scripts\install.bat">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="..\scripts\addiisnodesectiongroup.js">
+      <Filter>Scripts</Filter>
     </None>
     <None Include="..\samples\configuration\web.config">
       <Filter>Samples\configuration</Filter>

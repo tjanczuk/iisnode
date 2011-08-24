@@ -59,6 +59,17 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>rpcrt4.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>rmdir /s /q $(SolutionDir)\..\..\build\$(Configuration)
+mkdir $(SolutionDir)\..\..\build\$(Configuration)
+if not exist $(SolutionDir)\..\..\build\$(Configuration)\www\null mkdir $(SolutionDir)\..\..\build\$(Configuration)\www
+copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)
+copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)
+xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\www
+copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)
+copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -68,6 +79,17 @@
       <ModuleDefinitionFile>mymodule.def</ModuleDefinitionFile>
       <AdditionalDependencies>rpcrt4.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>rmdir /s /q $(SolutionDir)\..\..\build\$(Configuration)
+mkdir $(SolutionDir)\..\..\build\$(Configuration)
+if not exist $(SolutionDir)\..\..\build\$(Configuration)\www\null mkdir $(SolutionDir)\..\..\build\$(Configuration)\www
+copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)
+copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)
+xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\www
+copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)
+copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cactiverequestpool.cpp" />
@@ -100,9 +122,14 @@
     <None Include="..\samples\helloworld\hello.js" />
     <None Include="..\samples\helloworld\readme.txt" />
     <None Include="..\samples\helloworld\web.config" />
+    <None Include="..\samples\index.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="..\samples\logging\hello.js" />
     <None Include="..\samples\logging\readme.txt" />
     <None Include="..\samples\logging\web.config" />
+    <None Include="..\scripts\addiisnodesectiongroup.js" />
+    <None Include="..\scripts\install.bat" />
     <None Include="iisnode.def" />
   </ItemGroup>
   <ItemGroup>
