@@ -54,17 +54,25 @@ if "%1" neq "/s" (
 )
 
 echo Ensuring any existing registration of 'iisnode' native module is removed...
-%appcmd% set config  -section:system.webServer/globalModules /-"[name='iisnode']" /commit:apphost
-if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 4312 (
+%appcmd% uninstall module iisnode /commit:apphost
+if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1168 (
 	echo Installation failed. Cannot remove potentially existing registration of 'iisnode' IIS native module
 	exit /b -1
 )
 echo ...success
 
 echo Registering the iisnode native module %iisnode%...
-%appcmd% set config  -section:system.webServer/globalModules /+"[name='iisnode',image='%iisnode%',preCondition='bitness32']" /commit:apphost
+%appcmd% install module /name:iisnode /image:"%iisnode%" /commit:apphost
 if %ERRORLEVEL% neq 0 (
 	echo Installation failed. Cannot register iisnode native module 
+	exit /b -1
+)
+echo ...success
+
+echo Setting bitness precoditions for module %iisnode%...
+%appcmd% set module iisnode /preCondition:bitness32 /commit:apphost
+if %ERRORLEVEL% neq 0 (
+	echo Installation failed. Cannot set module preconditions 
 	exit /b -1
 )
 echo ...success
