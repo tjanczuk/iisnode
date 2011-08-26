@@ -11,19 +11,22 @@ Hosting node.js applications in IIS on Windows
 
 **Building**
 
-    msbuild src\iisnode\iisnode.sln
-    
+For 32 bit Windows:
+
+    msbuild /p:Platform=Win32 src\iisnode\iisnode.sln
+
+For 64 bit Windows:
+
+    msbuild /p:Platform=x64 src\iisnode\iisnode.sln
+
 **Installing after build**
 
-    build\debug\install.bat
-    
-on 64-bit Windows systems, make sure the application pool associated with Default Web Site allows running 32 bit code
+    build\debug\%PROCESSOR_ARCHITECTURE%\install.bat
 
 **Installing from a download**
 
 - [Download and unzip desired build](https://github.com/tjanczuk/iisnode/archives/master)
 - call install.bat
-- on 64-bit Windows systems, make sure the application pool associated with Default Web Site allows running 32 bit code
 
 **Samples**
 
