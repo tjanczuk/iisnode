@@ -2,6 +2,7 @@
 *.opensdf
 [Dd]ebug/
 [Rr]etail/
+[Rr]elease/
 ipch/
 *.sln.cache
 *.suo

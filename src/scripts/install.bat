@@ -11,6 +11,7 @@ set siteName=Default Web Site
 set path=node
 set site="%siteName%/%path%"
 set node=%systemdrive%\node\node.exe
+set processor_architecture_flag=%~dp0%PROCESSOR_ARCHITECTURE%.txt
 
 echo IIS module installer for iisnode - hosting of node.js applications in IIS
 
@@ -19,23 +20,28 @@ if not exist %appcmd% (
 	exit /b -1
 )
 
-if not exist %iisnode% (
+if not exist "%iisnode%" (
 	echo Installation failed. The iisnode.dll native module to install was not found at %iisnode%. Make sure you are running this script from the pre-built installation package rather than from the source tree.
 	exit /b -1
 )
 
-if not exist %index% (
+if not exist "%index%" (
 	echo Installation failed. The samples were not found at %www%. Make sure you are running this script from the pre-built installation package rather than from the source tree.
 	exit /b -1
 )
 
-if not exist %schema% (
+if not exist "%schema%" (
 	echo Installation failed. The configuration schema was not found at %schema%. Make sure you are running this script from the pre-built installation package rather than from the source tree.
 	exit /b -1
 )
 
-if not exist %addsection% (
+if not exist "%addsection%" (
 	echo Installation failed. The %addsection% script required to install iisnode configuration not found. Make sure you are running this script from the pre-built installation package rather than from the source tree.
+	exit /b -1
+)
+
+if not exist "%processor_architecture_flag%" (
+	echo Installation failed. This is a binary build with bitness incompatible with the bitness of your operating system. Please use %PROCESSOR_ARCHITECTURE% build instead. You can get it from https://github.com/tjanczuk/iisnode/archives/master or build yourself.
 	exit /b -1
 )
 
@@ -69,16 +75,8 @@ if %ERRORLEVEL% neq 0 (
 )
 echo ...success
 
-echo Setting bitness precoditions for module %iisnode%...
-%appcmd% set module iisnode /preCondition:bitness32 /commit:apphost
-if %ERRORLEVEL% neq 0 (
-	echo Installation failed. Cannot set module preconditions 
-	exit /b -1
-)
-echo ...success
-
 echo Installing the iisnode module configuration schema from %schema%...
-copy /y %schema% %systemroot%\system32\inetsrv\config\schema
+copy /y "%schema%" %systemroot%\system32\inetsrv\config\schema
 if %ERRORLEVEL% neq 0 (
 	echo Installation failed. Cannot install iisnode module configuration schema
 	exit /b -1
@@ -86,7 +84,7 @@ if %ERRORLEVEL% neq 0 (
 echo ...success
 
 echo Registering the iisnode section within the system.webServer section group...
-C:\Windows\System32\wscript.exe /B %addsection%
+C:\Windows\System32\wscript.exe /B "%addsection%"
 if %ERRORLEVEL% neq 0 (
 	echo Installation failed. Cannot register iisnode configuration section
 	exit /b -1
@@ -110,7 +108,7 @@ if %ERRORLEVEL% neq 0 (
 echo ...success
 
 echo Checking for %node% executable...
-if not exist %node% (
+if not exist "%node%" (
 	echo *****************************************************************************
 	echo *************************       WARNING      ********************************
 	echo   The node.exe is not found at %node%.
