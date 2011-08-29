@@ -229,6 +229,8 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     <None Include="..\samples\logging\hello.js" />
     <None Include="..\samples\logging\readme.txt" />
     <None Include="..\samples\logging\web.config" />
+    <None Include="..\samples\urlrewrite\hello.js" />
+    <None Include="..\samples\urlrewrite\web.config" />
     <None Include="..\scripts\addiisnodesectiongroup.js" />
     <None Include="..\scripts\install.bat" />
     <None Include="iisnode.def" />

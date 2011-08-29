@@ -37,6 +37,9 @@
     <Filter Include="Samples\express">
       <UniqueIdentifier>{ef0693b6-03e4-4dd5-9871-95e7ebdad97a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Samples\urlrewrite">
+      <UniqueIdentifier>{c2b92f3e-7cfe-4356-93eb-5ea1aedc7a23}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -195,6 +198,12 @@
     </None>
     <None Include="..\samples\express\web.config">
       <Filter>Samples\express</Filter>
+    </None>
+    <None Include="..\samples\urlrewrite\hello.js">
+      <Filter>Samples\urlrewrite</Filter>
+    </None>
+    <None Include="..\samples\urlrewrite\web.config">
+      <Filter>Samples\urlrewrite</Filter>
     </None>
   </ItemGroup>
 </Project>
