@@ -34,6 +34,9 @@
     <Filter Include="Scripts">
       <UniqueIdentifier>{08cdec16-3583-4ae0-8fd2-2ae9209a9f27}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Samples\express">
+      <UniqueIdentifier>{ef0693b6-03e4-4dd5-9871-95e7ebdad97a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -186,6 +189,12 @@
     </None>
     <None Include="..\samples\configuration\web.config">
       <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\samples\express\hello.js">
+      <Filter>Samples\express</Filter>
+    </None>
+    <None Include="..\samples\express\web.config">
+      <Filter>Samples\express</Filter>
     </None>
   </ItemGroup>
 </Project>

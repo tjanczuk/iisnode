@@ -218,6 +218,8 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     <None Include="..\samples\defaultdocument\index.js" />
     <None Include="..\samples\defaultdocument\readme.txt" />
     <None Include="..\samples\defaultdocument\web.config" />
+    <None Include="..\samples\express\hello.js" />
+    <None Include="..\samples\express\web.config" />
     <None Include="..\samples\helloworld\hello.js" />
     <None Include="..\samples\helloworld\readme.txt" />
     <None Include="..\samples\helloworld\web.config" />
