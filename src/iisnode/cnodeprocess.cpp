@@ -83,10 +83,11 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	coreCommandLineLength = _tcslen(coreCommandLine);
 	scriptNameLengthW = wcslen(scriptName) + 1;
 	ErrorIf(0 != wcstombs_s(&scriptNameLength, NULL, 0, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
-	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + scriptNameLength + 1]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + scriptNameLength + 2 + 1]), ERROR_NOT_ENOUGH_MEMORY); // script name must be enclosed in quotes
 	_tcscpy(fullCommandLine, coreCommandLine);
-	_tcscat(fullCommandLine, _T(" "));
-	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + 1, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+	_tcscat(fullCommandLine, _T(" \""));
+	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + 1 + 1, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+	_tcscat(fullCommandLine, _T("\""));
 
 	// create the environment block for the node.js process - pass in the named pipe name; 
 	// this is a zero terminated list of zero terminated strings of the form <var>=<value>
