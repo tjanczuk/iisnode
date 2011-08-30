@@ -12,8 +12,15 @@ set path=node
 set site="%siteName%/%path%"
 set node=%systemdrive%\node\node.exe
 set processor_architecture_flag=%~dp0%PROCESSOR_ARCHITECTURE%.txt
+set icacls=%systemdrive%\windows\system32\icacls.exe
 
-echo IIS module installer for iisnode - hosting of node.js applications in IIS
+echo IIS module installer for iisnode - hosting of node.js applications in IIS.
+echo This script must be run with administrative privileges.
+
+if not exist "%icacls%" (
+	echo Installation failed. The icacls.exe not found at %icacls%. 
+	exit /b -1
+)
 
 if not exist %appcmd% (
 	echo Installation failed. The appcmd.exe IIS management tool was not found at %appcmd%. Make sure you have both IIS7 as well as IIS7 Management Tools installed.
@@ -45,8 +52,21 @@ if not exist "%processor_architecture_flag%" (
 	exit /b -1
 )
 
+if not exist "%node%" (
+	echo *****************************************************************************
+	echo **************************       ERROR      *********************************
+	echo   The node.exe is not found at %node%.
+	echo   IIS cannot serve node.js applications without node.exe.
+	echo   Please get the latest node.exe build from http://nodejs.org and 
+	echo   install it to %node%, then restart the installer 
+	echo *****************************************************************************
+	echo *****************************************************************************
+	exit /b -1
+)
+
 if "%1" neq "/s" (
 	echo This installer will perform the following tasks to provide a quick :
+	echo * ensure that the IIS_IUSRS group has read and execute rights to %node%
 	echo * unregister existing "iisnode" global module from your installation of IIS if such registration exists
 	echo * register %iisnode% as a native module with your installation of IIS
 	echo * install configuration schema for the "iisnode" module
@@ -58,6 +78,14 @@ if "%1" neq "/s" (
 	echo Press ENTER to continue or Ctrl-C to terminate.
 	pause 
 )
+
+echo Ensuring IIS_IUSRS group has read and execute rights to %node%...
+%icacls% "%node%" /grant IIS_IUSRS:rx
+if %ERRORLEVEL% neq 0 (
+	echo Installation failed. Cannot set read and execute permissions to %node%. 
+	exit /b -1
+)
+echo ...success
 
 echo Ensuring any existing registration of 'iisnode' native module is removed...
 %appcmd% uninstall module iisnode /commit:apphost
@@ -106,21 +134,6 @@ if %ERRORLEVEL% neq 0 (
 	exit /b -1
 )
 echo ...success
-
-echo Checking for %node% executable...
-if not exist "%node%" (
-	echo *****************************************************************************
-	echo *************************       WARNING      ********************************
-	echo   The node.exe is not found at %node%.
-	echo   IIS cannot serve node.js applications without node.exe.
-	echo   Please get the latest node.exe build from http://nodejs.org and 
-	echo   install it to %node% [you can also adjust this location 
-	echo   through iisnode module configuration - check the samples]
-	echo *****************************************************************************
-	echo *****************************************************************************
-) else (
-	echo ...success
-)
 
 echo INSTALLATION SUCCESSFUL. Check out the samples at http://localhost/node.
 
