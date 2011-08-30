@@ -1,0 +1,54 @@
+<html>
+<head>
+    <title>logging sample</title>
+    <style>
+        pre
+        {
+            background-color: eeeeee;
+        }
+    </style>
+</head>
+<body>
+    <h2>
+        logging</h2>
+    <p>
+        Node.js applications hosted in IIS capture stdout and stderr (console.log) and make
+        the output available over HTTP.</p>
+    <ol>
+        <li>output from console.log (or any stdout or stderr output) from a node.js application
+            is captured, stored in a file on disk, and available through HTTP</li>
+        <li>By default, given a node.js application at http://localhost/node/logging/hello.js,
+            the logs are available at http://localhost/node/logging/hello.js.logs/0.txt. Logs
+            are updated every 5 seconds and limited to 128KB in size.</li>
+        <li>Check the <a href="../configuration/readme.htm">configuration sample</a> to customize
+            the logging behavior.</li></ol>
+    visit the node.js endpoint at <a href="hello.js">hello.js</a><br />
+    visit the logs at <a href="hello.js.logs/0.txt">logs</a> (only available after you
+    first visit the endpoint)<br />
+    <p>
+        <b>code</b></p>
+    <pre>var http = require('http');
+
+http.createServer(function (req, res) {
+    console.log('A new request arrived with HTTP headers: ' + JSON.stringify(req.headers));
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Hello, world! [logging sample]');
+}).listen(process.env.PORT);
+
+console.log('Application has started at location ' + process.env.PORT);</pre>
+    <p>
+        <b>web.config</b></p>
+    <pre>&lt;configuration&gt;
+  &lt;system.webServer&gt;
+
+    &lt;!-- indicates that the hello.js file is a node.js application 
+    to be handled by the iisnode module --&gt;
+
+    &lt;handlers&gt;
+      &lt;add name="iisnode" path="hello.js" verb="*" modules="iisnode" /&gt;
+    &lt;/handlers&gt;
+    
+  &lt;/system.webServer&gt;
+&lt;/configuration&gt;</pre>
+</body>
+</html>

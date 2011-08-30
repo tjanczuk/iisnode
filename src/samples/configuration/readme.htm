@@ -1,0 +1,120 @@
+<html>
+<head>
+    <title>configuration sample</title>
+    <style>
+        pre
+        {
+            background-color: eeeeee;
+        }
+    </style>
+</head>
+<body>
+    <h2>
+        configuration</h2>
+    <p>
+        There are several configuration options that can be controlled from the system.webServer/iisnode
+        section of the configurtion file. Review web.config below for detailed description
+        of them.</p>
+    visit the node.js endpoint at <a href="hello.js">hello.js</a><br />
+    visit the logs at <a href="hello.js.logs/0.txt">logs</a> (only available after you
+    first visit the endpoint)<br />
+    <p>
+        <b>code</b></p>
+    <pre>var http = require('http');
+
+http.createServer(function (req, res) {
+    console.log('A new request arrived with HTTP headers: ' + JSON.stringify(req.headers));
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Hello, world! [configuration sample]');
+}).listen(process.env.PORT);
+
+console.log('Application started at location ' + process.env.PORT);</pre>
+    <p>
+        <b>web.config</b></p>
+    <pre>&lt;configuration&gt;
+  &lt;system.webServer&gt;
+
+    &lt;!-- indicates that the hello.js file is a node.js application 
+    to be handled by the iisnode module --&gt;
+
+    &lt;handlers&gt;
+      &lt;add name="iisnode" path="hello.js" verb="*" modules="iisnode" /&gt;
+    &lt;/handlers&gt;
+
+    &lt;!-- 
+      the iisnode section configures the behavior of the node.js IIS module 
+      setting values below are defaults
+    
+    * nodeProcessCommandLine - command line starting the node executable; in shared
+      hosting environments this setting would typically be locked at the machine scope.
+      
+    * maxProcessCountPerApplication - maximum number of node processes that IIS will start
+      per application to accomodate incresing request load
+      
+    * maxConcurrentRequestsPerProcess - maximum number of reqeusts one node process can 
+      handle at a time; if a request arrives while all existing node processes have reached their 
+      limit, a new node process is created to handle it (up to the limit of maxProcessCountPerApplication)
+      
+    * maxPendingRequestsPerApplication - maximum number of requests per application queued up to be dispatched 
+      for processing by a specific node process; this is meant to accomodate temporary spikes in traffic
+      without rejecting the requests
+      
+    * maxNamedPipeConnectionRetry - number of times IIS will retry to establish a named pipe connection with a
+      node process in order to send a new HTTP request
+      
+    * namedPipeConnectionRetryDelay - delay in milliseconds between connection retries
+    
+    * asyncCompletionThreadCount - size of the IO thread pool maintained by the IIS module to process asynchronous IO
+    
+    * initialRequestBufferSize - initial size in bytes of a memory buffer allocated for a new HTTP request
+    
+    * maxRequestBufferSize - maximum size in bytes of a memory buffer allocated per request; this is a hard limit of 
+      the serialized form of HTTP request or response headers block
+      
+    * uncFileChangesPollingInterval - applications are recycled when the underlying *.js file is modified; if the file resides
+      on a UNC share, the only reliable way to detect such modifications is to periodically poll for them; this setting 
+      controls the polling interval
+      
+    * gracefulShutdownTimeout - when a node.js file is modified, all node processes handling running this application are recycled;
+      this setting controls the time (in milliseconds) given for currently active requests to gracefully finish before the 
+      process is terminated; during this time, all new requests are already dispatched to a new node process based on the fresh version 
+      of the application
+    
+    * loggingEnabled - controls whether stdout and stderr streams from node processes are captured and made available over HTTP
+    
+    * logDirectoryNameSuffix - suffix of the directory name that will store files with stdout and stderr captures; directly name is created
+      by appending this suffix to the file name of the node.js application; individual log files are stored in that directory, one per node 
+      process (in files of the form x.txt, where x is between 0 and maxProcessCountPerApplication - 1); given a node.js application at
+      http://localhost/node/hello.js, log files would by default be stored at http://localhost/node/hello.js.logs/0.txt (thrugh 3.txt); 
+      SECURITY NOTE: if log files contain sensitive information, this setting should be modified to contain enough entropy to be considered
+      cryptographically secure; in most situations, a GUID is sufficient
+    
+    * maxLogFileSizeInKB - maximum size of a log file in KB; once a log file exceeds this limit it is truncated back to empty
+    
+    * appendToExistingLog - determines whether pre-existing log files are appended to or created fresh when a node process with a given ordinal
+      number starts; appending may be useful to diagnose unorderly node process terminations or recycling
+      
+    --&gt;
+    
+    &lt;iisnode      
+      nodeProcessCommandLine="%systemdrive%\node\node.exe"
+      maxProcessCountPerApplication="4"
+      maxConcurrentRequestsPerProcess="1024"
+      maxPendingRequestsPerApplication="1024"
+      maxNamedPipeConnectionRetry="3"
+      namedPipeConnectionRetryDelay="2000"      
+      asyncCompletionThreadCount="4"
+      initialRequestBufferSize="4096"
+      maxRequestBufferSize="65536"
+      uncFileChangesPollingInterval="5000"
+      gracefulShutdownTimeout="60000"
+      loggingEnabled="true"
+      logDirectoryNameSuffix="logs"
+      maxLogFileSizeInKB="128"
+      appendToExistingLog="false"
+     /&gt;
+    
+  &lt;/system.webServer&gt;
+&lt;/configuration&gt;</pre>
+</body>
+</html>

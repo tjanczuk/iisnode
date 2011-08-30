@@ -1,0 +1,52 @@
+<html>
+<head>
+    <title>defaultdocument sample</title>
+    <style>
+        pre
+        {
+            background-color: eeeeee;
+        }
+    </style>
+</head>
+<body>
+    <h2>
+        defaultdocument</h2>
+    <p>
+        The &lt;defaultDocument&gt; element in web.config may specify a default node.js application file
+   that IIS will serve when the request URL does not specify any file name, e.g.
+   http://localhost/node/defaultdocument/.</p>
+    visit the <a href="./">default node.js endpoint</a><br />
+    <p>
+        <b>code [index.js]</b></p>
+    <pre>var http = require('http');
+
+http.createServer(function (req, res) {
+    res.writeHead(200, {'Content-Type': 'text/plain'});
+    res.end('You have reached the default node.js application at index.js! [defaultdocument sample]');
+}).listen(process.env.PORT); </pre>
+    <p>
+        <b>web.config</b></p>
+    <pre>&lt;configuration&gt;
+  &lt;system.webServer&gt;
+    
+    &lt;!-- indicates that the index.js file is a node.js application 
+    to be handled by the iisnode module --&gt;
+    
+    &lt;handlers&gt;
+      &lt;add name="iisnode" path="index.js" verb="*" modules="iisnode" /&gt;
+    &lt;/handlers&gt;
+    
+    &lt;!-- adds index.js to the default document list to allow 
+    URLs that only specify the application root location, 
+    e.g. http://mysite.antarescloud.com/ --&gt;
+    
+    &lt;defaultDocument enabled="true"&gt;
+      &lt;files&gt;
+        &lt;add value="index.js" /&gt;
+      &lt;/files&gt;
+    &lt;/defaultDocument&gt;
+    
+  &lt;/system.webServer&gt;
+&lt;/configuration&gt;</pre>
+</body>
+</html>

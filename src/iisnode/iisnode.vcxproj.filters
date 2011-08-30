@@ -160,25 +160,13 @@
     <None Include="..\samples\defaultdocument\web.config">
       <Filter>Samples\defaultdocument</Filter>
     </None>
-    <None Include="..\samples\helloworld\readme.txt">
-      <Filter>Samples\helloworld</Filter>
-    </None>
-    <None Include="..\samples\defaultdocument\readme.txt">
-      <Filter>Samples\defaultdocument</Filter>
-    </None>
     <None Include="..\samples\logging\hello.js">
-      <Filter>Samples\logging</Filter>
-    </None>
-    <None Include="..\samples\logging\readme.txt">
       <Filter>Samples\logging</Filter>
     </None>
     <None Include="..\samples\logging\web.config">
       <Filter>Samples\logging</Filter>
     </None>
     <None Include="..\samples\configuration\hello.js">
-      <Filter>Samples\configuration</Filter>
-    </None>
-    <None Include="..\samples\configuration\readme.txt">
       <Filter>Samples\configuration</Filter>
     </None>
     <None Include="..\samples\index.htm">
@@ -204,6 +192,24 @@
     </None>
     <None Include="..\samples\urlrewrite\web.config">
       <Filter>Samples\urlrewrite</Filter>
+    </None>
+    <None Include="..\samples\urlrewrite\readme.htm">
+      <Filter>Samples\urlrewrite</Filter>
+    </None>
+    <None Include="..\samples\helloworld\readme.htm">
+      <Filter>Samples\helloworld</Filter>
+    </None>
+    <None Include="..\samples\configuration\readme.htm">
+      <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\samples\defaultdocument\readme.htm">
+      <Filter>Samples\defaultdocument</Filter>
+    </None>
+    <None Include="..\samples\logging\readme.htm">
+      <Filter>Samples\logging</Filter>
+    </None>
+    <None Include="..\samples\express\readme.htm">
+      <Filter>Samples\express</Filter>
     </None>
   </ItemGroup>
 </Project>

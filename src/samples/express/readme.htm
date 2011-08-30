@@ -1,0 +1,90 @@
+<html>
+<head>
+    <title>express sample</title>
+    <style>
+        pre
+        {
+            background-color: eeeeee;
+        }
+    </style>
+</head>
+<body>
+    <h2>
+        express</h2>
+    <p>
+        node.js apps that use the popular <a href="http://expressjs.com/">express</a> framework
+        can be hosted in IIS.</p>
+    <ul>
+        <li>Express framework can be installed on Windows using <a href="https://github.com/japj/ryppi">
+            ryppi.py</a> while we wait for NPM support.</li>
+        <li>Remember that you may or may not own the entire URL space within an express application
+            when designing your URL structure - see code below.</li>
+        <li>The URL rewrite module is recommended for all but the most simple express applications
+            hosted in IIS. The sample below shows how to use it, but also check out the <a href="../urlrewrite/readme.htm">
+                urlrewrite sample</a>.</li>
+        <li>Remember to exclude the node_modules directory from serving from IIS - see web.config
+            below.</li>
+    </ul>
+    visit the foo endpoint at <a href="hello/foo">hello/foo</a><br />
+    visit the bar endpoint at <a href="hello/bar">hello/bar</a><br />
+    visit the nonexistent endpoint at <a href="hello/idontexist">hello/idontexist</a><br />
+    <p>
+        <b>code</b></p>
+    <pre>var express = require('express');
+
+var app = express.createServer();
+
+app.get('/node/express/hello/foo', function (req, res) {
+    res.send('Hello from foo! [express sample]');
+});
+
+app.get('/node/express/hello/bar', function (req, res) {
+    res.send('Hello from bar! [express sample]');
+});
+
+app.listen(process.env.PORT);</pre>
+    <p>
+        <b>web.config</b></p>
+    <pre>&lt;configuration&gt;
+  &lt;system.webServer&gt;
+
+    &lt;!-- indicates that the hello.js file is a node.js application 
+    to be handled by the iisnode module --&gt;
+
+    &lt;handlers&gt;
+      &lt;add name="iisnode" path="hello.js" verb="*" modules="iisnode" /&gt;
+    &lt;/handlers&gt;
+
+    &lt;!-- use URL rewriting to redirect the entire branch of the URL namespace
+    to hello.js node.js application; for example, the following URLs will 
+    all be handled by hello.js:
+    
+        http://localhost/node/express/hello/foo
+        http://localhost/node/express/hello/bar
+        
+    --&gt;
+
+    &lt;rewrite&gt;
+      &lt;rules&gt;
+        &lt;rule name="hello"&gt;
+          &lt;match url="hello/*" /&gt;
+          &lt;action type="Rewrite" url="hello.js" /&gt;
+        &lt;/rule&gt;
+      &lt;/rules&gt;
+    &lt;/rewrite&gt;
+
+    &lt;!-- exclude node_modules directory and subdirectories from serving
+    by IIS since these are implementation details of node.js applications --&gt;
+    
+    &lt;security&gt;
+      &lt;requestFiltering&gt;
+        &lt;hiddenSegments&gt;
+          &lt;add segment="node_modules" /&gt;
+        &lt;/hiddenSegments&gt;
+      &lt;/requestFiltering&gt;
+    &lt;/security&gt;    
+    
+  &lt;/system.webServer&gt;
+&lt;/configuration&gt;</pre>
+</body>
+</html>
