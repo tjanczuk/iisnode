@@ -84,7 +84,7 @@ if %ERRORLEVEL% neq 0 (
 echo ...success
 
 echo Registering the iisnode section within the system.webServer section group...
-C:\Windows\System32\wscript.exe /B "%addsection%"
+C:\Windows\System32\wscript.exe /B /E:jscript "%addsection%"
 if %ERRORLEVEL% neq 0 (
 	echo Installation failed. Cannot register iisnode configuration section
 	exit /b -1
