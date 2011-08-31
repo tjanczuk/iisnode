@@ -6,8 +6,9 @@ Hosting node.js applications in IIS on Windows
 - Windows
 - IIS 7.x with IIS Management Tools
 - Latest node.exe Windows build from [nodejs.org](http://nodejs.org/#download) saved to %systemdrive%\node directory
-- [Visual Studio C++ Express](http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express) (development only)
-- [IIS 7 header files from Windows SDK](http://msdn.microsoft.com/en-us/windows/bb980924) (development only)
+- [Visual Studio C++ Express](http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express) (building iisnode only)
+- [IIS 7 header files from Windows SDK](http://msdn.microsoft.com/en-us/windows/bb980924) (building iisnode only)
+- your favorite text editor; [WebMatrix](http://www.microsoft.com/web/webmatrix/) is recommended (developing node.js apps on Windows only)
 
 **Building**
 
@@ -19,14 +20,18 @@ For 64 bit Windows:
 
     msbuild /p:Platform=x64 src\iisnode\iisnode.sln
 
-**Installing after build**
+**Installing for IIS 7.x after build**
 
     build\debug\%PROCESSOR_ARCHITECTURE%\install.bat
 
-**Installing from a download**
+**Installing for IIS 7.x from a download**
 
-- [Download and unzip desired build](https://github.com/tjanczuk/iisnode/archives/master)
+- [Download and unzip desired build for 32 or 64 bit Windows](https://github.com/tjanczuk/iisnode/archives/master)
 - call install.bat
+
+**Installing for IIS Express/WebMatrix**
+
+- [Check out the walkthhrough](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)
 
 **Samples**
 
