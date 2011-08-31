@@ -13,7 +13,7 @@ set iisnode=%~dp0iisnode.dll
 set www=%~dp0www
 set index=%www%\index.htm
 set schema=%~dp0\iisnode_schema.xml
-set addsection=%~dp0\addiisnodesectiongroup_iisexpress.js
+set addsection=%~dp0\addiisnodesectiongroup.js
 set ensureiisexpressconfig=%~dp0\ensureiisexpressconfig.js
 set node=%systemdrive%\node\node.exe
 set processor_architecture_flag=%~dp0x86.txt
@@ -114,7 +114,7 @@ if %ERRORLEVEL% neq 0 (
 echo ...success
 
 echo Registering the iisnode section within the system.webServer section group...
-"%wscript%" /B /E:jscript "%addsection%" "%applicationhostconfig%"
+"%wscript%" /B /E:jscript "%addsection%" /express
 if %ERRORLEVEL% neq 0 (
 	echo Installation failed. Cannot register iisnode configuration section
 	exit /b -1
