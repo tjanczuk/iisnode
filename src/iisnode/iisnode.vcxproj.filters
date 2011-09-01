@@ -40,6 +40,24 @@
     <Filter Include="Samples\urlrewrite">
       <UniqueIdentifier>{c2b92f3e-7cfe-4356-93eb-5ea1aedc7a23}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests">
+      <UniqueIdentifier>{b9c8fafc-d71f-4060-b14b-fe9218b2a0d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional">
+      <UniqueIdentifier>{78694b12-f339-40b1-b5ff-1ba72d430f6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\tests">
+      <UniqueIdentifier>{0f89b7c4-dc5b-490f-93c8-1b992c568a62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www">
+      <UniqueIdentifier>{6ce18280-2588-47d7-ac4b-2940b30ae9fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\100_helloworld">
+      <UniqueIdentifier>{3cf35ea1-e79e-4005-80c2-83de193d43d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\tests\node_modules">
+      <UniqueIdentifier>{1e33b6a1-9db3-4e09-b02d-2fc269243dd8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -216,6 +234,18 @@
     </None>
     <None Include="..\scripts\ensureiisexpressconfig.js">
       <Filter>Scripts</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\100_helloworld.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\100_helloworld\hello.js">
+      <Filter>Tests\functional\www\100_helloworld</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\100_helloworld\web.config">
+      <Filter>Tests\functional\www\100_helloworld</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js">
+      <Filter>Tests\functional\tests\node_modules</Filter>
     </None>
   </ItemGroup>
 </Project>

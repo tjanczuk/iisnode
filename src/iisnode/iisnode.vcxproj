@@ -215,6 +215,10 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\test\functional\tests\100_helloworld.js" />
+    <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
+    <None Include="..\..\test\functional\www\100_helloworld\hello.js" />
+    <None Include="..\..\test\functional\www\100_helloworld\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
     <None Include="..\samples\configuration\hello.js" />
     <None Include="..\samples\configuration\readme.htm">
