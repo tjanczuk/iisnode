@@ -7,3 +7,5 @@ ipch/
 *.sln.cache
 *.suo
 *.user
+log.out
+*.js.logs
