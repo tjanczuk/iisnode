@@ -5,8 +5,11 @@ Hosting node.js applications in IIS on Windows
 
 - Windows
 - IIS 7.x with IIS Management Tools
+- [URL rewrite module for IIS](http://www.iis.net/download/URLRewrite) if you don't have it already installed
 - Latest node.exe Windows build from [nodejs.org](http://nodejs.org/#download) saved to %systemdrive%\node directory
-- [Visual Studio C++ Express](http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express) (building iisnode only)
+- One of the following:
+  - [Visual Studio C++ Express](http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express) (if you intend to build iisnode in addition to using it)
+  - Visual C++ 2010 Redistributable Package for [x86](http://www.microsoft.com/download/en/details.aspx?id=5555) or [x64](http://www.microsoft.com/download/en/details.aspx?id=14632) (if you only intend to use iisnode)
 - [IIS 7 header files from Windows SDK](http://msdn.microsoft.com/en-us/windows/bb980924) (building iisnode only)
 - your favorite text editor; [WebMatrix](http://www.microsoft.com/web/webmatrix/) is recommended (developing node.js apps on Windows only)
 
