@@ -40,7 +40,15 @@ For 64 bit Windows:
 
     http://localhost/node
 
+**Howtos**
+
+[the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)  
+[using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)  
+[using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)  
+[using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)  
+[using with mongodb](http://www.amazedsaint.com/2011/09/creating-10-minute-todo-listing-app-on.html)  
+
 **Resources & documentation**
 
-- https://github.com/tjanczuk/iisnode/wiki
-- http://tomasz.janczuk.org
+https://github.com/tjanczuk/iisnode/wiki
+http://tomasz.janczuk.org
