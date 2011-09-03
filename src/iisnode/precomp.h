@@ -32,5 +32,15 @@
 #include "cnodehttpstoredcontext.h"
 #include "cfilewatcher.h"
 
+#ifndef NTSTATUS
+typedef LONG NTSTATUS;
+#endif
+
+#ifndef STATUS_SUCCESS
+#define STATUS_SUCCESS ((NTSTATUS) 0x00000000L)
+#endif
+
+typedef ULONG (NTAPI *RtlNtStatusToDosError) (NTSTATUS Status);
+
 #endif
 

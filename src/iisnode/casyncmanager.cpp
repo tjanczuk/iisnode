@@ -1,5 +1,7 @@
 #include "precomp.h"
 
+extern RtlNtStatusToDosError pRtlNtStatusToDosError;
+
 CAsyncManager::CAsyncManager()
 	: threads(NULL), threadCount(0), completionPort(NULL)
 {
@@ -112,7 +114,8 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 		error = ERROR_SUCCESS;
 		if (!GetQueuedCompletionStatusEx(completionPort, &entry, 1, &removed, INFINITE, TRUE))
 		{
-			error = GetLastError();
+			// No I/O completion packets were dequeued, continue waiting.
+			continue;
 		}
 		
 		if (removed == 1)
@@ -121,6 +124,8 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 				&& NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) 
 				&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
 			{
+				error = (entry.lpOverlapped->Internal == STATUS_SUCCESS) ? ERROR_SUCCESS 
+					: pRtlNtStatusToDosError(entry.lpOverlapped->Internal);
 				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
 				ctx->synchronous = FALSE;
 				ctx->completionProcessor(
