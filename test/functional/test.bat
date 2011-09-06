@@ -44,6 +44,24 @@ exit /b 0
 
 echo Running: %1...
 echo ------------------------ Running %1 >> %log%
+
+%appcmd% stop apppool %apppool% >> %log% 2>>&1
+if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1062 (
+	set /A failure=failure+1
+	echo Failed: %1
+	echo Failed: %1 >> %log%
+	exit /b -1
+)
+
+%appcmd% start apppool %apppool% >> %log% 2>>&1
+if %ERRORLEVEL% neq 0 (
+	set /A failure=failure+1
+	echo Failed: %1
+	echo Failed: %1 >> %log%
+	exit /b -1
+)
+
+
 if "%2" equ ".js" (
 	call :run_node_test %1
 ) else (
