@@ -39,6 +39,12 @@ For 64 bit Windows:
 **Samples**
 
     http://localhost/node
+    
+**Running tests**
+
+Install for IIS 7.x (see previous sections), then:  
+
+    test\functional\test.bat
 
 **Howtos**
 
