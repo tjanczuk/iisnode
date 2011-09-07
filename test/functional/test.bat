@@ -89,6 +89,8 @@ if %ERRORLEVEL% equ 0 (
 	echo Failed: %1 >> %log%
 )
 
+if "%nr%" equ "0" call :resetAppPool
+
 exit /b 0
 
 :: stops and starts the iisnodetest application pool

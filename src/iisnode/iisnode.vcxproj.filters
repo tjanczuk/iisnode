@@ -280,5 +280,8 @@
     <None Include="..\..\test\functional\www\103_urlrewrite\web.config">
       <Filter>Tests\functional\www\103_urlrewrite</Filter>
     </None>
+    <None Include="..\..\test\functional\test.bat">
+      <Filter>Tests\functional</Filter>
+    </None>
   </ItemGroup>
 </Project>

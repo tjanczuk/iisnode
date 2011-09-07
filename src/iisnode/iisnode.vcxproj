@@ -215,6 +215,7 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\test\functional\test.bat" />
     <None Include="..\..\test\functional\tests\100_helloworld.js" />
     <None Include="..\..\test\functional\tests\101_helloworld_sequence.js" />
     <None Include="..\..\test\functional\tests\102_defaultdocument.js" />
