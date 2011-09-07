@@ -58,6 +58,15 @@
     <Filter Include="Tests\functional\tests\node_modules">
       <UniqueIdentifier>{1e33b6a1-9db3-4e09-b02d-2fc269243dd8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\101_helloworld_sequence">
+      <UniqueIdentifier>{c8e343a1-df1c-4683-a1a7-d85206b36862}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\102_defaultdocument">
+      <UniqueIdentifier>{c48f575c-4e53-4e0e-88ae-da27ebe4589d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\103_urlrewrite">
+      <UniqueIdentifier>{82399d26-206c-4d05-8815-34655e5d5079}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -246,6 +255,30 @@
     </None>
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js">
       <Filter>Tests\functional\tests\node_modules</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\101_helloworld_sequence.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\101_helloworld_sequence\hello.js">
+      <Filter>Tests\functional\www\101_helloworld_sequence</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\101_helloworld_sequence\web.config">
+      <Filter>Tests\functional\www\101_helloworld_sequence</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\102_defaultdocument\web.config">
+      <Filter>Tests\functional\www\102_defaultdocument</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\102_defaultdocument\index.js">
+      <Filter>Tests\functional\www\102_defaultdocument</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\102_defaultdocument.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\103_urlrewrite\hello.js">
+      <Filter>Tests\functional\www\103_urlrewrite</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\103_urlrewrite\web.config">
+      <Filter>Tests\functional\www\103_urlrewrite</Filter>
     </None>
   </ItemGroup>
 </Project>

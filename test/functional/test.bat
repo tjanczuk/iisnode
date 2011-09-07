@@ -1,29 +1,41 @@
 @echo off
 setlocal
 
-set log="%~dp0log.out"
+set this=%~dp0
+
+if "%1" equ "/?" goto :help
+if "%1" equ "/help" goto :help
+if "%1" equ "-h" goto :help
+if "%1" equ "--help" goto :help
+if "%1" equ "--h" goto :help
+
+set log="%this%log.out"
 
 date /T 
 time /T 
 date /T > %log%
 time /T >> %log%
 
-call %~dp0scripts\setup.bat
+call %this%scripts\setup.bat
 if %ERRORLEVEL% neq 0 exit /b -1
 
 set testFilter=*
-if "%1" neq "" set testFilter=%1
+set nr=0
 
-dir /b %~dp0tests\%testFilter%.* 2> nul > nul
+:nextParam
+if "%1" equ "/nr" set nr=1& shift & goto :nextParam
+if "%1" neq "" set testFilter=%1& shift & goto :nextParam
+
+dir /b %this%tests\%testFilter% > nul 2>&1
 if %ERRORLEVEL% neq 0 (
-	echo No tests names match the filter %testFilter%.
+	echo No tests names match the filter %testFilter%
 	exit /b -1
 )
 
 set success=0
 set failure=0
 
-for /f %%I in ('dir /b /a-d %~dp0tests\%testFilter%.*') do call :run_one %%I %%~xI
+for /f %%I in ('dir /b /a-d %this%tests\%testFilter%') do call :run_one %%I %%~xI
 
 echo Total passed: %success%
 echo Total failed: %failure%
@@ -36,36 +48,35 @@ time /T
 date /T >> %log%
 time /T >> %log%
 
-if %failure% neq 0 exit /b -1
+if %failure% neq 0 (
+	echo Check %log% for details. 
+	exit /b -1
+)
 
 exit /b 0
+
+
+:: run one test
+:: %1 - the fully qualified file name of the test file
+:: %2 - the extension of the file name
 
 :run_one
 
 echo Running: %1...
 echo ------------------------ Running %1 >> %log%
 
-%appcmd% stop apppool %apppool% >> %log% 2>>&1
-if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1062 (
-	set /A failure=failure+1
-	echo Failed: %1
-	echo Failed: %1 >> %log%
-	exit /b -1
-)
-
-%appcmd% start apppool %apppool% >> %log% 2>>&1
+if "%nr%" equ "0" call :resetAppPool
 if %ERRORLEVEL% neq 0 (
 	set /A failure=failure+1
 	echo Failed: %1
 	echo Failed: %1 >> %log%
-	exit /b -1
+	exit /b -1	
 )
 
-
 if "%2" equ ".js" (
-	call :run_node_test %1
-) else (
-	call "%~dp0tests\%1" >> %log% 2>>&1
+	call %this%scripts\runNodeTest.bat %1 >> %log% 2>>&1
+) else if "%2" equ ".bat" (
+	call "%this%tests\%1" >> %log% 2>>&1
 )
 
 if %ERRORLEVEL% equ 0 (
@@ -80,13 +91,25 @@ if %ERRORLEVEL% equ 0 (
 
 exit /b 0
 
-:run_node_test
+:: stops and starts the iisnodetest application pool
 
-%node% "%~dp0tests\%1" >> %log% 2>"%~dp0tests\%1.err"
-type "%~dp0tests\%1.err" >> %log%
-for /F %%A IN ('dir /s /b "%~dp0tests\%1.err"') do set size=%%~zA
-del /q "%~dp0tests\%1.err"
-if "%size%" neq "0" exit /b -1
+:resetAppPool
+
+%appcmd% stop apppool %apppool% >> %log% 2>>&1
+if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1062 exit /b -1
+%appcmd% start apppool %apppool% >> %log% 2>>&1
+if %ERRORLEVEL% neq 0 exit /b -1
 exit /b 0
+
+:: display help and exit
+
+:help
+
+echo test.bat [options] [testFilter]
+echo options:
+echo     /nr         - do not reset the application pool before every test case (useful for debugging)
+echo testFilter      - a filename-based filter for tests to run; default *
+echo e.g. test.bat 1* - run all tests from the 100 category
+exit /b -1
 
 endlocal

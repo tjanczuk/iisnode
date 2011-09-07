@@ -216,9 +216,17 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\test\functional\tests\100_helloworld.js" />
+    <None Include="..\..\test\functional\tests\101_helloworld_sequence.js" />
+    <None Include="..\..\test\functional\tests\102_defaultdocument.js" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\www\100_helloworld\hello.js" />
     <None Include="..\..\test\functional\www\100_helloworld\web.config" />
+    <None Include="..\..\test\functional\www\101_helloworld_sequence\hello.js" />
+    <None Include="..\..\test\functional\www\101_helloworld_sequence\web.config" />
+    <None Include="..\..\test\functional\www\102_defaultdocument\index.js" />
+    <None Include="..\..\test\functional\www\102_defaultdocument\web.config" />
+    <None Include="..\..\test\functional\www\103_urlrewrite\hello.js" />
+    <None Include="..\..\test\functional\www\103_urlrewrite\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
     <None Include="..\samples\configuration\hello.js" />
     <None Include="..\samples\configuration\readme.htm">
