@@ -56,7 +56,7 @@ if %failure% neq 0 (
 exit /b 0
 
 
-:: run one test
+:: Runs one test.
 :: %1 - the fully qualified file name of the test file
 :: %2 - the extension of the file name
 
@@ -93,7 +93,7 @@ if "%nr%" equ "0" call :resetAppPool
 
 exit /b 0
 
-:: stops and starts the iisnodetest application pool
+:: Stops and starts the iisnodetest application pool.
 
 :resetAppPool
 
@@ -103,7 +103,7 @@ if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1062 exit /b -1
 if %ERRORLEVEL% neq 0 exit /b -1
 exit /b 0
 
-:: display help and exit
+:: Displays help and exit.
 
 :help
 
