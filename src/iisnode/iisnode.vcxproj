@@ -215,11 +215,21 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\test\functional\scripts\runNodeTest.bat" />
+    <None Include="..\..\test\functional\scripts\setup.bat" />
     <None Include="..\..\test\functional\test.bat" />
     <None Include="..\..\test\functional\tests\100_helloworld.js" />
     <None Include="..\..\test\functional\tests\101_helloworld_sequence.js" />
     <None Include="..\..\test\functional\tests\102_defaultdocument.js" />
+    <None Include="..\..\test\functional\tests\103_urlrewrite.js" />
+    <None Include="..\..\test\functional\tests\104_echo.js" />
+    <None Include="..\..\test\functional\tests\105_logging.js" />
+    <None Include="..\..\test\functional\tests\106_autoupdate.bat" />
+    <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
+    <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
+    <None Include="..\..\test\functional\tests\parts\106_autoupdate_second.js" />
+    <None Include="..\..\test\functional\tests\parts\200_samples.js" />
     <None Include="..\..\test\functional\www\100_helloworld\hello.js" />
     <None Include="..\..\test\functional\www\100_helloworld\web.config" />
     <None Include="..\..\test\functional\www\101_helloworld_sequence\hello.js" />
@@ -228,6 +238,13 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     <None Include="..\..\test\functional\www\102_defaultdocument\web.config" />
     <None Include="..\..\test\functional\www\103_urlrewrite\hello.js" />
     <None Include="..\..\test\functional\www\103_urlrewrite\web.config" />
+    <None Include="..\..\test\functional\www\104_echo\echo.js" />
+    <None Include="..\..\test\functional\www\104_echo\web.config" />
+    <None Include="..\..\test\functional\www\105_logging\hello.js" />
+    <None Include="..\..\test\functional\www\105_logging\web.config" />
+    <None Include="..\..\test\functional\www\106_autoupdate\hello_first.js" />
+    <None Include="..\..\test\functional\www\106_autoupdate\hello_second.js" />
+    <None Include="..\..\test\functional\www\106_autoupdate\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
     <None Include="..\samples\configuration\hello.js" />
     <None Include="..\samples\configuration\readme.htm">

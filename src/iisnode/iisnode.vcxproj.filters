@@ -67,6 +67,21 @@
     <Filter Include="Tests\functional\www\103_urlrewrite">
       <UniqueIdentifier>{82399d26-206c-4d05-8815-34655e5d5079}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\tests\parts">
+      <UniqueIdentifier>{0e9835dc-cb6d-4014-8ffb-b9e35b05160a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\104_echo">
+      <UniqueIdentifier>{368ed79c-099f-4196-bc66-4ce324df08cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\105_logging">
+      <UniqueIdentifier>{053097ae-c9f4-4c00-8a31-a2c83ea57b14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\106_autoupdate">
+      <UniqueIdentifier>{eabfd5d6-7e45-439a-90c1-fd0f7ed538a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\scripts">
+      <UniqueIdentifier>{f69631ee-6910-4fa3-9e6f-36786970c51e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -282,6 +297,57 @@
     </None>
     <None Include="..\..\test\functional\test.bat">
       <Filter>Tests\functional</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\103_urlrewrite.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\104_echo.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\105_logging.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\200_samples.bat">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\parts\200_samples.js">
+      <Filter>Tests\functional\tests\parts</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\104_echo\echo.js">
+      <Filter>Tests\functional\www\104_echo</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\104_echo\web.config">
+      <Filter>Tests\functional\www\104_echo</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\105_logging\hello.js">
+      <Filter>Tests\functional\www\105_logging</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\105_logging\web.config">
+      <Filter>Tests\functional\www\105_logging</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\106_autoupdate\hello_first.js">
+      <Filter>Tests\functional\www\106_autoupdate</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\106_autoupdate\hello_second.js">
+      <Filter>Tests\functional\www\106_autoupdate</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\106_autoupdate\web.config">
+      <Filter>Tests\functional\www\106_autoupdate</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\106_autoupdate.bat">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js">
+      <Filter>Tests\functional\tests\parts</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\parts\106_autoupdate_second.js">
+      <Filter>Tests\functional\tests\parts</Filter>
+    </None>
+    <None Include="..\..\test\functional\scripts\runNodeTest.bat">
+      <Filter>Tests\functional\scripts</Filter>
+    </None>
+    <None Include="..\..\test\functional\scripts\setup.bat">
+      <Filter>Tests\functional\scripts</Filter>
     </None>
   </ItemGroup>
 </Project>
