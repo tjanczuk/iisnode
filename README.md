@@ -34,7 +34,7 @@ For 64 bit Windows:
 
 **Installing for IIS Express/WebMatrix**
 
-- [Check out the walkthhrough](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)
+- [Check out the walkthrough](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)
 
 **Samples**
 
