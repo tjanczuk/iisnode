@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <?if $(var.Platform) = x86 ?>
+    <?define platformShortName="x86" ?>    
+  <?endif?>
+
+  <?if $(var.Platform) = x64 ?>
+    <?define platformShortName="amd64" ?>
+  <?endif?>
+
+  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\$(var.platformShortName)\" ?>
+  
+  <?define version="0.1.4.0"?>
+
+  <Product Id="cc6c176e-e26c-48ec-8970-f58bd1d046ce" Name="iisnode" Language="1033" Version="$(var.version)" Manufacturer="iisnode" UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1f">
+
+    <Package InstallerVersion="200" Compressed="yes" />
+
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="iisnoderootdir" Name="iisnode">
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
+      <ComponentGroupRef Id="allfiles" />
+      <ComponentGroupRef Id="Product.Generated" />
+    </Feature>
+  </Product>
+    
+  <?include iisnodefiles.wxi ?>
+
+</Wix>

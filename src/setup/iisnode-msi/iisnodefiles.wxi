@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+     generated with WIX 3.5 command
+     
+     build\Debug>heat dir amd64 -srd -gg -g1 -cg allfiles -sfrag -dr iisnoderootdir -var var.sourcedir -o iisnodefiles.wxi
+     
+     then copied all Fragment elements from the output to inside of the Include top level element in this file
+     then review for removed unnecessary files
+     then added <?if $(var.Configuration) = Debug ?> around pdb files (both in file specification and in reference under component group)
+-->
+<Include xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="iisnoderootdir">
+      <Component Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" Guid="B59AD501-3EBD-43AA-A6ED-12E55660B0CE">
+        <File Id="fil7FAEA07CDAF0588E758688EFA85F0A6A" KeyPath="yes" Source="$(var.sourcedir)\iisnode.dll" />
+      </Component>
+      <?if $(var.Configuration) = Debug ?>
+        <Component Id="cmpE429AFB5AD377FF35803A538B9BE37A7" Guid="640DF20F-AECC-4D43-9D47-2E447EC0ECD9">
+          <File Id="fil10F3E910C80F806A860F37AA30660F83" KeyPath="yes" Source="$(var.sourcedir)\iisnode.pdb" />
+        </Component>
+      <?endif?>
+      <Component Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" Guid="0EC0F08E-89B3-4C35-A286-8DB8598597F2">
+        <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="yes" Source="$(var.sourcedir)\iisnode_schema.xml" />
+      </Component>
+      <Component Id="cmp78AE398245B3D9A234A35735C8E7C51E" Guid="2EE818DF-8E3E-4706-BBD7-5C5B9FEF0A2C">
+        <File Id="filBA09BAF012C23F2BA4BAF074AAB67223" KeyPath="yes" Source="$(var.sourcedir)\install.bat" />
+      </Component>
+      <Component Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" Guid="D67F8169-9A64-4ABB-8BDE-D331C90B0198">
+        <File Id="fil0F1847FEE89C137D02C1A6B34753D194" KeyPath="yes" Source="$(var.sourcedir)\LICENSE.txt" />
+      </Component>
+      <Component Id="cmp1B33C88432AC7530411D254B86561208" Guid="7289761F-64EA-4015-A56D-918198EA7AE3">
+        <File Id="fil3B86A7DAD58B7C191C98A67D26D2C427" KeyPath="yes" Source="$(var.sourcedir)\README.md" />
+      </Component>
+      <Directory Id="dirC3B05243102F810BD3959CD3BA949E87" Name="www">
+        <Component Id="cmp000EF07CDC332A898735A6BFF674ECBD" Guid="5B2C5D14-6189-4A7C-AC3D-7C74C8463A8A">
+          <File Id="fil35BF90395B31103B4836B171584F727A" KeyPath="yes" Source="$(var.sourcedir)\www\index.htm" />
+        </Component>
+        <Directory Id="dir137EDEFDAFBD98FD99C23E11BFE4FA56" Name="configuration">
+          <Component Id="cmp97BBEA440C75C9AA1726A3083CD6B0AA" Guid="5CB4284F-DBE1-4097-A61F-9AFCA7C8D417">
+            <File Id="filC84C6F4F3A4A26E6C60922E9EB27A44A" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\hello.js" />
+          </Component>
+          <Component Id="cmp35E8791EC1813578EC05F557AD0DB971" Guid="9F37FB12-C3A8-46EA-B7C6-E204BE7660C3">
+            <File Id="fil71B6426C908BE42E25A29282F767DFF0" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\readme.htm" />
+          </Component>
+          <Component Id="cmp43304DBF7D5F428226B66D8BCE98F79C" Guid="D677A41F-77E9-4133-A646-54B6800A824B">
+            <File Id="fil2F0416F09F068096D5E253A91DCDFB4D" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\web.config" />
+          </Component>
+        </Directory>
+        <Directory Id="dir45A892E29212AE212D756BFAD925773B" Name="defaultdocument">
+          <Component Id="cmpB18006FAB8C1983F7075672963FB789C" Guid="8977FE53-FB08-4FA5-86F9-1E3F25B4A6CB">
+            <File Id="filE53AE563CAB9C23C9F68379295CD0F72" KeyPath="yes" Source="$(var.sourcedir)\www\defaultdocument\index.js" />
+          </Component>
+          <Component Id="cmp4EE8AC791973A668E0BD31E0C7C56779" Guid="5884A8EA-05B5-4740-9C5C-F368EA395B1D">
+            <File Id="fil26C91C624C0230A839D3BC7029B0CEAF" KeyPath="yes" Source="$(var.sourcedir)\www\defaultdocument\readme.htm" />
+          </Component>
+          <Component Id="cmp797D37F6545ADEB8D9388E1F4E27274F" Guid="51B4721C-06C4-4E33-A9F5-968D8BA32C2E">
+            <File Id="fil771AE13FD3BAADFF88169511EE302A30" KeyPath="yes" Source="$(var.sourcedir)\www\defaultdocument\web.config" />
+          </Component>
+        </Directory>
+        <Directory Id="dir750480CD5179755F6F57142663376208" Name="express">
+          <Component Id="cmpDD09B3C30D38631271A080EF2753834D" Guid="0AFCDA80-0F85-411D-9F85-1BB2C6561458">
+            <File Id="fil095BAD26C4A5ACA5A9746CE8531540D0" KeyPath="yes" Source="$(var.sourcedir)\www\express\hello.js" />
+          </Component>
+          <Component Id="cmp261AB439082A8771448F1CA30991B206" Guid="A10A2939-AD49-4752-B4B8-194E9B1EC4E4">
+            <File Id="filA077CA8217813C083441FCE1C73B1409" KeyPath="yes" Source="$(var.sourcedir)\www\express\readme.htm" />
+          </Component>
+          <Component Id="cmp49A142A188D295AACAD68BD2F160D8E8" Guid="73205137-9C86-4717-B68E-A1D141BE96B4">
+            <File Id="fil3CF73AF92D1808EE221AA8D3196326A8" KeyPath="yes" Source="$(var.sourcedir)\www\express\web.config" />
+          </Component>
+          <Directory Id="dirC9A817A6648549A2260E0C5F80004875" Name="node_modules">
+            <Directory Id="dirAD8A4932679026E71C88A4DDA9E3E3F2" Name="connect">
+              <Component Id="cmp441C4F733B334F7091880A5B0A08B4A6" Guid="C50DED99-8F6F-4FD9-8678-6F85BA7DAF1C">
+                <File Id="fil564C0C054ADB8D2CFBED684428B2E9A5" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\index.js" />
+              </Component>
+              <Component Id="cmp6216B2B414EE7FF6617E6577C2DE8BFD" Guid="67570FE9-7A61-4D5D-A5B1-C0F4B9CD6521">
+                <File Id="fil30820C197FBCCB99AA0FD831307A02DD" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\LICENSE" />
+              </Component>
+              <Component Id="cmpB97DB37EB19FD4B3346062F5B618DEFF" Guid="7256C992-9905-4105-8494-E6560108561C">
+                <File Id="fil4B74DFE558D1F32657B39C6C520CC914" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\package.json" />
+              </Component>
+              <Directory Id="dirD3FD675DBC4E0EDDF5B35C62C84CC6E4" Name="lib">
+                <Component Id="cmp07E283A389927256F1A8F4A0E965646F" Guid="1D3038A2-B0BA-4B40-995D-B4DB9AD79B4C">
+                  <File Id="filEAD320972D1525DC6D64ACA4B2A3902F" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\connect.js" />
+                </Component>
+                <Component Id="cmp6A22D3F6B16A836158394B27DE7F1D6E" Guid="9C8B7116-13DF-46EB-8B65-B9EDE55FCD44">
+                  <File Id="fil65C5F37E917A6750B68F62DD9560D521" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\http.js" />
+                </Component>
+                <Component Id="cmp4E3D7FB0EFD6E8130A32BE20F9D551A6" Guid="66D58196-6232-4178-9771-C6DDE69E97C3">
+                  <File Id="filEC7947D555AA0B7D66D901082740B329" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\https.js" />
+                </Component>
+                <Component Id="cmp1EB407D4B103A18851B55AC267C3DF7F" Guid="25477DB1-ECE1-4456-9FA9-014F9C89FAE0">
+                  <File Id="fil2EE567207579347C087AEBCD5774070B" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\index.js" />
+                </Component>
+                <Component Id="cmp4C4CC0865497D8DCDE6DA1AA7F3CC74B" Guid="AAE55331-0619-42B7-A43E-3592C4C21B89">
+                  <File Id="fil1BF868F7808E0FEFE4965914FAC0463F" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\patch.js" />
+                </Component>
+                <Component Id="cmpC66420EE6FC3FD09F5300082F82EE24A" Guid="A943FEE3-AC2D-42E4-9275-6FD7C4128581">
+                  <File Id="filD0D7B13B347EBADADCEFFB1036A98F25" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\utils.js" />
+                </Component>
+                <Directory Id="dirF57E5F7650D2A31E965379E6F1FE6BCF" Name="middleware">
+                  <Component Id="cmp0BDA0E43FD77C75166012A3E6E5F799D" Guid="2BAA4BDE-D66E-4EB6-B232-E870F357E454">
+                    <File Id="fil9D4D51BFB1E152A5730374522B2CA31E" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\basicAuth.js" />
+                  </Component>
+                  <Component Id="cmp41924B963016B35428C01DC29ABD4D86" Guid="5C4549DE-A8E1-42E1-967A-79F20B1B8065">
+                    <File Id="fil68B3B2FACEB0581E7B709AC9002ED215" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\bodyParser.js" />
+                  </Component>
+                  <Component Id="cmp050E67A7F055081F5C60DF1AB80BBE1B" Guid="1D57000F-797C-422F-A63E-9FA9786C5F68">
+                    <File Id="fil5270CDC7F754488BA4F85702564D92D8" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\compiler.js" />
+                  </Component>
+                  <Component Id="cmp14C90748D486D43E96834D7DF4C6DFE3" Guid="212CFE24-F158-4F89-B597-E56D0071ECA0">
+                    <File Id="filA1DF332BEB4D056DCCCCF0B496F99AFC" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\cookieParser.js" />
+                  </Component>
+                  <Component Id="cmpB36FE2F8DDD5CE8A6064BA577EFA1707" Guid="4EE7D478-A60F-4196-918E-DFE61E8BA53D">
+                    <File Id="fil98AC640298A9B3D59BF2B04A09C9CCBE" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\csrf.js" />
+                  </Component>
+                  <Component Id="cmp2D4A3141B24C9B93C55432FFE1EEA4A8" Guid="33D29069-D19D-4082-8588-4EC641525DE3">
+                    <File Id="fil39DAAD4BDA83C174A11164ABF99F2969" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\directory.js" />
+                  </Component>
+                  <Component Id="cmp75A1A7D8EC92E6649353A03FF0C32056" Guid="851590CF-9F85-4583-96AB-96CCE6B0AC5F">
+                    <File Id="filCD3732EBE10AEA8C8089156238585E7E" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\errorHandler.js" />
+                  </Component>
+                  <Component Id="cmpFC1B2CB25E05AB9940CCF17D47E22215" Guid="C216F5E5-6836-4D35-BAE3-547357286A35">
+                    <File Id="filB146C60CCDC234E7743388A7E51062B7" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\favicon.js" />
+                  </Component>
+                  <Component Id="cmpE34AF7E6A206B2BB4CAE275C6179CAFC" Guid="B0FDC663-6CA3-4A2B-AE46-A11B5ED4108E">
+                    <File Id="filBBE74AAFD10109A2BF62840845680FBF" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\limit.js" />
+                  </Component>
+                  <Component Id="cmpC8BBF949B815B38AEB8F6FDE2200D33D" Guid="9A56DA3D-D2E8-49C0-ABE7-5855C19F191B">
+                    <File Id="filA29D8CC370F1B05D05487FB4241CA55E" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\logger.js" />
+                  </Component>
+                  <Component Id="cmp8DF9E5B7C7F3A4D887FD519A26E2EE80" Guid="9BA7B02E-2226-47C4-87CC-F0803B8EB6F3">
+                    <File Id="fil3DF491B442E5BD6507CDD92A6C06C5E1" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\methodOverride.js" />
+                  </Component>
+                  <Component Id="cmp2DE3905485782D8D52AC29653F144348" Guid="04B9A99C-8AB2-499A-BF83-149E07BE4801">
+                    <File Id="filA1300C835C3BDB4F89D9AE47C9983B8C" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\profiler.js" />
+                  </Component>
+                  <Component Id="cmp56964E24C917BFAD13EEE34EFB4983B7" Guid="F1E6640D-83AB-4206-A2B4-E4DD01946F70">
+                    <File Id="fil103B5A8C0D00C8C0DB1FC4AA981779B0" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\query.js" />
+                  </Component>
+                  <Component Id="cmp5D1E24519E28E4250B3DAE878BE1F1CD" Guid="3A7F6FE0-DFD9-452F-91F0-CBEF76A4C76F">
+                    <File Id="filF6FE0B19CCAC7DF54915D1B25A54992D" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\responseTime.js" />
+                  </Component>
+                  <Component Id="cmp50388CA011384D01ADE68CC379F42A76" Guid="7AF1BDF5-7EBE-4F9F-BF08-9A294BA580DC">
+                    <File Id="filA0E2863355E47390CDF6B6F69DD23A59" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\router.js" />
+                  </Component>
+                  <Component Id="cmp462C1AE3EC7A49AC50664AF5514E152D" Guid="CF54E65E-FAC7-40C4-BB2D-1DC49D83F8F0">
+                    <File Id="fil6D2599EED4EBE1182327C14FAE14C70D" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\session.js" />
+                  </Component>
+                  <Component Id="cmp6467F94989ED30362C6E1D3EE264E8C5" Guid="AA52720F-9FB4-4612-B6F8-524F122385AE">
+                    <File Id="fil56B3F5A6D7DDEDDA22627AA67988B446" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\static.js" />
+                  </Component>
+                  <Component Id="cmp098AA34D2E295909F7E10D944499A68E" Guid="20618EE9-3E57-476C-AED3-34BC2F1E5E2F">
+                    <File Id="filAA66E30B7117B56A45D6D57E52E1146C" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\vhost.js" />
+                  </Component>
+                  <Directory Id="dir9838C164C3E1BA89F4EB3FA0480F1883" Name="session">
+                    <Component Id="cmp5B09843CC1D2A008CC9A6D058CD16F30" Guid="47086241-FEB0-4702-BEFE-94DC986F1F4C">
+                      <File Id="fil3DA1D3426FA81B473EE15C5D29747344" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\session\cookie.js" />
+                    </Component>
+                    <Component Id="cmp6059D76D68D21E0BAB29C5179CB0B4A9" Guid="7EA1F8C1-365F-4579-A24C-83D487909453">
+                      <File Id="fil8E064B5847C5E50AC4CDE0D83AC8CAA5" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\session\memory.js" />
+                    </Component>
+                    <Component Id="cmp8FDD847A44E85DF751F690D8EF5BEF5C" Guid="E572B08C-AB43-40D2-BFB8-871152B0A952">
+                      <File Id="fil9AEBC40E96161FBD4BF519D49FD211CE" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\session\session.js" />
+                    </Component>
+                    <Component Id="cmp30964D1BC17FE99F4AD9FF2281CD9B04" Guid="43C31A84-75AE-4D90-87AA-CDB90D7E5618">
+                      <File Id="fil759314DA87EE4910E6157BA513373D93" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\connect\lib\middleware\session\store.js" />
+                    </Component>
+                  </Directory>
+                </Directory>
+              </Directory>
+            </Directory>
+            <Directory Id="dir655DC7C6A4965D9778485C40DA269FB8" Name="express">
+              <Component Id="cmp2D4F33C8E39EB9BE2C6DF4B74297A009" Guid="BE654D0C-EDA7-4DD1-8C3D-128F954D4ADC">
+                <File Id="fil2B2CF4B0FDAB7EFFFC937D63CAA9C94B" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\index.js" />
+              </Component>
+              <Component Id="cmp628E942404E9718DE8E05CE8C7398E62" Guid="BDC23E47-651F-4251-AC1A-152D5C02D79F">
+                <File Id="fil89FD9587A6FE927D5F92B865D6FF0C3D" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\LICENSE" />
+              </Component>
+              <Component Id="cmp64CF5155F1E6B1506369753021DA283C" Guid="1452E8EE-8FB1-443A-AF5D-405A3EFECB94">
+                <File Id="fil84DE724829DFCDE86285A9874126D844" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\package.json" />
+              </Component>
+              <Directory Id="dirA4AF8739A25AC1653EAFDC9975427960" Name="lib">
+                <Component Id="cmp709CFEE9DE682901FDF8930D301B0D00" Guid="D29BB780-FEF8-435A-B0CA-18437CE467BF">
+                  <File Id="fil8E3E473557DE5F8C26097D2AEC187712" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\express.js" />
+                </Component>
+                <Component Id="cmpA95C85AF9FDE020658E3E1FE97CB61C6" Guid="B46FAA7E-9589-46A5-B356-4A31CA242A39">
+                  <File Id="fil2F4646D1DB4B22B2E3EFE264E64C5A95" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\http.js" />
+                </Component>
+                <Component Id="cmp343A16CF412306FEE26ADA8BBE7AA90F" Guid="4467A598-7A26-4FFB-8055-BD58EEF8BFB5">
+                  <File Id="fil3CA507C0B0DE1BA7146C981343D1A7A8" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\https.js" />
+                </Component>
+                <Component Id="cmpA974C35A7BF05B678593E8C4F7B92E28" Guid="0F6D8D01-9191-4E5D-B91C-BD09A8820C0C">
+                  <File Id="fil846737EB9317DEF53DA5A4555C09B096" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\request.js" />
+                </Component>
+                <Component Id="cmpB76F97EBA0D20D705B5692B300E6F00D" Guid="B69F0C2E-EA58-43D1-912C-F43CA069E090">
+                  <File Id="fil161C7EFB5DAD371B507818C3019E09CA" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\response.js" />
+                </Component>
+                <Component Id="cmp2CC2142CD05B7460B8729B3C63D01D80" Guid="644364CB-5D65-4504-BC12-7A0A6016795A">
+                  <File Id="fil4B9CCE0A72CE7068C9D3F35AD4E29B9B" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\utils.js" />
+                </Component>
+                <Component Id="cmp402B2192A5B6FB2AA15224AE34D10359" Guid="F70A2492-FF63-4788-B15C-5D3E5B83BD06">
+                  <File Id="filB09A8BA91E506F8E7F8B2F6A0685C905" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\view.js" />
+                </Component>
+                <Directory Id="dir14160EDAD6642797D2735FE2A9388E54" Name="router">
+                  <Component Id="cmp92AB306337385427F37A134F795F9E17" Guid="538634FA-9D90-4CE1-B04E-F5850919113E">
+                    <File Id="filAC83812AB01B79A6A41735E5E9E826B8" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\router\collection.js" />
+                  </Component>
+                  <Component Id="cmp9F87CEC0E41BE71019C03628E90E353D" Guid="EBA68C86-DF6D-4E39-8C99-555905A6349B">
+                    <File Id="filA471CADB38577CFCD8F87BFF936418FC" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\router\index.js" />
+                  </Component>
+                  <Component Id="cmp311C21D2433E8A04991F5268D871747F" Guid="F37A9130-ACE1-43BE-823F-22D8CDB65BF6">
+                    <File Id="filB77E55873E4FE0A7C687215BA6391C13" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\router\methods.js" />
+                  </Component>
+                  <Component Id="cmpECC90787EBEC7CE5A9B2B42B0BF42BE7" Guid="F4D482AA-8E78-416E-A5CE-CDC5BCCAFDEC">
+                    <File Id="fil04145B450B466440E59D3FB51C8F6163" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\router\route.js" />
+                  </Component>
+                </Directory>
+                <Directory Id="dirC328AA7BCFC6A8D9BE84899C9B9D4301" Name="view">
+                  <Component Id="cmp3AD2723884FD14B3F357299361B2C534" Guid="CC096243-79FE-4D19-A6C1-2D4AEF978558">
+                    <File Id="filE742ECFF9D73039F3ED18621BD7DB41F" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\view\partial.js" />
+                  </Component>
+                  <Component Id="cmp6DB6A1852FB132D189374D57FE2159F4" Guid="72EA1C39-6EDA-4FE6-9F64-BE0B2A46B47B">
+                    <File Id="fil0ADEBED34404196A1E062E036D5FAC25" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\express\lib\view\view.js" />
+                  </Component>
+                </Directory>
+              </Directory>
+            </Directory>
+            <Directory Id="dir9A946F8392B720034F4739D1F419D3D8" Name="mime">
+              <Component Id="cmpE796765D36257C6A2EFF2522183A8151" Guid="771CEFF5-D681-44D4-9EF5-4B1C74F55840">
+                <File Id="filF9DAC447D9F0E549B0EBB2A0E19A3F62" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\mime\index.js" />
+              </Component>
+              <Component Id="cmpCF1A5FF12B42FE1120677E513B125F31" Guid="D52BD579-3C52-4344-BB21-EB6E36D2F6FE">
+                <File Id="fil9C2B481943252B2593777B7846123C6E" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\mime\LICENSE" />
+              </Component>
+              <Component Id="cmp68491D36EDA4404D73928C02FA2BE0B0" Guid="05688886-AB2E-456A-8974-5CD901E5F659">
+                <File Id="fil735BE25E1D2C44DE11B7950C15D11D51" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\mime\mime.js" />
+              </Component>
+              <Component Id="cmpD9C1671A663811B5253692CF09C42B38" Guid="4A8980CC-3D5D-46E1-B07B-E70B95522293">
+                <File Id="filEE878EEBBAF95165A7CABCD7F3EF66CD" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\mime\mime.types" />
+              </Component>
+              <Component Id="cmp3337AFA79A9F9F5D5E2A20BF1219D076" Guid="99990BF2-011D-4533-BEE6-FB984AE51E15">
+                <File Id="fil47ED3B1966D254AD230F14EB139ABE43" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\mime\node.types" />
+              </Component>
+              <Component Id="cmp74871E3EECE5731B8A10D640B66A61B8" Guid="09D29BFA-B1E9-4B29-B9E4-BDBBE03083CF">
+                <File Id="fil93729C958E198F8A4B40266E32369285" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\mime\package.json" />
+              </Component>
+            </Directory>
+            <Directory Id="dir160D9DA736148EB43AE7D591CABFFF3E" Name="qs">
+              <Component Id="cmpA1F3C3B905389D5BC69A20E419C216C8" Guid="8283C9DC-B307-4129-BFBD-68E329673696">
+                <File Id="fil70E64A68AC9A4A2B3BE29CDED3866329" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\qs\index.js" />
+              </Component>
+              <Component Id="cmp3851BE123A14A777150D7732FCCD9A97" Guid="33BB4C3A-BF4F-44CB-9EE0-C4EAD7352714">
+                <File Id="fil5BCC13165C7C953895BD7968CB87B241" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\qs\package.json" />
+              </Component>
+              <Directory Id="dirBDC8A0E105A25D977DD73F9C20FF00F3" Name="lib">
+                <Component Id="cmpE75FC2D207FD69898310CC30945B6CB4" Guid="CF21EB58-AEE0-4000-B522-DD63090EF847">
+                  <File Id="fil67ED5A7DDCBF8A99AE51972FE9BEDD8C" KeyPath="yes" Source="$(var.sourcedir)\www\express\node_modules\qs\lib\querystring.js" />
+                </Component>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+        <Directory Id="dir4242E1ABE0185B95EDD89AD67F71EF81" Name="helloworld">
+          <Component Id="cmpA095DF6B198992EA94136CC9954F6954" Guid="1FF1359F-9E97-4987-8158-C956CD3F6A4F">
+            <File Id="fil1E75F2DF2EB27D06A6AC3CE0BF1E997A" KeyPath="yes" Source="$(var.sourcedir)\www\helloworld\hello.js" />
+          </Component>
+          <Component Id="cmpB3B18140CA33ADB4D548A48B86CD77AC" Guid="35CB8E7D-E764-4A03-98BD-156FF212D770">
+            <File Id="fil519CAF482249C117573BC668C06E29C3" KeyPath="yes" Source="$(var.sourcedir)\www\helloworld\helloClient.js" />
+          </Component>
+          <Component Id="cmp8729BEFDC385892EA61BF7208B75F7E4" Guid="66396DCD-B853-41C2-8A2E-5DB938E28622">
+            <File Id="fil147ACFE24D9CA343339D7F95AE699C3A" KeyPath="yes" Source="$(var.sourcedir)\www\helloworld\readme.htm" />
+          </Component>
+          <Component Id="cmp566249C7B93455CC96B34226BFCFE699" Guid="806E1A5E-C81E-428D-BEBE-AADA9367D155">
+            <File Id="fil6AEF1150F8A65D4A97ADF3B964C9FC40" KeyPath="yes" Source="$(var.sourcedir)\www\helloworld\web.config" />
+          </Component>
+        </Directory>
+        <Directory Id="dir0DAEB0F1F5958E36606F9C61E2FFCD91" Name="logging">
+          <Component Id="cmp6ED31FD9AD562B4EC571FD844C7A8988" Guid="40232F19-1E2C-4033-AD4A-3B3928E3C17D">
+            <File Id="filB97CD54B57C0565504F9E3ED44D54DB9" KeyPath="yes" Source="$(var.sourcedir)\www\logging\hello.js" />
+          </Component>
+          <Component Id="cmp519895DD50C1D303FF6C61C61719828F" Guid="5B73B751-ECBF-4ABB-A430-B1D7175931A2">
+            <File Id="fil556CAA506595DBEC297D79B49323DA87" KeyPath="yes" Source="$(var.sourcedir)\www\logging\readme.htm" />
+          </Component>
+          <Component Id="cmp1BFE03AB6A93D185791D459125ECD5DB" Guid="34DC952C-D708-462F-8417-EA888324A473">
+            <File Id="filF9A8D1FADB883905F8309D0A771B8EF0" KeyPath="yes" Source="$(var.sourcedir)\www\logging\web.config" />
+          </Component>
+        </Directory>
+        <Directory Id="dirC6FC461581E01E64AF15799654D7F727" Name="urlrewrite">
+          <Component Id="cmp2206B4ED3BFE29BD483211C73F9303A2" Guid="EF5B83CF-6D4E-498E-915E-D77DCD98471E">
+            <File Id="fil5F968805F2FF9629238A5C197B32617E" KeyPath="yes" Source="$(var.sourcedir)\www\urlrewrite\hello.js" />
+          </Component>
+          <Component Id="cmp40869352F2AE98A449D38679FD313089" Guid="57C2E251-760F-4643-AFF8-6DDF13F398EA">
+            <File Id="fil9822CCF6AB89B30637505A21DF2BEA1B" KeyPath="yes" Source="$(var.sourcedir)\www\urlrewrite\readme.htm" />
+          </Component>
+          <Component Id="cmp9F3A0FADEE166143F3633103BBA2782D" Guid="D76F7583-8ABD-40A5-BB14-B2CE278566A7">
+            <File Id="fil7467E82B1D21EEE31BEDC5BD11BA7255" KeyPath="yes" Source="$(var.sourcedir)\www\urlrewrite\web.config" />
+          </Component>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="allfiles">
+      <ComponentRef Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" />
+      <?if $(var.Configuration) = Debug ?>      
+        <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A7" />
+      <?endif?>
+      <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" />
+      <ComponentRef Id="cmp78AE398245B3D9A234A35735C8E7C51E" />
+      <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" />
+      <ComponentRef Id="cmp1B33C88432AC7530411D254B86561208" />
+      <ComponentRef Id="cmp000EF07CDC332A898735A6BFF674ECBD" />
+      <ComponentRef Id="cmp97BBEA440C75C9AA1726A3083CD6B0AA" />
+      <ComponentRef Id="cmp35E8791EC1813578EC05F557AD0DB971" />
+      <ComponentRef Id="cmp43304DBF7D5F428226B66D8BCE98F79C" />
+      <ComponentRef Id="cmpB18006FAB8C1983F7075672963FB789C" />
+      <ComponentRef Id="cmp4EE8AC791973A668E0BD31E0C7C56779" />
+      <ComponentRef Id="cmp797D37F6545ADEB8D9388E1F4E27274F" />
+      <ComponentRef Id="cmpDD09B3C30D38631271A080EF2753834D" />
+      <ComponentRef Id="cmp261AB439082A8771448F1CA30991B206" />
+      <ComponentRef Id="cmp49A142A188D295AACAD68BD2F160D8E8" />
+      <ComponentRef Id="cmp441C4F733B334F7091880A5B0A08B4A6" />
+      <ComponentRef Id="cmp6216B2B414EE7FF6617E6577C2DE8BFD" />
+      <ComponentRef Id="cmpB97DB37EB19FD4B3346062F5B618DEFF" />
+      <ComponentRef Id="cmp07E283A389927256F1A8F4A0E965646F" />
+      <ComponentRef Id="cmp6A22D3F6B16A836158394B27DE7F1D6E" />
+      <ComponentRef Id="cmp4E3D7FB0EFD6E8130A32BE20F9D551A6" />
+      <ComponentRef Id="cmp1EB407D4B103A18851B55AC267C3DF7F" />
+      <ComponentRef Id="cmp4C4CC0865497D8DCDE6DA1AA7F3CC74B" />
+      <ComponentRef Id="cmpC66420EE6FC3FD09F5300082F82EE24A" />
+      <ComponentRef Id="cmp0BDA0E43FD77C75166012A3E6E5F799D" />
+      <ComponentRef Id="cmp41924B963016B35428C01DC29ABD4D86" />
+      <ComponentRef Id="cmp050E67A7F055081F5C60DF1AB80BBE1B" />
+      <ComponentRef Id="cmp14C90748D486D43E96834D7DF4C6DFE3" />
+      <ComponentRef Id="cmpB36FE2F8DDD5CE8A6064BA577EFA1707" />
+      <ComponentRef Id="cmp2D4A3141B24C9B93C55432FFE1EEA4A8" />
+      <ComponentRef Id="cmp75A1A7D8EC92E6649353A03FF0C32056" />
+      <ComponentRef Id="cmpFC1B2CB25E05AB9940CCF17D47E22215" />
+      <ComponentRef Id="cmpE34AF7E6A206B2BB4CAE275C6179CAFC" />
+      <ComponentRef Id="cmpC8BBF949B815B38AEB8F6FDE2200D33D" />
+      <ComponentRef Id="cmp8DF9E5B7C7F3A4D887FD519A26E2EE80" />
+      <ComponentRef Id="cmp2DE3905485782D8D52AC29653F144348" />
+      <ComponentRef Id="cmp56964E24C917BFAD13EEE34EFB4983B7" />
+      <ComponentRef Id="cmp5D1E24519E28E4250B3DAE878BE1F1CD" />
+      <ComponentRef Id="cmp50388CA011384D01ADE68CC379F42A76" />
+      <ComponentRef Id="cmp462C1AE3EC7A49AC50664AF5514E152D" />
+      <ComponentRef Id="cmp6467F94989ED30362C6E1D3EE264E8C5" />
+      <ComponentRef Id="cmp098AA34D2E295909F7E10D944499A68E" />
+      <ComponentRef Id="cmp5B09843CC1D2A008CC9A6D058CD16F30" />
+      <ComponentRef Id="cmp6059D76D68D21E0BAB29C5179CB0B4A9" />
+      <ComponentRef Id="cmp8FDD847A44E85DF751F690D8EF5BEF5C" />
+      <ComponentRef Id="cmp30964D1BC17FE99F4AD9FF2281CD9B04" />
+      <ComponentRef Id="cmp2D4F33C8E39EB9BE2C6DF4B74297A009" />
+      <ComponentRef Id="cmp628E942404E9718DE8E05CE8C7398E62" />
+      <ComponentRef Id="cmp64CF5155F1E6B1506369753021DA283C" />
+      <ComponentRef Id="cmp709CFEE9DE682901FDF8930D301B0D00" />
+      <ComponentRef Id="cmpA95C85AF9FDE020658E3E1FE97CB61C6" />
+      <ComponentRef Id="cmp343A16CF412306FEE26ADA8BBE7AA90F" />
+      <ComponentRef Id="cmpA974C35A7BF05B678593E8C4F7B92E28" />
+      <ComponentRef Id="cmpB76F97EBA0D20D705B5692B300E6F00D" />
+      <ComponentRef Id="cmp2CC2142CD05B7460B8729B3C63D01D80" />
+      <ComponentRef Id="cmp402B2192A5B6FB2AA15224AE34D10359" />
+      <ComponentRef Id="cmp92AB306337385427F37A134F795F9E17" />
+      <ComponentRef Id="cmp9F87CEC0E41BE71019C03628E90E353D" />
+      <ComponentRef Id="cmp311C21D2433E8A04991F5268D871747F" />
+      <ComponentRef Id="cmpECC90787EBEC7CE5A9B2B42B0BF42BE7" />
+      <ComponentRef Id="cmp3AD2723884FD14B3F357299361B2C534" />
+      <ComponentRef Id="cmp6DB6A1852FB132D189374D57FE2159F4" />
+      <ComponentRef Id="cmpE796765D36257C6A2EFF2522183A8151" />
+      <ComponentRef Id="cmpCF1A5FF12B42FE1120677E513B125F31" />
+      <ComponentRef Id="cmp68491D36EDA4404D73928C02FA2BE0B0" />
+      <ComponentRef Id="cmpD9C1671A663811B5253692CF09C42B38" />
+      <ComponentRef Id="cmp3337AFA79A9F9F5D5E2A20BF1219D076" />
+      <ComponentRef Id="cmp74871E3EECE5731B8A10D640B66A61B8" />
+      <ComponentRef Id="cmpA1F3C3B905389D5BC69A20E419C216C8" />
+      <ComponentRef Id="cmp3851BE123A14A777150D7732FCCD9A97" />
+      <ComponentRef Id="cmpE75FC2D207FD69898310CC30945B6CB4" />
+      <ComponentRef Id="cmpA095DF6B198992EA94136CC9954F6954" />
+      <ComponentRef Id="cmpB3B18140CA33ADB4D548A48B86CD77AC" />
+      <ComponentRef Id="cmp8729BEFDC385892EA61BF7208B75F7E4" />
+      <ComponentRef Id="cmp566249C7B93455CC96B34226BFCFE699" />
+      <ComponentRef Id="cmp6ED31FD9AD562B4EC571FD844C7A8988" />
+      <ComponentRef Id="cmp519895DD50C1D303FF6C61C61719828F" />
+      <ComponentRef Id="cmp1BFE03AB6A93D185791D459125ECD5DB" />
+      <ComponentRef Id="cmp2206B4ED3BFE29BD483211C73F9303A2" />
+      <ComponentRef Id="cmp40869352F2AE98A449D38679FD313089" />
+      <ComponentRef Id="cmp9F3A0FADEE166143F3633103BBA2782D" />
+    </ComponentGroup>
+  </Fragment>
+</Include>
