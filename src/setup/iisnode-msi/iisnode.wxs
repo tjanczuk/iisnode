@@ -24,6 +24,10 @@
         <Directory Id="iisnoderootdir" Name="iisnode">
         </Directory>
       </Directory>
+      <Directory Id="SystemFolder">
+        <Directory Id="inetsrvdir" Name="inetsrv">          
+        </Directory>
+      </Directory>
     </Directory>
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">

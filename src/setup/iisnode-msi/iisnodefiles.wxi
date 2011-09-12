@@ -7,8 +7,20 @@
      then copied all Fragment elements from the output to inside of the Include top level element in this file
      then review for removed unnecessary files
      then added <?if $(var.Configuration) = Debug ?> around pdb files (both in file specification and in reference under component group)
+     moved iisnode_schema file to under inetsrvdir directory reference
 -->
 <Include xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="inetsrvdir">
+        <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
+          <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">
+            <Component Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" Guid="0EC0F08E-89B3-4C35-A286-8DB8598597F2">
+              <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="yes" Source="$(var.sourcedir)\iisnode_schema.xml" />
+            </Component>
+          </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
   <Fragment>
     <DirectoryRef Id="iisnoderootdir">
       <Component Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" Guid="B59AD501-3EBD-43AA-A6ED-12E55660B0CE">
@@ -19,12 +31,6 @@
           <File Id="fil10F3E910C80F806A860F37AA30660F83" KeyPath="yes" Source="$(var.sourcedir)\iisnode.pdb" />
         </Component>
       <?endif?>
-      <Component Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" Guid="0EC0F08E-89B3-4C35-A286-8DB8598597F2">
-        <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="yes" Source="$(var.sourcedir)\iisnode_schema.xml" />
-      </Component>
-      <Component Id="cmp78AE398245B3D9A234A35735C8E7C51E" Guid="2EE818DF-8E3E-4706-BBD7-5C5B9FEF0A2C">
-        <File Id="filBA09BAF012C23F2BA4BAF074AAB67223" KeyPath="yes" Source="$(var.sourcedir)\install.bat" />
-      </Component>
       <Component Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" Guid="D67F8169-9A64-4ABB-8BDE-D331C90B0198">
         <File Id="fil0F1847FEE89C137D02C1A6B34753D194" KeyPath="yes" Source="$(var.sourcedir)\LICENSE.txt" />
       </Component>
@@ -306,7 +312,6 @@
         <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A7" />
       <?endif?>
       <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" />
-      <ComponentRef Id="cmp78AE398245B3D9A234A35735C8E7C51E" />
       <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B86561208" />
       <ComponentRef Id="cmp000EF07CDC332A898735A6BFF674ECBD" />
