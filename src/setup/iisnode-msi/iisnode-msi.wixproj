@@ -50,7 +50,10 @@
     <Compile Include="iisnode.wxs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="addiisnodesection.js" />
+    <Content Include="customactions.wxi" />
     <Content Include="iisnodefiles.wxi" />
+    <Content Include="removeiisnodesection.js" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\iisnode\iisnode.vcxproj">
@@ -61,6 +64,12 @@
       <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
       <RefTargetDir>INSTALLLOCATION</RefTargetDir>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WixExtension Include="WixUtilExtension">
+      <HintPath>$(WixExtDir)\WixUtilExtension.dll</HintPath>
+      <Name>WixUtilExtension</Name>
+    </WixExtension>
   </ItemGroup>
   <Import Project="$(WixTargetsPath)" />
   <!--

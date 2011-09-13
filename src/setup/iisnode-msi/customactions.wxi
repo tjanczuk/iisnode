@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <Fragment>
+    
+    <Binary Id="addiisnodesection" SourceFile="addiisnodesection.js"/>
+    <Binary Id="removeiisnodesection" SourceFile="removeiisnodesection.js"/>
+
+    <CustomAction Id="AddIisnodeSection"
+                  BinaryKey="addiisnodesection"
+                  JScriptCall="main"
+                  Execute="deferred"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="no" />
+
+    <CustomAction Id="UndoAddIisnodeSection"
+                  BinaryKey="removeiisnodesection"
+                  JScriptCall="main"
+                  Execute="deferred"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="no" />
+
+    <CustomAction Id="RollbackAddIisnodeSection"
+                  BinaryKey="removeiisnodesection"
+                  JScriptCall="main"
+                  Execute="rollback"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="no" />
+
+    <!-- Quiet execution: http://wix.sourceforge.net/manual-wix3/qtexec.htm 
+         ... and why it does not work: http://stackoverflow.com/questions/2297772/caquietexec-fails-in-wix-installer-while-executing-inetsrv-appcmd -->
+
+    <!-- set up commands - if Quiet execuition worked, this would have to be placed in the InstallExecuteSequence in the main file -->
+
+    <!--<Custom Action="PrepareRemoveIisnodeModuleRegistration" After="CostFinalize" />
+      <Custom Action="PrepareAddIisnodeModuleRegistration" After="CostFinalize" />
+      <Custom Action="PrepareRollbackAddIisnodeModuleRegistration" After="CostFinalize" />
+      <Custom Action="PrepareUndoAddIisnodeModuleRegistration" After="CostFinalize" />-->
+
+    <!--<CustomAction Id="PrepareRemoveIisnodeModuleRegistration" 
+                  Property="RemoveIisnodeModuleRegistration"
+                  Value="[SystemFolder]inetsrv\appcmd.exe uninstall module iisnode /commit:apphost" 
+                  Execute="immediate"/>
+    <CustomAction Id="RemoveIisnodeModuleRegistration"
+                  BinaryKey="WixCA"
+                  DllEntry="CAQuietExecute"
+                  Execute="deferred"
+                  Return="ignore"
+                  Impersonate="no"/>-->
+    <CustomAction Id="RemoveIisnodeModuleRegistration"
+                  ExeCommand="[SystemFolder]inetsrv\appcmd.exe uninstall module iisnode /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="ignore"
+                  Impersonate="no"/>
+
+    <!--<CustomAction Id="PrepareAddIisnodeModuleRegistration"
+                  Property="AddIisnodeModuleRegistration"
+                  Value="[SystemFolder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]\iisnode.dll&quot; /commit:apphost"
+                  Execute="immediate"/>
+    <CustomAction Id="AddIisnodeModuleRegistration"
+                  BinaryKey="WixCA"
+                  DllEntry="CAQuietExecute"
+                  Execute="deferred"
+                  Return="check"
+                  Impersonate="no"/>-->
+    <CustomAction Id="AddIisnodeModuleRegistration"
+                  ExeCommand="[SystemFolder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="check"
+                  Impersonate="no"/>
+
+    <!--<CustomAction Id="PrepareRollbackAddIisnodeModuleRegistration"
+                  Property="RollbackAddIisnodeModuleRegistration"
+                  Value="[SystemFolder]inetsrv\appcmd.exe uninstall module iisnode /commit:apphost"
+                  Execute="immediate"/>
+    <CustomAction Id="RollbackAddIisnodeModuleRegistration"
+                  BinaryKey="WixCA"
+                  DllEntry="CAQuietExecute"
+                  Execute="rollback"
+                  Return="ignore"
+                  Impersonate="no"/>-->
+    <CustomAction Id="RollbackAddIisnodeModuleRegistration"
+                  ExeCommand="[SystemFolder]inetsrv\appcmd.exe uninstall module iisnode /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="rollback"
+                  Return="ignore"
+                  Impersonate="no"/>
+
+    <!--<CustomAction Id="PrepareUndoAddIisnodeModuleRegistration"
+                  Property="UndoAddIisnodeModuleRegistration"
+                  Value="[SystemFolder]inetsrv\appcmd.exe uninstall module iisnode /commit:apphost"
+                  Execute="immediate"/>
+    <CustomAction Id="UndoAddIisnodeModuleRegistration"
+                  BinaryKey="WixCA"
+                  DllEntry="CAQuietExecute"
+                  Execute="deferred"
+                  Return="ignore"
+                  Impersonate="no"/>-->
+    <CustomAction Id="UndoAddIisnodeModuleRegistration"
+                  ExeCommand="[SystemFolder]inetsrv\appcmd.exe uninstall module iisnode /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="ignore"
+                  Impersonate="no"/>
+  </Fragment>
+</Include>

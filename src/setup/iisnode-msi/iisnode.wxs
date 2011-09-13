@@ -2,15 +2,15 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?if $(var.Platform) = x86 ?>
-    <?define platformShortName="x86" ?>    
+  <?define platformShortName="x86" ?>
   <?endif?>
 
   <?if $(var.Platform) = x64 ?>
-    <?define platformShortName="amd64" ?>
+  <?define platformShortName="amd64" ?>
   <?endif?>
 
   <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\$(var.platformShortName)\" ?>
-  
+
   <?define version="0.1.4.0"?>
 
   <Product Id="cc6c176e-e26c-48ec-8970-f58bd1d046ce" Name="iisnode" Language="1033" Version="$(var.version)" Manufacturer="iisnode" UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1f">
@@ -25,7 +25,7 @@
         </Directory>
       </Directory>
       <Directory Id="SystemFolder">
-        <Directory Id="inetsrvdir" Name="inetsrv">          
+        <Directory Id="inetsrvdir" Name="inetsrv">
         </Directory>
       </Directory>
     </Directory>
@@ -34,8 +34,35 @@
       <ComponentGroupRef Id="allfiles" />
       <ComponentGroupRef Id="Product.Generated" />
     </Feature>
-  </Product>
     
+    <InstallExecuteSequence>
+
+      <!-- Conditions for custom actions:
+         http://stackoverflow.com/questions/537584/how-to-execute-custom-action-only-in-install-not-uninstall
+         http://stackoverflow.com/questions/128279/how-best-to-define-a-custom-action-in-wix 
+      -->
+
+      <!-- install/rollback/uninstall iisnode section under system.webServer -->
+
+      <Custom Action="AddIisnodeSection" After="InstallFiles">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="RollbackAddIisnodeSection" After="InstallFiles">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="UndoAddIisnodeSection" After="InstallFiles">REMOVE="ALL"</Custom>
+
+      <!-- remove iisnode module registration -->
+
+      <Custom Action="RemoveIisnodeModuleRegistration" After="AddIisnodeSection" />
+      
+      <!-- install/rollback/uninstall iisnode module -->
+
+      <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="RollbackAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="UndoAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE="ALL"</Custom>
+      
+    </InstallExecuteSequence>
+
+  </Product>
+
   <?include iisnodefiles.wxi ?>
+  <?include customactions.wxi ?>
 
 </Wix>
