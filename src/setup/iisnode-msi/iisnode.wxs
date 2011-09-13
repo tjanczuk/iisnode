@@ -73,6 +73,9 @@
       <ComponentGroupRef Id="allfiles" />
       <ComponentGroupRef Id="Product.Generated" />
     </Feature>
+
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\License.rtf" />
+    <UIRef Id="WixUI_Minimal" />
     
     <InstallExecuteSequence>
 

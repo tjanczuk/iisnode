@@ -54,6 +54,7 @@
     <Content Include="customactions.wxi" />
     <Content Include="iisnodefiles.wxi" />
     <Content Include="iisnodefiles64.wxi" />
+    <Content Include="License.rtf" />
     <Content Include="removeiisnodesection.js" />
   </ItemGroup>
   <ItemGroup>
@@ -67,6 +68,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <WixExtension Include="WixUIExtension">
+      <HintPath>$(WixExtDir)\WixUIExtension.dll</HintPath>
+      <Name>WixUIExtension</Name>
+    </WixExtension>
     <WixExtension Include="WixUtilExtension">
       <HintPath>$(WixExtDir)\WixUtilExtension.dll</HintPath>
       <Name>WixUtilExtension</Name>
