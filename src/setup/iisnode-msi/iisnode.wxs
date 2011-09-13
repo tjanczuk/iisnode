@@ -6,7 +6,7 @@
   <?endif?>
 
   <?if $(var.Platform) = x64 ?>
-  <?define platformShortName="amd64" ?>
+  <?define platformShortName="AMD64" ?>
   <?endif?>
 
   <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\$(var.platformShortName)\" ?>
@@ -29,6 +29,10 @@
 
     <Condition Message="The node.exe is not found at [ROOTDRIVE]\node\node.exe. IIS cannot serve node.js applications without node.exe. Please get the latest node.exe build from http://nodejs.org and install it to [ROOTDRIVE]\node, then restart the installer.">
       <![CDATA[Installed OR NODEEXE]]>
+    </Condition>
+
+    <Condition Message="Cannot install $(var.platformShortName) version of iisnode on a $(env.PROCESSOR_ARCHITECTURE) system. Please download $(env.PROCESSOR_ARCHITECTURE) version of iisnode.">
+      <![CDATA[Installed OR $(env.PROCESSOR_ARCHITECTURE) = $(var.platformShortName)]]>
     </Condition>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
