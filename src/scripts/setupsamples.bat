@@ -43,6 +43,7 @@ if not exist "%node%" (
 if "%1" neq "/s" (
 	echo This installer will perform the following tasks:
 	echo * ensure that the IIS_IUSRS group has read and execute rights to %node%
+	echo * ensure that the IIS_IUSRS group has read and write rights to %www%
 	echo * delete the %site% web application if it exists
 	echo * add a new site %site% to IIS with physical path pointing to %www%
 	echo This script does not provide means to revert these actions. If something fails in the middle you are on your own.
@@ -50,13 +51,22 @@ if "%1" neq "/s" (
 	pause 
 )
 
-echo Ensuring IIS_IUSRS group has read and execute rights to %node%...
+echo Ensuring IIS_IUSRS group has execute permissions for %node%...
 %icacls% "%node%" /grant IIS_IUSRS:rx
 if %ERRORLEVEL% neq 0 (
-	echo Installation failed. Cannot set read and execute permissions to %node%. 
+	echo Installation failed. Cannot set permissions for %node%. 
 	exit /b -1
 )
 echo ...success
+
+echo Ensuring IIS_IUSRS group has full permissions for %www%...
+%icacls% "%www%" /grant IIS_IUSRS:(OI)(CI)F
+if %ERRORLEVEL% neq 0 (
+	echo Installation failed. Cannot set permissions for %www%. 
+	exit /b -1
+)
+echo ...success
+
 
 echo Ensuring the %site% is removed if it exists...
 %appcmd% delete app %site%
