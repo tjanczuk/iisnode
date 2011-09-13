@@ -214,12 +214,6 @@
     <None Include="..\samples\index.htm">
       <Filter>Samples</Filter>
     </None>
-    <None Include="..\scripts\install.bat">
-      <Filter>Scripts</Filter>
-    </None>
-    <None Include="..\scripts\addiisnodesectiongroup.js">
-      <Filter>Scripts</Filter>
-    </None>
     <None Include="..\samples\configuration\web.config">
       <Filter>Samples\configuration</Filter>
     </None>
@@ -348,6 +342,9 @@
     </None>
     <None Include="..\..\test\functional\scripts\setup.bat">
       <Filter>Tests\functional\scripts</Filter>
+    </None>
+    <None Include="..\scripts\setupsamples.bat">
+      <Filter>Scripts</Filter>
     </None>
   </ItemGroup>
 </Project>

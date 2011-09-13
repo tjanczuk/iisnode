@@ -279,10 +279,9 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="..\samples\urlrewrite\web.config" />
-    <None Include="..\scripts\addiisnodesectiongroup.js" />
     <None Include="..\scripts\ensureiisexpressconfig.js" />
-    <None Include="..\scripts\install.bat" />
     <None Include="..\scripts\install_iisexpress.bat" />
+    <None Include="..\scripts\setupsamples.bat" />
     <None Include="iisnode.def" />
   </ItemGroup>
   <ItemGroup>
