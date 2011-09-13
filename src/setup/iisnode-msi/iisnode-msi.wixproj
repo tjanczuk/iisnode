@@ -53,6 +53,7 @@
     <Content Include="addiisnodesection.js" />
     <Content Include="customactions.wxi" />
     <Content Include="iisnodefiles.wxi" />
+    <Content Include="iisnodefiles64.wxi" />
     <Content Include="removeiisnodesection.js" />
   </ItemGroup>
   <ItemGroup>

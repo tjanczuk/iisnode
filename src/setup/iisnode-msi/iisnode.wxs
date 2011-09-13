@@ -2,21 +2,33 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?if $(var.Platform) = x86 ?>
-  <?define platformShortName="x86" ?>
-  <?endif?>
-
-  <?if $(var.Platform) = x64 ?>
-  <?define platformShortName="AMD64" ?>
-  <?endif?>
-
-  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\$(var.platformShortName)\" ?>
+  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\x86\" ?>
+  <?define isWin64="no" ?>
+  <?elseif $(var.Platform) = x64 ?>
+  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\amd64\" ?>
+  <?define isWin64="yes" ?>
+  <?endif?>  
 
   <?define version="0.1.4.0"?>
+  
+  <!-- 64 bit installers: 
+       http://blogs.msdn.com/b/astebner/archive/2007/08/09/4317654.aspx,
+       http://blogs.msdn.com/b/heaths/archive/2005/10/24/windows-installer-on-64-bit-platforms.aspx
+   -->
 
-  <Product Id="cc6c176e-e26c-48ec-8970-f58bd1d046ce" Name="iisnode" Language="1033" Version="$(var.version)" Manufacturer="iisnode" UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1f">
+  <Product Id="cc6c176e-e26c-48ec-8970-f58bd1d046ce" 
+           Name="iisnode" 
+           Language="1033" 
+           Version="$(var.version)" 
+           Manufacturer="Tomasz Janczuk"            
+           UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1f">
 
-    <Package InstallerVersion="200" Compressed="yes" />
-
+    <?if $(var.Platform) = x86 ?>
+    <Package InstallerVersion="200" Compressed="yes" Platform="x86" />
+    <?elseif $(var.Platform) = x64 ?>
+    <Package InstallerVersion="200" Compressed="yes" Platform="x64" />
+    <?endif?>
+    
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
 
     <Property Id='ROOTDRIVE' Value='$(env.SystemDrive)' />
@@ -31,19 +43,30 @@
       <![CDATA[Installed OR NODEEXE]]>
     </Condition>
 
-    <Condition Message="Cannot install $(var.platformShortName) version of iisnode on a $(env.PROCESSOR_ARCHITECTURE) system. Please download $(env.PROCESSOR_ARCHITECTURE) version of iisnode.">
-      <![CDATA[Installed OR $(env.PROCESSOR_ARCHITECTURE) = $(var.platformShortName)]]>
+    <Condition Message="Cannot install [PLATSNAME] version of iisnode on a [PROCARCH] system. Please download [PROCARCH] version of iisnode.">
+      <![CDATA[Installed OR PROCARCH = PLATSNAME]]>
     </Condition>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder">
-        <Directory Id="iisnoderootdir" Name="iisnode">
+      <?if $(var.Platform) = x86 ?>
+        <Directory Id="ProgramFilesFolder">
+          <Directory Id="iisnoderootdir" Name="iisnode">
+          </Directory>
         </Directory>
-      </Directory>
-      <Directory Id="SystemFolder">
-        <Directory Id="inetsrvdir" Name="inetsrv">
+        <Directory Id="SystemFolder">
+          <Directory Id="inetsrvdir" Name="inetsrv">
+          </Directory>
         </Directory>
-      </Directory>
+      <?elseif $(var.Platform) = x64 ?>
+        <Directory Id="ProgramFiles64Folder">
+          <Directory Id="iisnoderootdir" Name="iisnode">
+          </Directory>
+        </Directory>
+        <Directory Id="System64Folder">
+          <Directory Id="inetsrvdir" Name="inetsrv">
+          </Directory>
+        </Directory>
+      <?endif?>
     </Directory>
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
@@ -52,6 +75,12 @@
     </Feature>
     
     <InstallExecuteSequence>
+
+      <?if $(var.isWin64) = "no" ?>
+      <Custom Action="CA_Err32BitMsiOn64BitOS" After="LaunchConditions">
+        <![CDATA[MsiAMD64 OR Intel64]]>
+      </Custom>
+      <?endif ?>
 
       <!-- Conditions for custom actions:
          http://stackoverflow.com/questions/537584/how-to-execute-custom-action-only-in-install-not-uninstall
@@ -78,7 +107,12 @@
 
   </Product>
 
+  <?if $(var.Platform) = x86 ?>
   <?include iisnodefiles.wxi ?>
+  <?elseif $(var.Platform) = x64 ?>
+  <?include iisnodefiles64.wxi ?>
+  <?endif?>
+
   <?include customactions.wxi ?>
 
 </Wix>
