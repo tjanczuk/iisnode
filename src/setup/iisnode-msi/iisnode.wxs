@@ -39,6 +39,12 @@
       </DirectorySearch>
     </Property>
 
+    <PropertyRef Id="IISMAJORVERSION" />
+
+    <Condition Message="IIS 7.x must be installed before iisnode installation.">
+      <![CDATA[IISMAJORVERSION >= "#7"]]>
+    </Condition>
+
     <Condition Message="The node.exe is not found at [ROOTDRIVE]\node\node.exe. IIS cannot serve node.js applications without node.exe. Please get the latest node.exe build from http://nodejs.org and install it to [ROOTDRIVE]\node, then restart the installer.">
       <![CDATA[Installed OR NODEEXE]]>
     </Condition>
