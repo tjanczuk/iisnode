@@ -19,6 +19,18 @@
 
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
 
+    <Property Id='ROOTDRIVE' Value='$(env.SystemDrive)' />
+
+    <Property Id="NODEEXE">
+      <DirectorySearch Id="NodeDir" Path="[ROOTDRIVE]\node\">
+        <FileSearch Name="node.exe" />
+      </DirectorySearch>
+    </Property>
+
+    <Condition Message="The node.exe is not found at [ROOTDRIVE]\node\node.exe. IIS cannot serve node.js applications without node.exe. Please get the latest node.exe build from http://nodejs.org and install it to [ROOTDRIVE]\node, then restart the installer.">
+      <![CDATA[Installed OR NODEEXE]]>
+    </Condition>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder">
         <Directory Id="iisnoderootdir" Name="iisnode">

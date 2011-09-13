@@ -3,7 +3,7 @@
   <Fragment>
     
     <Binary Id="addiisnodesection" SourceFile="addiisnodesection.js"/>
-    <Binary Id="removeiisnodesection" SourceFile="removeiisnodesection.js"/>
+    <Binary Id="rmiisnodesection" SourceFile="removeiisnodesection.js"/>
 
     <CustomAction Id="AddIisnodeSection"
                   BinaryKey="addiisnodesection"
@@ -14,7 +14,7 @@
                   Impersonate="no" />
 
     <CustomAction Id="UndoAddIisnodeSection"
-                  BinaryKey="removeiisnodesection"
+                  BinaryKey="rmiisnodesection"
                   JScriptCall="main"
                   Execute="deferred"
                   Return="check"
@@ -22,7 +22,7 @@
                   Impersonate="no" />
 
     <CustomAction Id="RollbackAddIisnodeSection"
-                  BinaryKey="removeiisnodesection"
+                  BinaryKey="rmiisnodesection"
                   JScriptCall="main"
                   Execute="rollback"
                   Return="check"
