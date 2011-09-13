@@ -20,7 +20,7 @@
            Name="iisnode" 
            Language="1033" 
            Version="$(var.version)" 
-           Manufacturer="Tomasz Janczuk"            
+           Manufacturer="Microsoft Corporation"            
            UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1f">
 
     <?if $(var.Platform) = x86 ?>
