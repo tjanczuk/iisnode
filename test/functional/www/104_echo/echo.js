@@ -9,7 +9,7 @@ http.createServer(function (req, res) {
     });
     req.on("end", function () {
         console.log('End of body');
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(body);
     });
 }).listen(process.env.PORT);  
