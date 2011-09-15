@@ -100,9 +100,7 @@ copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(Plat
 copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
 xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
 copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-if "$(PlatformShortName)" neq "x86" del /q $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\*iisexpress*.*
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\$(PlatformShortName).txt</Command>
+copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -133,9 +131,7 @@ copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(Plat
 copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
 xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
 copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-if "$(PlatformShortName)" neq "x86" del /q $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\*iisexpress*.*
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\$(PlatformShortName).txt</Command>
+copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -159,9 +155,7 @@ copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(Plat
 copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
 xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
 copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-if "$(PlatformShortName)" neq "x86" del /q $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\*iisexpress*.*
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\$(PlatformShortName).txt</Command>
+copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -185,9 +179,7 @@ copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(Plat
 copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
 xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
 copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-if "$(PlatformShortName)" neq "x86" del /q $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\*iisexpress*.*
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\$(PlatformShortName).txt</Command>
+copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -280,9 +272,6 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="..\samples\urlrewrite\web.config" />
-    <None Include="..\scripts\addiisnodesectiongroup.js" />
-    <None Include="..\scripts\ensureiisexpressconfig.js" />
-    <None Include="..\scripts\install_iisexpress.bat" />
     <None Include="..\scripts\setupsamples.bat" />
     <None Include="iisnode.def" />
   </ItemGroup>

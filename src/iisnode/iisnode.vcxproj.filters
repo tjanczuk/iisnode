@@ -247,12 +247,6 @@
     <None Include="..\samples\express\readme.htm">
       <Filter>Samples\express</Filter>
     </None>
-    <None Include="..\scripts\install_iisexpress.bat">
-      <Filter>Scripts</Filter>
-    </None>
-    <None Include="..\scripts\ensureiisexpressconfig.js">
-      <Filter>Scripts</Filter>
-    </None>
     <None Include="..\..\test\functional\tests\100_helloworld.js">
       <Filter>Tests\functional\tests</Filter>
     </None>
@@ -344,9 +338,6 @@
       <Filter>Tests\functional\scripts</Filter>
     </None>
     <None Include="..\scripts\setupsamples.bat">
-      <Filter>Scripts</Filter>
-    </None>
-    <None Include="..\scripts\addiisnodesectiongroup.js">
       <Filter>Scripts</Filter>
     </None>
     <None Include="..\config\iisnode_schema_x64.xml">
