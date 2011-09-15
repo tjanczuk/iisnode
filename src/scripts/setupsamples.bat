@@ -7,7 +7,6 @@ set index=%www%\index.htm
 set siteName=Default Web Site
 set path=node
 set site="%siteName%/%path%"
-set node=%systemdrive%\node\node.exe
 set icacls=%systemdrive%\windows\system32\icacls.exe
 
 echo Installation of node.js samples for IIS 7
@@ -28,21 +27,8 @@ if not exist "%index%" (
 	exit /b -1
 )
 
-if not exist "%node%" (
-	echo *****************************************************************************
-	echo **************************       ERROR      *********************************
-	echo   The node.exe is not found at %node%.
-	echo   IIS cannot serve node.js applications without node.exe.
-	echo   Please get the latest node.exe build from http://nodejs.org and 
-	echo   install it to %node%, then restart the installer 
-	echo *****************************************************************************
-	echo *****************************************************************************
-	exit /b -1
-)
-
 if "%1" neq "/s" (
 	echo This installer will perform the following tasks:
-	echo * ensure that the IIS_IUSRS group has read and execute rights to %node%
 	echo * ensure that the IIS_IUSRS group has read and write rights to %www%
 	echo * delete the %site% web application if it exists
 	echo * add a new site %site% to IIS with physical path pointing to %www%
@@ -50,14 +36,6 @@ if "%1" neq "/s" (
 	echo Press ENTER to continue or Ctrl-C to terminate.
 	pause 
 )
-
-echo Ensuring IIS_IUSRS group has execute permissions for %node%...
-%icacls% "%node%" /grant IIS_IUSRS:rx
-if %ERRORLEVEL% neq 0 (
-	echo Installation failed. Cannot set permissions for %node%. 
-	exit /b -1
-)
-echo ...success
 
 echo Ensuring IIS_IUSRS group has full permissions for %www%...
 %icacls% "%www%" /grant IIS_IUSRS:(OI)(CI)F

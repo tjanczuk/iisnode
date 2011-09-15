@@ -246,6 +246,7 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
     <None Include="..\..\test\functional\www\106_autoupdate\hello_second.js" />
     <None Include="..\..\test\functional\www\106_autoupdate\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
+    <None Include="..\config\iisnode_schema_x64.xml" />
     <None Include="..\samples\configuration\hello.js" />
     <None Include="..\samples\configuration\readme.htm">
       <DeploymentContent>true</DeploymentContent>
@@ -279,6 +280,7 @@ echo $(Configuration) &gt; $(SolutionDir)\..\..\build\$(Configuration)\$(Platfor
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="..\samples\urlrewrite\web.config" />
+    <None Include="..\scripts\addiisnodesectiongroup.js" />
     <None Include="..\scripts\ensureiisexpressconfig.js" />
     <None Include="..\scripts\install_iisexpress.bat" />
     <None Include="..\scripts\setupsamples.bat" />

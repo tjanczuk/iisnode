@@ -16,7 +16,7 @@
         <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
           <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">
             <Component Win64="yes" Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" Guid="0EC0F08E-89B3-4C35-A286-8DB8598597F2">
-              <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="yes" Source="$(var.sourcedir)\iisnode_schema.xml" />
+              <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="yes" Source="$(var.sourcedir)\iisnode_schema_x64.xml" Name="iisnode_schema.xml"/>
             </Component>
           </Directory>
       </Directory>

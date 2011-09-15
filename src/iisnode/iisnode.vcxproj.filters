@@ -346,5 +346,11 @@
     <None Include="..\scripts\setupsamples.bat">
       <Filter>Scripts</Filter>
     </None>
+    <None Include="..\scripts\addiisnodesectiongroup.js">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="..\config\iisnode_schema_x64.xml">
+      <Filter>Config</Filter>
+    </None>
   </ItemGroup>
 </Project>

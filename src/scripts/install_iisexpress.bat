@@ -3,9 +3,11 @@ setlocal
 
 set appcmd="%ProgramFiles%\IIS Express\appcmd.exe"
 set schemadir="%ProgramFiles%\IIS Express\config\schema"
+set node="%programfiles%\nodejs\node.exe"
 if "%PROCESSOR_ARCHITECTURE%" equ "AMD64" (
 	set appcmd="%ProgramFiles(x86)%\IIS Express\appcmd.exe"
 	set schemadir="%ProgramFiles(x86)%\IIS Express\config\schema"
+	set node="%programfiles(x86)%\nodejs\node.exe"
 )
 
 set applicationhostconfig=%userprofile%\documents\IISexpress\config\applicationhost.config
@@ -15,7 +17,6 @@ set index=%www%\index.htm
 set schema=%~dp0\iisnode_schema.xml
 set addsection=%~dp0\addiisnodesectiongroup.js
 set ensureiisexpressconfig=%~dp0\ensureiisexpressconfig.js
-set node=%systemdrive%\node\node.exe
 set processor_architecture_flag=%~dp0x86.txt
 set wscript=%systemdrive%\windows\system32\wscript.exe
 
@@ -57,7 +58,7 @@ if not exist "%ensureiisexpressconfig%" (
 	exit /b -1
 )
 
-if not exist "%node%" (
+if not exist %node% (
 	echo *****************************************************************************
 	echo **************************       ERROR      *********************************
 	echo   The node.exe is not found at %node%.

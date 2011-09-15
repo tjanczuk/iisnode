@@ -30,22 +30,20 @@
     <?endif?>
     
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
-
-    <Property Id='ROOTDRIVE' Value='$(env.SystemDrive)' />
-
+    
     <Property Id="NODEEXE">
-      <DirectorySearch Id="NodeDir" Path="[ROOTDRIVE]\node\">
+      <DirectorySearch Id="NodeDir" Path="[ProgramFilesFolder]nodejs">
         <FileSearch Name="node.exe" />
       </DirectorySearch>
     </Property>
-
+    
     <PropertyRef Id="IISMAJORVERSION" />
 
     <Condition Message="IIS 7.x must be installed before iisnode installation.">
       <![CDATA[IISMAJORVERSION >= "#7"]]>
     </Condition>
 
-    <Condition Message="The node.exe is not found at [ROOTDRIVE]\node\node.exe. IIS cannot serve node.js applications without node.exe. Please get the latest node.exe build from http://nodejs.org and install it to [ROOTDRIVE]\node, then restart the installer.">
+    <Condition Message="The node.exe is not found at [ProgramFilesFolder]nodejs. IIS cannot serve node.js applications without node.exe. Please run the latest node.js installer from https://github.com/tjanczuk/node/archives/master, then restart this installer.">
       <![CDATA[Installed OR NODEEXE]]>
     </Condition>
 
@@ -82,7 +80,7 @@
 
     <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\License.rtf" />
     <UIRef Id="WixUI_Minimal" />
-    
+
     <InstallExecuteSequence>
 
       <?if $(var.isWin64) = "no" ?>
@@ -111,6 +109,10 @@
       <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
       <Custom Action="RollbackAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
       <Custom Action="UndoAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE="ALL"</Custom>
+      
+      <!-- grant permissions for default IIS user to read and execute pre-installed node.exe -->
+
+      <Custom Action="AddPermissionsToNodeExeForDefaultIISUser" After="AddIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
       
     </InstallExecuteSequence>
 
