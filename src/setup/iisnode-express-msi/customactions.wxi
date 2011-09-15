@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <Fragment>
+    
+    <Binary Id="addiisnodesection" SourceFile="addiisnodesection.js"/>
+    <Binary Id="rmiisnodesection" SourceFile="removeiisnodesection.js"/>
+    <Binary Id="ensureiisexpconfig" SourceFile="ensureiisexpressconfig.js"/>
+
+    <CustomAction Id="EnsureIISExpressConfig"
+                  BinaryKey="ensureiisexpconfig"
+                  JScriptCall="main"
+                  Execute="deferred"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="yes" />
+
+    <CustomAction Id="AddIisnodeSection"
+                  BinaryKey="addiisnodesection"
+                  JScriptCall="main"
+                  Execute="deferred"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="yes" />
+
+    <CustomAction Id="UndoAddIisnodeSection"
+                  BinaryKey="rmiisnodesection"
+                  JScriptCall="main"
+                  Execute="deferred"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="yes" />
+
+    <CustomAction Id="RollbackAddIisnodeSection"
+                  BinaryKey="rmiisnodesection"
+                  JScriptCall="main"
+                  Execute="rollback"
+                  Return="check"
+                  HideTarget="no"
+                  Impersonate="yes" />
+
+    <CustomAction Id="RemoveIisnodeModuleRegistration"
+                  ExeCommand="&quot;[APPCMDEXE]&quot; uninstall module iisnode /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="ignore"
+                  Impersonate="yes"/>
+
+    <CustomAction Id="AddIisnodeModuleRegistration"
+                  ExeCommand="&quot;[APPCMDEXE]&quot; install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="check"
+                  Impersonate="yes"/>
+
+    <CustomAction Id="RollbackAddIisnodeModuleRegistration"
+                  ExeCommand="&quot;[APPCMDEXE]&quot; uninstall module iisnode /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="rollback"
+                  Return="ignore"
+                  Impersonate="yes"/>
+
+    <CustomAction Id="UndoAddIisnodeModuleRegistration"
+                  ExeCommand="&quot;[APPCMDEXE]&quot; uninstall module iisnode /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="ignore"
+                  Impersonate="yes"/>
+    
+  </Fragment>
+</Include>

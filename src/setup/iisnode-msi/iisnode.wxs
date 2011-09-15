@@ -9,7 +9,7 @@
   <?define isWin64="yes" ?>
   <?endif?>  
 
-  <?define version="0.1.4.0"?>
+  <?define version="0.1.5.0"?>
   
   <!-- 64 bit installers: 
        http://blogs.msdn.com/b/astebner/archive/2007/08/09/4317654.aspx,
@@ -17,7 +17,7 @@
    -->
 
   <Product Id="cc6c176e-e26c-48ec-8970-f58bd1d046ce" 
-           Name="iisnode" 
+           Name="iisnode for iis 7.x" 
            Language="1033" 
            Version="$(var.version)" 
            Manufacturer="Microsoft Corporation"            

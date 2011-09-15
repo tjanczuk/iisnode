@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>3.5</ProductVersion>
+    <ProjectGuid>{36d6e303-e057-4963-a093-c7aae0fd92b3}</ProjectGuid>
+    <SchemaVersion>2.0</SchemaVersion>
+    <OutputName>iisnode-express</OutputName>
+    <OutputType>Package</OutputType>
+    <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' AND '$(MSBuildExtensionsPath32)' != '' ">$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
+    <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(MSBuildExtensionsPath)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <OutputPath>..\..\..\build\$(Configuration)\x86\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <DefineConstants>Debug</DefineConstants>
+    <SuppressSpecificWarnings>
+    </SuppressSpecificWarnings>
+    <SuppressIces>ICE30;ICE91;ICE64</SuppressIces>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>..\..\..\build\$(Configuration)\x86\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <SuppressSpecificWarnings>
+    </SuppressSpecificWarnings>
+    <SuppressIces>ICE30;ICE91;ICE64</SuppressIces>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="iisnode.wxs" />
+  </ItemGroup>
+  <ItemGroup>
+    <WixExtension Include="WixUtilExtension">
+      <HintPath>$(WixExtDir)\WixUtilExtension.dll</HintPath>
+      <Name>WixUtilExtension</Name>
+    </WixExtension>
+    <WixExtension Include="WixUIExtension">
+      <HintPath>$(WixExtDir)\WixUIExtension.dll</HintPath>
+      <Name>WixUIExtension</Name>
+    </WixExtension>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\iisnode\iisnode.vcxproj">
+      <Name>iisnode</Name>
+      <Project>{d1f7201f-064b-48ab-868c-fed22464841c}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLLOCATION</RefTargetDir>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="addiisnodesection.js" />
+    <Content Include="customactions.wxi" />
+    <Content Include="ensureiisexpressconfig.js" />
+    <Content Include="iisnodefiles.wxi" />
+    <Content Include="removeiisnodesection.js" />
+  </ItemGroup>
+  <Import Project="$(WixTargetsPath)" />
+  <!--
+	To modify your build process, add your task inside one of the targets below and uncomment it.
+	Other similar extension points exist, see Wix.targets.
+	<Target Name="BeforeBuild">
+	</Target>
+	<Target Name="AfterBuild">
+	</Target>
+	-->
+</Project>

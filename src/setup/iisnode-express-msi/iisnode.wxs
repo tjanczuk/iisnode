@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  
+  <!-- creating MSIs for local apps http://blogs.msdn.com/b/astebner/archive/2007/11/18/6385121.aspx -->
+
+  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\x86\" ?>
+
+  <?define version="0.1.5.0"?>
+  
+
+  <Product Id="cc6c176e-e26c-48ec-8970-f58bd1d046cd" 
+           Name="iisnode for iis express 7.x" 
+           Language="1033" 
+           Version="$(var.version)" 
+           Manufacturer="Microsoft Corporation"            
+           UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1e">
+
+    <Package InstallerVersion="200" Compressed="yes" Platform="x86" InstallPrivileges="limited" />
+    
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+    <Property Id="ALLUSERS" Secure="yes"/>
+    
+    <Property Id="NODEEXE">
+      <DirectorySearch Id="NodeDir" Path="[ProgramFilesFolder]nodejs">
+        <FileSearch Name="node.exe" />
+      </DirectorySearch>
+    </Property>
+
+    <Property Id="APPCMDEXE">
+      <DirectorySearch Id="IISExpressDir" Path="[ProgramFilesFolder]IIS Express">
+        <FileSearch Name="appcmd.exe" />
+      </DirectorySearch>
+    </Property>
+
+    <Condition Message="Setting the ALLUSERS property is not allowed because iisnode for iis express 7.x is a per-user application.">
+      <![CDATA[NOT ALLUSERS]]>
+    </Condition>
+    
+    <Condition Message="IIS Express 7.x must be installed before iisnode for IIS Express 7.x installation.">
+      <![CDATA[Installed or APPCMDEXE]]>
+    </Condition>
+
+    <Condition Message="The node.exe is not found at [ProgramFilesFolder]nodejs. IIS cannot serve node.js applications without node.exe. Please run the latest node.js installer from https://github.com/tjanczuk/node/archives/master, then restart this installer.">
+      <![CDATA[Installed OR NODEEXE]]>
+    </Condition>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+        <Directory Id="LocalAppDataFolder">
+          <Directory Id="iisnoderootdir" Name="iisnode">
+          </Directory>
+        </Directory>
+        <Directory Id="PersonalFolder">
+          <Directory Id="inetsrvdir" Name="IISExpress">
+          </Directory>
+        </Directory>
+    </Directory>
+
+    <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS Express 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS Express 7.x">
+      <ComponentGroupRef Id="allfiles" />
+      <ComponentGroupRef Id="Product.Generated" />
+    </Feature>
+
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\..\iisnode-msi\License.rtf" />
+    <UIRef Id="WixUI_Minimal" />
+
+    <InstallExecuteSequence>
+      
+      <!-- make sure the applicationhost.config for the personal IISExpress installation is created -->
+
+      <Custom Action="EnsureIISExpressConfig" After="InstallFiles">REMOVE&lt;>"ALL"</Custom>
+
+      <!-- install/rollback/uninstall iisnode section under system.webServer -->
+
+      <Custom Action="AddIisnodeSection" After="EnsureIISExpressConfig">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="RollbackAddIisnodeSection" After="EnsureIISExpressConfig">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="UndoAddIisnodeSection" After="EnsureIISExpressConfig">REMOVE="ALL"</Custom>
+
+      <!-- remove iisnode module registration -->
+
+      <Custom Action="RemoveIisnodeModuleRegistration" After="AddIisnodeSection" />
+      
+      <!-- install/rollback/uninstall iisnode module -->
+
+      <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="RollbackAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
+      <Custom Action="UndoAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE="ALL"</Custom>
+            
+    </InstallExecuteSequence>
+
+  </Product>
+
+  <?include iisnodefiles.wxi ?>
+  <?include customactions.wxi ?>
+
+</Wix>
