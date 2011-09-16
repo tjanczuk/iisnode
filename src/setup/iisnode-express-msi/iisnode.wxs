@@ -15,7 +15,7 @@
            Manufacturer="Microsoft Corporation"            
            UpgradeCode="1d60944c-b9ce-4a71-a7c0-0384eb884b1e">
 
-    <Package InstallerVersion="200" Compressed="yes" Platform="x86" InstallPrivileges="limited" />
+    <Package InstallerVersion="200" Compressed="yes" Platform="x86" />
     
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
 
@@ -50,8 +50,8 @@
           <Directory Id="iisnoderootdir" Name="iisnode">
           </Directory>
         </Directory>
-        <Directory Id="PersonalFolder">
-          <Directory Id="inetsrvdir" Name="IISExpress">
+        <Directory Id="ProgramFilesFolder">
+          <Directory Id="inetsrvdir" Name="IIS Express">
           </Directory>
         </Directory>
     </Directory>
