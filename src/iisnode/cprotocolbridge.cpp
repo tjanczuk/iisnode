@@ -371,10 +371,15 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	else
 	{
 		LONGLONG length = 0;
-		for (int i = 0; i < contentLengthLength; i++)
-		{
-			length = length * 10 + contentLength[i] - '0';
-		}
+		int i = 0;
+
+		// skip leading white space
+		while (i < contentLengthLength && (contentLength[i] < '0' || contentLength[i] > '9')) 
+			i++;
+
+		while (i < contentLengthLength && contentLength[i] >= '0' && contentLength[i] <= '9') 
+			length = length * 10 + contentLength[i++] - '0';
+
 		ctx->SetResponseContentLength(length);
 	}
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);

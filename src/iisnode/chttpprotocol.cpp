@@ -278,10 +278,22 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 
 		// set header on response
 		
-		data[nameEndOffset] = 0; // zero-terminate name to reuse without copying
-		data[valueEndOffset] = 0; // zero-terminate header value because this is what IHttpResponse::SetHeader expects
-		CheckError(response->SetHeader(data + offset, data + nameEndOffset + 1, valueEndOffset - nameEndOffset - 1, TRUE));
-		//CheckError(response->SetHeader(data + offset, data + nameEndOffset + 2, valueEndOffset - nameEndOffset - 2, TRUE));
+		data[nameEndOffset] = 0; // zero-terminate name to reuse without copying		
+
+		// skip the connection header because it relates to the iisnode <-> node.exe communication over named pipes 
+		if (0 != strcmpi("Connection", data + offset))
+		{
+			data[valueEndOffset] = 0; // zero-terminate header value because this is what IHttpResponse::SetHeader expects
+
+			// skip over ':'
+			nameEndOffset++; 
+
+			// skip over leading whitespace in value		
+			while (*(data + nameEndOffset) == ' ') // data is already zero-terminated, so this loop has sentinel value
+				nameEndOffset++;
+
+			CheckError(response->SetHeader(data + offset, data + nameEndOffset, valueEndOffset - nameEndOffset, TRUE));
+		}
 
 		// adjust offsets
 		
