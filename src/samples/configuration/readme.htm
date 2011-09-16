@@ -97,7 +97,6 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     --&gt;
     
     &lt;iisnode      
-      nodeProcessCommandLine="%systemdrive%\node\node.exe"
       maxProcessCountPerApplication="4"
       maxConcurrentRequestsPerProcess="1024"
       maxPendingRequestsPerApplication="1024"
@@ -113,6 +112,16 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       maxLogFileSizeInKB="128"
       appendToExistingLog="false"
      /&gt;
+
+    &lt;!--     
+    
+    One more setting that can be modified is the path to the node.exe executable:
+    
+    &lt;iisnode
+      nodeProcessCommandLine="&amp;quot;%programfiles%\nodejs\node.exe&amp;quot;" /&gt;
+    
+    --&gt;
+
     
   &lt;/system.webServer&gt;
 &lt;/configuration&gt;</pre>
