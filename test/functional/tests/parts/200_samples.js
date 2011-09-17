@@ -5,7 +5,7 @@ Testing samples
 var iisnodeassert = require("iisnodeassert");
 
 iisnodeassert.sequence([
-    iisnodeassert.get(10000, "/node/helloworld/hello.js", 200, "Hello, world! [helloworld sample]"),
+    iisnodeassert.get(10000, "/node/helloworld/hello.js", 200),
     iisnodeassert.get(10000, "/node/configuration/hello.js", 200, "Hello, world! [configuration sample]"),
     iisnodeassert.get(10000, "/node/logging/hello.js", 200, "Hello, world! [logging sample]"),
     iisnodeassert.get(10000, "/node/defaultdocument/", 200, "You have reached the default node.js application at index.js! [defaultdocument sample]"),

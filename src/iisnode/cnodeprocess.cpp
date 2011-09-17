@@ -97,10 +97,10 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	do {
 		while (*(currentEnvironment + environmentSize++) != 0);
 	} while (*(currentEnvironment + environmentSize++) != 0);
-	ErrorIf(NULL == (newEnvironment = (LPCH)new char[environmentSize + 256 + 1 + 1]), ERROR_NOT_ENOUGH_MEMORY);	
-	_tcscpy(newEnvironment, _T("PORT="));
-	_tcscat(newEnvironment, this->namedPipe);
-	memcpy(newEnvironment + 6 + strlen(this->namedPipe), currentEnvironment, environmentSize);
+	ErrorIf(NULL == (newEnvironment = (LPCH)new char[environmentSize + 256]), ERROR_NOT_ENOUGH_MEMORY);	
+	sprintf(newEnvironment, "PORT=%s", this->namedPipe);
+	sprintf(newEnvironment + 6 + strlen(this->namedPipe), "IISNODE_VERSION=%s", IISNODE_VERSION);
+	memcpy(newEnvironment + 6 + strlen(this->namedPipe) + 17 + strlen(IISNODE_VERSION), currentEnvironment, environmentSize);
 	FreeEnvironmentStrings(currentEnvironment);
 	currentEnvironment = NULL;
 
