@@ -16,7 +16,7 @@
 
     <Package InstallerVersion="200" Compressed="yes" Platform="x86" />
     
-    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />    
 
     <Property Id="ALLUSERS" Secure="yes"/>
     
@@ -31,6 +31,16 @@
         <FileSearch Name="appcmd.exe" />
       </DirectorySearch>
     </Property>
+
+    <!-- http://blogs.msdn.com/b/astebner/archive/2010/05/05/10008146.aspx -->
+
+    <Property Id="VCREDIST2010INSTALLED">
+      <RegistrySearch Id="VCRedist2010Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{196BB40D-1578-3D01-B289-BEFC77A11A1E}" Name="InstallDate" Type="raw" />
+    </Property>
+
+    <Condition Message="Microsoft Visual C++ 2010 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
+      <![CDATA[INstalled OR VCREDIST2010INSTALLED]]>
+    </Condition>
 
     <Condition Message="Setting the ALLUSERS property is not allowed because iisnode for iis express 7.x is a per-user application.">
       <![CDATA[NOT ALLUSERS]]>
