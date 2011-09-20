@@ -50,14 +50,14 @@
 
     <?if $(var.isWin64) = "yes" ?>
     <CustomAction Id="AddIisnodeModuleRegistration"
-                  ExeCommand="[System64Folder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /commit:apphost"
+                  ExeCommand="[System64Folder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /preCondition:bitness64 /commit:apphost"
                   Directory="TARGETDIR"
                   Execute="deferred"
                   Return="check"
                   Impersonate="no"/>
     <?else?>
     <CustomAction Id="AddIisnodeModuleRegistration"
-                  ExeCommand="[SystemFolder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /commit:apphost"
+                  ExeCommand="[SystemFolder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /preCondition:bitness32 /commit:apphost"
                   Directory="TARGETDIR"
                   Execute="deferred"
                   Return="check"
@@ -94,10 +94,6 @@
                   Execute="deferred"
                   Return="ignore"
                   Impersonate="no"/>
-    <?endif?>
-
-    <?if $(var.isWin64) = "no" ?>
-      <CustomAction Id="CA_Err32BitMsiOn64BitOS" Error="Please use amd64 flavor of iisnode to match your operating system." />
     <?endif?>
 
     <?if $(var.isWin64) = "yes" ?>
