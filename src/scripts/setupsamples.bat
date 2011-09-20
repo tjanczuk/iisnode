@@ -64,4 +64,6 @@ echo ...success
 
 echo INSTALLATION SUCCESSFUL. Check out the samples at http://localhost/node.
 
+if "%1" neq "/s" pause
+
 endlocal
