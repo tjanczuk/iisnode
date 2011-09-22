@@ -12,6 +12,18 @@
 -->
 <Include xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
+    <DirectoryRef Id="TARGETDIR">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="iisnoderootdir" Name="iisnode">
+        </Directory>
+      </Directory>
+      <Directory Id="SystemFolder">
+        <Directory Id="inetsrvdir" Name="inetsrv">
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
     <DirectoryRef Id="inetsrvdir">
         <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
           <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">

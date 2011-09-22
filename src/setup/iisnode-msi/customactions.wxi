@@ -55,6 +55,12 @@
                   Execute="deferred"
                   Return="check"
                   Impersonate="no"/>
+    <CustomAction Id="AddIisnodeModuleRegistrationWow"
+                  ExeCommand="[System64Folder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdirwow]iisnode.dll&quot; /preCondition:bitness32 /commit:apphost"
+                  Directory="TARGETDIR"
+                  Execute="deferred"
+                  Return="check"
+                  Impersonate="no"/>
     <?else?>
     <CustomAction Id="AddIisnodeModuleRegistration"
                   ExeCommand="[SystemFolder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /preCondition:bitness32 /commit:apphost"

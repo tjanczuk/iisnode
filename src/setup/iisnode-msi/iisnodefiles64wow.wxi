@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+     generated with WIX 3.5 command
+     
+     build\Debug>heat dir amd64 -srd -gg -g1 -cg allfiles -sfrag -dr iisnoderootdir -var var.sourcedir -o iisnodefiles.wxi
+     
+     then copied all Fragment elements from the output to inside of the Include top level element in this file
+     then review for removed unnecessary files
+     then added <?if $(var.Configuration) = Debug ?> around pdb files (both in file specification and in reference under component group)
+     moved iisnode_schema file to under inetsrvdir directory reference
+     then added Win64="yes" to all components
+-->
+<Include xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="TARGETDIR">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="iisnoderootdirwow" Name="iisnode">
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+    <DirectoryRef Id="System64Folder">
+      <Directory Id="inetsrvdirwow" Name="inetsrv">
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="inetsrvdirwow">
+        <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
+          <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">
+            <Component Win64="yes" Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" Guid="*">
+              <File Id="fil98FE22082D3964939C1CB4060FC2A0C7" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode_schema_x64.xml" Name="iisnode_schema.xml"/>
+            </Component>
+          </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="iisnoderootdirwow">
+      <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68235A8CA281C6" Guid="*">
+        <File Id="fil7FAEA07CDAF0588E758688EFA85F0A6B" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode.dll" />
+      </Component>
+      <?if $(var.Configuration) = Debug ?>
+        <Component Win64="yes" Id="cmpE429AFB5AD377FF35803A538B9BE37A8" Guid="*">
+          <File Id="fil10F3E910C80F806A860F37AA30660F84" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode.pdb" />
+        </Component>
+      <?endif?>
+      <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" Guid="*">
+        <File Id="fil0F1847FEE89C137D02C1A6B34753D195" KeyPath="yes" Source="$(var.wowsourcedir)\LICENSE.txt" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="allfileswow">
+      <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" />
+      <?if $(var.Configuration) = Debug ?>      
+        <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A8" />
+      <?endif?>
+      <ComponentRef Id="cmpF6505586D2A7DD2F0C68235A8CA281C6" />
+      <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" />
+    </ComponentGroup>
+  </Fragment>
+</Include>

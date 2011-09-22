@@ -32,7 +32,7 @@
     <SuppressPdbOutput>False</SuppressPdbOutput>
     <SuppressSpecificWarnings>
     </SuppressSpecificWarnings>
-    <SuppressIces>ICE80</SuppressIces>
+    <SuppressIces>ICE80;ICE30</SuppressIces>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <SuppressPdbOutput>False</SuppressPdbOutput>
@@ -44,13 +44,14 @@
     <SuppressPdbOutput>False</SuppressPdbOutput>
     <SuppressSpecificWarnings>
     </SuppressSpecificWarnings>
-    <SuppressIces>ICE80</SuppressIces>
+    <SuppressIces>ICE80;ICE30</SuppressIces>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="iisnode.wxs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="addiisnodesection.js" />
+    <Content Include="iisnodefiles64wow.wxi" />
     <Content Include="customactions.wxi" />
     <Content Include="iisnodefiles.wxi" />
     <Content Include="iisnodefiles64.wxi" />

@@ -7,6 +7,7 @@
   <?define productName="iisnode for iis 7.x (x86)" ?>
   <?elseif $(var.Platform) = x64 ?>
   <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\amd64\" ?>
+  <?define wowsourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\x86\" ?>
   <?define isWin64="yes" ?>
   <?define productName="iisnode for iis 7.x (x64)" ?>
   <?endif?>
@@ -29,7 +30,7 @@
     <?if $(var.Platform) = x86 ?>
     <Package InstallerVersion="200" Compressed="yes" Platform="x86" />
     <?elseif $(var.Platform) = x64 ?>
-    <Package InstallerVersion="200" Compressed="yes" />
+    <Package InstallerVersion="200" Compressed="yes" Platform="x64"/>
     <?endif?>
 
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
@@ -71,33 +72,24 @@
     </Condition>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <?if $(var.Platform) = x86 ?>
-      <Directory Id="ProgramFilesFolder">
-        <Directory Id="iisnoderootdir" Name="iisnode">
-        </Directory>
-      </Directory>
-      <Directory Id="WindowsFolder">
-        <Directory Id="theSystem32Directory" Name="system32">
-          <Directory Id="inetsrvdir" Name="inetsrv">
-          </Directory>
-        </Directory>
-      </Directory>
-      <?elseif $(var.Platform) = x64 ?>
-      <Directory Id="ProgramFiles64Folder">
-        <Directory Id="iisnoderootdir" Name="iisnode">
-        </Directory>
-      </Directory>
-      <Directory Id="System64Folder">
-        <Directory Id="inetsrvdir" Name="inetsrv">
-        </Directory>
-      </Directory>
+      <?if $(var.isWin64) = "yes" ?>
+      <Directory Id="System64Folder" />
       <?endif?>
     </Directory>
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
       <ComponentGroupRef Id="allfiles" />
       <ComponentGroupRef Id="Product.Generated" />
+      <Condition Level="1">NOT WOW</Condition>
     </Feature>
+
+    <?if $(var.isWin64) = "yes" ?>
+    <Feature Id="iisnode4iiswow" Title="Hosting node.js applications in IIS 7.x in WOW mode" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS in WOW mode">
+      <ComponentGroupRef Id="allfileswow" />
+      <ComponentGroupRef Id="Product.Generated" />
+      <Condition Level="1">WOW</Condition>
+    </Feature>
+    <?endif?>
 
     <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\License.rtf" />
     <UIRef Id="WixUI_Minimal" />
@@ -121,7 +113,12 @@
 
       <!-- install/rollback/uninstall iisnode module -->
 
+      <?if $(var.isWin64) = "yes" ?>
+      <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">(REMOVE&lt;>"ALL") AND (NOT WOW)</Custom>      
+      <Custom Action="AddIisnodeModuleRegistrationWow" After="RemoveIisnodeModuleRegistration">(REMOVE&lt;>"ALL") AND WOW</Custom>
+      <?else?>
       <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
+      <?endif?>
       <Custom Action="RollbackAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
       <Custom Action="UndoAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE="ALL"</Custom>
 
@@ -137,6 +134,7 @@
   <?include iisnodefiles.wxi ?>
   <?elseif $(var.Platform) = x64 ?>
   <?include iisnodefiles64.wxi ?>
+  <?include iisnodefiles64wow.wxi ?>
   <?endif?>
 
   <?include customactions.wxi ?>
