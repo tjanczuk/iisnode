@@ -309,4 +309,11 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="BuildWow64" Condition="'$(Platform)' == 'x64'">
+    <Message Text="Building x86 flavor to support building x64 MSI for WOW" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Properties="Configuration=$(Configuration);Platform=Win32" />
+  </Target>
+  <PropertyGroup>
+    <BuildDependsOn>BuildWow64;$(BuildDependsOn)</BuildDependsOn>
+  </PropertyGroup>
 </Project>
