@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
   <Fragment>
+
+    <?if $(var.isWin64) = "no" ?>
+    <CustomAction Id="CA_Err32BitMsiOn64BitOS" Error="Please use x64 flavor of iisnode to match your operating system." />
+    <?endif?>
     
     <Binary Id="addiisnodesection" SourceFile="addiisnodesection.js"/>
     <Binary Id="rmiisnodesection" SourceFile="removeiisnodesection.js"/>

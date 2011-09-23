@@ -96,6 +96,12 @@
 
     <InstallExecuteSequence>
 
+      <?if $(var.isWin64) = "no" ?>
+      <Custom Action="CA_Err32BitMsiOn64BitOS" After="LaunchConditions">
+        <![CDATA[MsiAMD64 OR Intel64]]>
+      </Custom>
+      <?endif ?>
+
       <!-- Conditions for custom actions:
          http://stackoverflow.com/questions/537584/how-to-execute-custom-action-only-in-install-not-uninstall
          http://stackoverflow.com/questions/128279/how-best-to-define-a-custom-action-in-wix 
