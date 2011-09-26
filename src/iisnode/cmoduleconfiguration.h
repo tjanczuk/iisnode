@@ -26,7 +26,7 @@ private:
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
-	static HRESULT GetConfigSection(IHttpContext* context, IAppHostElement** section);
+	static HRESULT GetConfigSection(IHttpContext* context, IAppHostElement** section, OLECHAR* configElement = L"system.webServer/iisnode");
 	static HRESULT GetString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value);
 	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value);
 	static HRESULT GetDWORD(IAppHostElement* section, LPCWSTR propertyName, DWORD* value);
@@ -55,6 +55,8 @@ public:
 	static DWORD GetMaxLogFileSizeInKB(IHttpContext* ctx);
 	static BOOL GetLoggingEnabled(IHttpContext* ctx);
 	static BOOL GetAppendToExistingLog(IHttpContext* ctx);
+
+	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, PCH namedPipe, PCH* env);
 
 	virtual void CleanupStoredContext();
 };

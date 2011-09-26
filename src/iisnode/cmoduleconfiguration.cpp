@@ -39,7 +39,185 @@ Error:
 	return hr;
 }
 
-HRESULT CModuleConfiguration::GetConfigSection(IHttpContext* context, IAppHostElement** section)
+HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, PCH namedPipe, PCH* env)
+{
+	HRESULT hr;
+	LPCH currentEnvironment = NULL;
+	LPCH tmpStart, tmpIndex = NULL;
+	DWORD tmpSize;
+	DWORD environmentSize;
+	IAppHostElement* section = NULL;
+	IAppHostElementCollection* appSettings = NULL;
+	IAppHostElement* entry = NULL;
+	IAppHostPropertyCollection* properties = NULL;
+	IAppHostProperty* prop = NULL;
+	BSTR keyPropertyName = NULL;
+	BSTR valuePropertyName = NULL;
+	VARIANT vKeyPropertyName;
+	VARIANT vValuePropertyName;
+	DWORD count;
+	BSTR propertyValue;
+	int propertySize;
+
+	CheckNull(env);
+	*env = NULL;
+
+	// this is a zero terminated list of zero terminated strings of the form <var>=<value>
+
+	// calculate size of current environment
+
+	ErrorIf(NULL == (currentEnvironment = GetEnvironmentStrings()), GetLastError());
+	environmentSize = 0;
+	do {
+		while (*(currentEnvironment + environmentSize++) != 0);
+	} while (*(currentEnvironment + environmentSize++) != 0);
+
+	// allocate memory for new environment variables
+
+	tmpSize = 32767 - environmentSize;
+	ErrorIf(NULL == (tmpIndex = tmpStart = new char[tmpSize]), ERROR_NOT_ENOUGH_MEMORY);
+	RtlZeroMemory(tmpIndex, tmpSize);
+
+	// set PORT and IISNODE_VERSION variables
+
+	ErrorIf(tmpSize < (strlen(namedPipe) + strlen(IISNODE_VERSION) + 6 + 17), ERROR_NOT_ENOUGH_MEMORY);
+	sprintf(tmpIndex, "PORT=%s", namedPipe);
+	tmpIndex += strlen(namedPipe) + 6;
+	sprintf(tmpIndex, "IISNODE_VERSION=%s", IISNODE_VERSION);
+	tmpIndex += strlen(IISNODE_VERSION) + 17;
+
+	// add environment variables from the appSettings section of config
+
+	ErrorIf(NULL == (keyPropertyName = SysAllocString(L"key")), ERROR_NOT_ENOUGH_MEMORY);
+	vKeyPropertyName.vt = VT_BSTR;
+	vKeyPropertyName.bstrVal = keyPropertyName;
+	ErrorIf(NULL == (valuePropertyName = SysAllocString(L"value")), ERROR_NOT_ENOUGH_MEMORY);
+	vValuePropertyName.vt = VT_BSTR;
+	vValuePropertyName.bstrVal = valuePropertyName;
+	CheckError(GetConfigSection(ctx, &section, L"appSettings"));
+	CheckError(section->get_Collection(&appSettings));
+	CheckError(appSettings->get_Count(&count));
+
+	for (USHORT i = 0; i < count; i++)
+	{
+		VARIANT index;
+		index.vt = VT_I2;
+		index.iVal = i;		
+
+		CheckError(appSettings->get_Item(index, &entry));
+		CheckError(entry->get_Properties(&properties));
+		
+		CheckError(properties->get_Item(vKeyPropertyName, &prop));
+		CheckError(prop->get_StringValue(&propertyValue));
+		ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), NULL, 0, NULL, NULL)), E_FAIL);
+		ErrorIf((propertySize + 2) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), tmpIndex, propertySize, NULL, NULL), E_FAIL);
+		tmpIndex[propertySize] = '=';
+		tmpIndex += propertySize + 1;
+		SysFreeString(propertyValue);
+		propertyValue = NULL;
+		prop->Release();
+		prop = NULL;
+
+		CheckError(properties->get_Item(vValuePropertyName, &prop));
+		CheckError(prop->get_StringValue(&propertyValue));
+		ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), NULL, 0, NULL, NULL)), E_FAIL);
+		ErrorIf((propertySize + 1) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), tmpIndex, propertySize, NULL, NULL), E_FAIL);
+		tmpIndex += propertySize + 1;
+		SysFreeString(propertyValue);
+		propertyValue = NULL;
+		prop->Release();
+		prop = NULL;
+
+		properties->Release();
+		properties = NULL;
+		entry->Release();
+		entry = NULL;
+	}
+
+	// concatenate new environment variables with the current environment block
+
+	ErrorIf(NULL == (*env = (LPCH)new char[environmentSize + (tmpIndex - tmpStart)]), ERROR_NOT_ENOUGH_MEMORY);	
+	memcpy(*env, tmpStart, (tmpIndex - tmpStart));
+	memcpy(*env + (tmpIndex - tmpStart), currentEnvironment, environmentSize);
+
+	// cleanup
+
+	FreeEnvironmentStrings(currentEnvironment);
+	section->Release();
+	appSettings->Release();
+	SysFreeString(keyPropertyName);
+	SysFreeString(valuePropertyName);
+	delete [] tmpStart;
+
+	return S_OK;
+Error:
+
+	if (currentEnvironment)
+	{
+		FreeEnvironmentStrings(currentEnvironment);
+		currentEnvironment = NULL;
+	}
+
+	if (section)
+	{
+		section->Release();
+		section = NULL;
+	}
+
+	if (appSettings)
+	{
+		appSettings->Release();
+		appSettings = NULL;
+	}
+
+	if (keyPropertyName)
+	{
+		SysFreeString(keyPropertyName);
+		keyPropertyName = NULL;
+	}
+
+	if (valuePropertyName)
+	{
+		SysFreeString(valuePropertyName);
+		valuePropertyName = NULL;
+	}
+
+	if (entry)
+	{
+		entry->Release();
+		entry = NULL;
+	}
+
+	if (properties)
+	{
+		properties->Release();
+		properties = NULL;
+	}
+
+	if (prop)
+	{
+		prop->Release();
+		prop = NULL;
+	}
+
+	if (propertyValue)
+	{
+		SysFreeString(propertyValue);
+		propertyValue = NULL;
+	}
+
+	if (tmpStart)
+	{
+		delete [] tmpStart;
+		tmpStart = NULL;
+	}
+
+	return hr;
+}
+
+HRESULT CModuleConfiguration::GetConfigSection(IHttpContext* context, IAppHostElement** section, OLECHAR* configElement)
 {
 	HRESULT hr = S_OK;
     BSTR path = NULL;
@@ -48,7 +226,7 @@ HRESULT CModuleConfiguration::GetConfigSection(IHttpContext* context, IAppHostEl
 	CheckNull(section);
 	*section = NULL;
 	ErrorIf(NULL == (path = SysAllocString(context->GetMetadata()->GetMetaPath())), ERROR_NOT_ENOUGH_MEMORY);
-    ErrorIf(NULL == (elementName = SysAllocString(L"system.webServer/iisnode")), ERROR_NOT_ENOUGH_MEMORY);
+    ErrorIf(NULL == (elementName = SysAllocString(configElement)), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(server->GetAdminManager()->GetAdminSection(elementName, path, section));
 
 Error:

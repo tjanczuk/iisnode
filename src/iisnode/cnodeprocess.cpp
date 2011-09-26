@@ -50,9 +50,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW;	
 	PROCESS_INFORMATION processInformation;
 	DWORD exitCode = S_OK;
-	LPCH currentEnvironment = NULL;
 	LPCH newEnvironment = NULL;
-	DWORD environmentSize;
 	DWORD flags;
 	HANDLE job;
 	PWSTR currentDirectory = NULL;
@@ -93,19 +91,9 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + 1 + 1, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
 	_tcscat(fullCommandLine, _T("\""));
 
-	// create the environment block for the node.js process - pass in the named pipe name; 
-	// this is a zero terminated list of zero terminated strings of the form <var>=<value>
-	ErrorIf(NULL == (currentEnvironment = GetEnvironmentStrings()), GetLastError());
-	environmentSize = 0;
-	do {
-		while (*(currentEnvironment + environmentSize++) != 0);
-	} while (*(currentEnvironment + environmentSize++) != 0);
-	ErrorIf(NULL == (newEnvironment = (LPCH)new char[environmentSize + 256]), ERROR_NOT_ENOUGH_MEMORY);	
-	sprintf(newEnvironment, "PORT=%s", this->namedPipe);
-	sprintf(newEnvironment + 6 + strlen(this->namedPipe), "IISNODE_VERSION=%s", IISNODE_VERSION);
-	memcpy(newEnvironment + 6 + strlen(this->namedPipe) + 17 + strlen(IISNODE_VERSION), currentEnvironment, environmentSize);
-	FreeEnvironmentStrings(currentEnvironment);
-	currentEnvironment = NULL;
+	// create the environment block for the node.js process 	
+
+	CheckError(CModuleConfiguration::CreateNodeEnvironment(context, this->namedPipe, &newEnvironment));
 
 	// establish the current directory for node.exe process to be the same as the location of the *.js file
 
@@ -243,12 +231,6 @@ Error:
 		TerminateProcess(processInformation.hProcess, 1);
 		CloseHandle(processInformation.hProcess);
 		processInformation.hProcess = NULL;
-	}
-
-	if (NULL != currentEnvironment)
-	{
-		FreeEnvironmentStrings(currentEnvironment);
-		currentEnvironment = NULL;
 	}
 
 	if (NULL != newEnvironment)
