@@ -55,6 +55,10 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	DWORD environmentSize;
 	DWORD flags;
 	HANDLE job;
+	PWSTR currentDirectory = NULL;
+	PSTR currentDirectoryA = NULL;
+	DWORD currentDirectorySize = 0;
+	DWORD currentDirectorySizeA = 0;
 
 	RtlZeroMemory(&processInformation, sizeof processInformation);
 	RtlZeroMemory(&startupInfo, sizeof startupInfo);
@@ -91,7 +95,6 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	// create the environment block for the node.js process - pass in the named pipe name; 
 	// this is a zero terminated list of zero terminated strings of the form <var>=<value>
-
 	ErrorIf(NULL == (currentEnvironment = GetEnvironmentStrings()), GetLastError());
 	environmentSize = 0;
 	do {
@@ -103,6 +106,16 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	memcpy(newEnvironment + 6 + strlen(this->namedPipe) + 17 + strlen(IISNODE_VERSION), currentEnvironment, environmentSize);
 	FreeEnvironmentStrings(currentEnvironment);
 	currentEnvironment = NULL;
+
+	// establish the current directory for node.exe process to be the same as the location of the *.js file
+
+	currentDirectory = (PWSTR)context->GetPhysicalPath(&currentDirectorySize);
+	while (currentDirectorySize && currentDirectory[currentDirectorySize] != L'\\' && currentDirectory[currentDirectorySize] != L'/')
+		currentDirectorySize--;
+	ErrorIf(0 == (currentDirectorySizeA = WideCharToMultiByte(CP_ACP, 0, currentDirectory, currentDirectorySize, NULL, 0, NULL, NULL)), E_FAIL);
+	ErrorIf(NULL == (currentDirectoryA = new char[currentDirectorySize + 1]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(currentDirectorySizeA != WideCharToMultiByte(CP_ACP, 0, currentDirectory, currentDirectorySize, currentDirectoryA, currentDirectorySizeA, NULL, NULL), E_FAIL);
+	currentDirectoryA[currentDirectorySizeA] = '\0';
 
 	// create startup info for the node.js process
 
@@ -137,7 +150,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 			TRUE,
 			flags,
 			newEnvironment,
-			NULL,
+			currentDirectoryA,
 			&this->startupInfo,
 			&processInformation
 		), GetLastError());
@@ -189,6 +202,8 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	// clean up
 
+	delete [] currentDirectoryA;
+	currentDirectoryA = NULL;
 	delete [] newEnvironment;
 	newEnvironment = NULL;
 	delete [] fullCommandLine;
@@ -198,6 +213,12 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	return S_OK;
 Error:
+
+	if (currentDirectoryA)
+	{
+		delete [] currentDirectoryA;
+		currentDirectoryA = NULL;
+	}
 
 	if (suuid != NULL)
 	{

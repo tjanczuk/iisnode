@@ -82,6 +82,9 @@
     <Filter Include="Tests\functional\scripts">
       <UniqueIdentifier>{f69631ee-6910-4fa3-9e6f-36786970c51e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\107_filesystem">
+      <UniqueIdentifier>{cc6d4108-5cc9-4576-adf4-6ddc7d186998}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -345,6 +348,18 @@
     </None>
     <None Include="..\config\iisnode_schema_x64.xml">
       <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\107_filesystem.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\107_filesystem\file.txt">
+      <Filter>Tests\functional\www\107_filesystem</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\107_filesystem\hello.js">
+      <Filter>Tests\functional\www\107_filesystem</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\107_filesystem\web.config">
+      <Filter>Tests\functional\www\107_filesystem</Filter>
     </None>
   </ItemGroup>
 </Project>

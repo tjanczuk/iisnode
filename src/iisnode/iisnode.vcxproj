@@ -229,6 +229,7 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
     <None Include="..\..\test\functional\tests\104_echo.js" />
     <None Include="..\..\test\functional\tests\105_logging.js" />
     <None Include="..\..\test\functional\tests\106_autoupdate.bat" />
+    <None Include="..\..\test\functional\tests\107_filesystem.js" />
     <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
@@ -249,6 +250,9 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
     <None Include="..\..\test\functional\www\106_autoupdate\hello_first.js" />
     <None Include="..\..\test\functional\www\106_autoupdate\hello_second.js" />
     <None Include="..\..\test\functional\www\106_autoupdate\web.config" />
+    <None Include="..\..\test\functional\www\107_filesystem\file.txt" />
+    <None Include="..\..\test\functional\www\107_filesystem\hello.js" />
+    <None Include="..\..\test\functional\www\107_filesystem\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
     <None Include="..\config\iisnode_schema_x64.xml" />
     <None Include="..\samples\configuration\hello.js" />
