@@ -4,6 +4,7 @@
 class CNodeApplication;
 class CAsyncManager;
 class CFileWatcher;
+class CNodeEventProvider;
 
 class CNodeApplicationManager
 {
@@ -22,6 +23,7 @@ private:
 	HANDLE jobObject;
 	BOOL breakAwayFromJobObject;
 	CFileWatcher* fileWatcher;
+	CNodeEventProvider* eventProvider;
 	BOOL initialized;
 
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
@@ -36,6 +38,7 @@ public:
 	IHttpServer* GetHttpServer();
 	HTTP_MODULE_ID GetModuleId();
 	CAsyncManager* GetAsyncManager();
+	CNodeEventProvider* GetEventProvider();
 	HANDLE GetJobObject();
 	BOOL GetBreakAwayFromJobObject();
 

@@ -2,7 +2,7 @@
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
 	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
-	breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE)
+	breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -18,6 +18,8 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 		return S_OK;
 	}
 
+	ErrorIf(NULL == (this->eventProvider = new CNodeEventProvider()), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->eventProvider->Initialize());
 	ErrorIf(NULL != this->asyncManager, ERROR_INVALID_OPERATION);
 	ErrorIf(NULL == (this->asyncManager = new CAsyncManager()), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->asyncManager->Initialize(context));
@@ -68,6 +70,8 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 
 	this->initialized = TRUE;
 
+	this->GetEventProvider()->Log(L"iisnode has initialized the application manager", WINEVENT_LEVEL_INFO);
+
 	return S_OK;
 Error:
 
@@ -87,6 +91,12 @@ Error:
 	{
 		delete this->fileWatcher;
 		this->fileWatcher = NULL;
+	}
+
+	if (NULL != this->eventProvider)
+	{
+		delete this->eventProvider;
+		this->eventProvider = NULL;
 	}
 
 	return hr;
@@ -118,6 +128,12 @@ CNodeApplicationManager::~CNodeApplicationManager()
 	{
 		delete this->fileWatcher;
 		this->fileWatcher = NULL;
+	}
+
+	if (NULL != this->eventProvider)
+	{
+		delete this->eventProvider;
+		this->eventProvider = NULL;
 	}
 
 	DeleteCriticalSection(&this->syncRoot);
@@ -237,4 +253,9 @@ HANDLE CNodeApplicationManager::GetJobObject()
 BOOL CNodeApplicationManager::GetBreakAwayFromJobObject()
 {
 	return this->breakAwayFromJobObject;
+}
+
+CNodeEventProvider* CNodeApplicationManager::GetEventProvider()
+{
+	return this->eventProvider;
 }
