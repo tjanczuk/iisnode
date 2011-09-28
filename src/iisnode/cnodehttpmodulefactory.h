@@ -11,8 +11,8 @@ public:
 	CNodeHttpModuleFactory(); 
 	~CNodeHttpModuleFactory();
 	HRESULT Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId);
-    virtual HRESULT GetHttpModule(OUT CHttpModule **ppModule, IN IModuleAllocator *);
-    virtual void Terminate();
+    HRESULT GetHttpModule(OUT CHttpModule **ppModule, IN IModuleAllocator *);
+    void Terminate();
 };
 
 #endif

@@ -47,6 +47,9 @@
       <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" Guid="*">
         <File Id="fil0F1847FEE89C137D02C1A6B34753D195" KeyPath="yes" Source="$(var.wowsourcedir)\LICENSE.txt" />
       </Component>
+      <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B8656120B" Guid="7289761F-64EA-4015-A56D-918198EA7AF5">
+        <File Id="fil3B86A7DAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.wowsourcedir)\etw.bat" />
+      </Component>
     </DirectoryRef>
   </Fragment>
   <Fragment>
@@ -57,6 +60,7 @@
       <?endif?>
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68235A8CA281C6" />
       <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" />
+      <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120B" />
     </ComponentGroup>
   </Fragment>
 </Include>

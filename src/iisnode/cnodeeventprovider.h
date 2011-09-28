@@ -1,24 +1,24 @@
 #ifndef __CNODEEVENTPROVIDER_H__
 #define __CNODEEVENTPROVIDER_H__
 
-typedef ULONG (*EventRegisterFunc)(
+typedef ULONG (__stdcall *EventRegisterFunc)(
   _In_      LPCGUID ProviderId,
   _In_opt_  PENABLECALLBACK EnableCallback,
   _In_opt_  PVOID CallbackContext,
   _Out_     PREGHANDLE RegHandle
 );
 
-typedef ULONG (*EventUnregisterFunc)(
+typedef ULONG (__stdcall *EventUnregisterFunc)(
   _In_  REGHANDLE RegHandle
 );
 
-typedef bool (*EventProviderEnabledFunc)(
+typedef bool (__stdcall *EventProviderEnabledFunc)(
   __in  REGHANDLE RegHandle,
   __in  UCHAR Level,
   __in  ULONGLONG Keyword
 );
 
-typedef ULONG (*EventWriteStringFunc)(
+typedef ULONG (__stdcall *EventWriteStringFunc)(
   __in  REGHANDLE RegHandle,
   __in  UCHAR Level,
   __in  ULONGLONG Keyword,
@@ -37,7 +37,6 @@ private:
 	EventUnregisterFunc eventUnregister;
 	EventProviderEnabledFunc eventProviderEnabled;
 	EventWriteStringFunc eventWriteString;
-
 
 public:
 

@@ -53,6 +53,9 @@
       <Component Id="cmp1B33C88432AC7530411D254B86561209" Guid="7289761F-64EA-4015-A56D-918198EA7AE4">
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C428" KeyPath="yes" Source="$(var.sourcedir)\setupsamples.bat" />
       </Component>
+      <Component Id="cmp1B33C88432AC7530411D254B8656120A" Guid="7289761F-64EA-4015-A56D-918198EA7AE5">
+        <File Id="fil3B86A7DAD58B7C191C98A67D26D2C429" KeyPath="yes" Source="$(var.sourcedir)\etw.bat" />
+      </Component>
       <Directory Id="dirC3B05243102F810BD3959CD3BA949E87" Name="www">
         <Component Id="cmp000EF07CDC332A898735A6BFF674ECBD" Guid="5B2C5D14-6189-4A7C-AC3D-7C74C8463A8A">
           <File Id="fil35BF90395B31103B4836B171584F727A" KeyPath="yes" Source="$(var.sourcedir)\www\index.htm" />
@@ -407,6 +410,7 @@
       <ComponentRef Id="cmp40869352F2AE98A449D38679FD313089" />
       <ComponentRef Id="cmp9F3A0FADEE166143F3633103BBA2782D" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B86561209" />
+      <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120A" />
     </ComponentGroup>
   </Fragment>
 </Include>

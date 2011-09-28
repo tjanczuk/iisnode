@@ -4,16 +4,16 @@
 const GUID CNodeEventProvider::providerId = { 0x1040dfc4, 0x61db, 0x484a, { 0x95, 0x30, 0x58, 0x4b, 0x27, 0x35, 0xf7, 0xf7 } };
 
 CNodeEventProvider::CNodeEventProvider()
-	: handle(NULL), advapi(NULL), eventRegister(NULL), eventUnregister(NULL), eventWriteString(NULL), eventProviderEnabled(NULL)
+	: handle(0), advapi(NULL), eventRegister(NULL), eventUnregister(NULL), eventWriteString(NULL), eventProviderEnabled(NULL)
 {
 }
 
 CNodeEventProvider::~CNodeEventProvider()
 {
-	if (this->advapi && this->eventUnregister)
+	if (this->advapi && this->eventUnregister && this->handle)
 	{
 		this->eventUnregister(this->handle);
-		this->handle = NULL;
+		this->handle = 0;
 	}
 
 	if (this->advapi)
