@@ -6,20 +6,20 @@ Hosting node.js applications in IIS on Windows
 - Windows
 - IIS 7.x with IIS Management Tools
 - [URL rewrite module for IIS](http://www.iis.net/download/URLRewrite)
-- [Latest node.exe Windows build](https://github.com/tjanczuk/node/downloads)
+- [Latest node.js build for Windows](http://go.microsoft.com/?linkid=9784334)
   - You can also do it manually by downloading node.exe from [nodejs.org](http://nodejs.org/#download) and saving to %programfiles%\nodejs on a 32 bit system or %programfiles(x86)%\nodejs on a 64 bit system
-- Visual C++ 2010 Redistributable Package for [x86](http://www.microsoft.com/download/en/details.aspx?id=5555) or [x64](http://www.microsoft.com/download/en/details.aspx?id=14632) (skip this if you install Visual Studio)
+- Visual C++ 2010 Redistributable Package for [x86](http://www.microsoft.com/download/en/details.aspx?id=5555) or [x64](http://www.microsoft.com/download/en/details.aspx?id=14632) (skip this if you install Visual Studio; on x64 systems you need to install both x86 and x64 if you intend to use IIS Express/WebMatrix)
 
 **Installing for IIS 7.x**
 
-- [Install iisnode for IIS 7.x](https://github.com/tjanczuk/iisnode/downloads) - choose bitness matching your system
+- Install iisnode for IIS 7.x: [x86](http://go.microsoft.com/?linkid=9784330) or [x64](http://go.microsoft.com/?linkid=9784331) - choose bitness matching your system
 - To set up samples, from the administrative command prompt call `%programfiles%\iisnode\setupsamples.bat`  
 - Go to `http://localhost/node`
 
 **Installing for IIS Express/WebMatrix**
 
 - [Install WebMatrix](http://www.microsoft.com/web/webmatrix/)
-- [Install iisnode for IIS Express 7.x](https://github.com/tjanczuk/iisnode/downloads) - choose x86 even for 64 bit systems
+- [Install iisnode for IIS Express 7.x](http://go.microsoft.com/?linkid=9784329)
 - [Install node.js templates for WebMatrix](https://github.com/SteveSanderson/Node.js-Site-Templates-for-WebMatrix/downloads)
 - Open WebMatrix, choose “Site from folder”, enter %localappdata%\iisnode\www, start the site, and play with the iisnode samples, or
 - Use node.js templates to get started quickly with an Express application or a skeleton Hello World
