@@ -12,10 +12,15 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 	HRESULT hr;
 
 	CheckError(this->applicationManager->Initialize(pHttpContext));
+
+	this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
+
 	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider));
 
 	return RQ_NOTIFICATION_PENDING;
 Error:
+
+	this->applicationManager->GetEventProvider()->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
 
 	if (ERROR_NOT_ENOUGH_QUOTA == hr)
 	{

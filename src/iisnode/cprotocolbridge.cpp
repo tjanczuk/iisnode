@@ -12,6 +12,9 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 
 HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult)
 {
+	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode request processing failed", WINEVENT_LEVEL_VERBOSE);
+
 	if (INVALID_HANDLE_VALUE != context->GetPipe())
 	{
 		CloseHandle(context->GetPipe());
@@ -536,6 +539,9 @@ Error:
 
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 {
+	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode request processing succeeded", WINEVENT_LEVEL_VERBOSE);
+
 	CloseHandle(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
 

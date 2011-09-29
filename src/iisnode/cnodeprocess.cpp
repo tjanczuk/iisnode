@@ -199,8 +199,14 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	CloseHandle(processInformation.hThread);
 	processInformation.hThread = NULL;	
 
+	this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode initialized a new node.exe process", WINEVENT_LEVEL_INFO);
+
 	return S_OK;
 Error:
+
+	this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode failed to initialize a new node.exe process", WINEVENT_LEVEL_ERROR);
 
 	if (currentDirectoryA)
 	{
@@ -295,9 +301,13 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE))
 		{
 			process->FlushStdHandles();
+			process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode has flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
 		}
 		else if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
 		{
+			process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_INFO);
 			process->OnProcessExited();
 			return exitCode;
 		}

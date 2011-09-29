@@ -116,6 +116,9 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 		{
 			queue->Pop();
 
+			this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
+
 			if (!this->TryRouteRequestToExistingProcess(request))
 			{
 				CNodeProcess* newProcess = NULL;
@@ -126,12 +129,20 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 
 		LEAVE_CS(this->syncRoot)
 	}
+	else
+	{
+		this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode attempted to dequeue a request for processing from the pending request queue but the queue is empty", WINEVENT_LEVEL_VERBOSE);
+	}
 
 	return;
 Error:
 
 	if (request != NULL)
 	{
+		this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to initiate processing of a request dequeued from the pending request queue", WINEVENT_LEVEL_ERROR);
+
 		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
 	}
 

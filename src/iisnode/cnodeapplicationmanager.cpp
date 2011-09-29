@@ -75,6 +75,8 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 	return S_OK;
 Error:
 
+	this->GetEventProvider()->Log(L"iisnode has failed to initialize the application manager", WINEVENT_LEVEL_ERROR);
+
 	if (NULL != this->asyncManager)
 	{
 		delete this->asyncManager;
@@ -182,6 +184,10 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalP
 		applicationEntry->next = this->applications;
 		this->applications = applicationEntry;
 	}	
+	else
+	{
+		this->GetEventProvider()->Log(L"iisnode found an existing node.js application to dispatch the http request to", WINEVENT_LEVEL_VERBOSE);
+	}
 
 	return S_OK;
 Error:
@@ -194,6 +200,8 @@ Error:
 		}
 		delete applicationEntry;
 	}
+	
+	this->GetEventProvider()->Log(L"iisnode failed to create a new node.js application", WINEVENT_LEVEL_ERROR);
 
 	return hr;
 }
