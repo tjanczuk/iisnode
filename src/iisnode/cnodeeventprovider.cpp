@@ -60,7 +60,10 @@ HRESULT CNodeEventProvider::Log(PCWSTR message, UCHAR level)
 {
 	HRESULT hr;
 
-	CheckError(this->eventWriteString(this->handle, level, 0, message));
+	if (this->eventWriteString) 
+	{
+		CheckError(this->eventWriteString(this->handle, level, 0, message));
+	}
 
 	return S_OK;
 Error:
