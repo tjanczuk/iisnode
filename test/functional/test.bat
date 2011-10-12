@@ -16,15 +16,17 @@ time /T
 date /T > %log%
 time /T >> %log%
 
-call %this%scripts\setup.bat
-if %ERRORLEVEL% neq 0 exit /b -1
-
 set testFilter=*
 set nr=0
+set ns=
 
 :nextParam
 if "%1" equ "/nr" set nr=1& shift & goto :nextParam
+if "%1" equ "/ns" set ns=/ns& shift & goto :nextParam
 if "%1" neq "" set testFilter=%1& shift & goto :nextParam
+
+call %this%scripts\setup.bat %ns%
+if %ERRORLEVEL% neq 0 exit /b -1
 
 dir /b %this%tests\%testFilter% > nul 2>&1
 if %ERRORLEVEL% neq 0 (
@@ -81,12 +83,12 @@ if "%2" equ ".js" (
 
 if %ERRORLEVEL% equ 0 (
 	set /A success=success+1
-	echo Passed: %1
-	echo Passed: %1 >> %log%
+	echo Passed:  %1
+	echo Passed:  %1 >> %log%
 ) else (
 	set /A failure=failure+1
-	echo Failed: %1
-	echo Failed: %1 >> %log%
+	echo Failed:  %1
+	echo Failed:  %1 >> %log%
 )
 
 if "%nr%" equ "0" call :resetAppPool
@@ -110,6 +112,7 @@ exit /b 0
 echo test.bat [options] [testFilter]
 echo options:
 echo     /nr         - do not reset the application pool before every test case (useful for debugging)
+echo     /ns         - do not recreate the application pool before every test run (useful for debugging)
 echo testFilter      - a filename-based filter for tests to run; default *
 echo e.g. test.bat 1* - run all tests from the 100 category
 exit /b -1

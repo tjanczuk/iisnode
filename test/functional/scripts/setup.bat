@@ -20,6 +20,8 @@ if not exist %appcmd% (
 	exit /b -1
 )
 
+if "%1" equ "/ns" exit /b 0
+
 %appcmd% delete site %site% >> %log%
 if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1168 (
 	echo FAILED. Cannot delete site %site%.

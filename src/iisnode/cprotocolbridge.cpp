@@ -339,7 +339,7 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 			context->InitializeOverlapped()),
 		GetLastError());
 
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated reading http response chunk", WINEVENT_LEVEL_VERBOSE);
+	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has synchronously read http response chunk", WINEVENT_LEVEL_VERBOSE);
 
 	return;
 Error:
@@ -361,6 +361,10 @@ Error:
 			context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to read http response", WINEVENT_LEVEL_ERROR);
 			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
 		}
+	}
+	else
+	{
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated reading http response chunk", WINEVENT_LEVEL_VERBOSE);
 	}
 
 	return;
@@ -469,7 +473,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			// connection termination with chunked transfer encoding indicates end of response
 			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
 
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished processing http response body", WINEVENT_LEVEL_VERBOSE);
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has detected the end of the http response", WINEVENT_LEVEL_VERBOSE);
 
 			// CR: check the other commend for finalizing response
 			CProtocolBridge::FinalizeResponse(ctx);
@@ -585,6 +589,7 @@ void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD 
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
 	CheckError(error);	
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished flushing of http response body chunk", WINEVENT_LEVEL_VERBOSE);
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ContinueReadResponse(ctx);
 

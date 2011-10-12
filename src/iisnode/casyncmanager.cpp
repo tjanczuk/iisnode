@@ -3,7 +3,7 @@
 extern RtlNtStatusToDosError pRtlNtStatusToDosError;
 
 CAsyncManager::CAsyncManager()
-	: threads(NULL), threadCount(0), completionPort(NULL)
+	: threads(NULL), threadCount(0), completionPort(NULL), timerThread(NULL), timerSignal(NULL)
 {
 }
 
@@ -22,7 +22,10 @@ HRESULT CAsyncManager::Initialize(IHttpContext* context)
 	this->threadCount = CModuleConfiguration::GetAsyncCompletionThreadCount(context);
 
 	ErrorIf(NULL == (this->completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, this->threadCount)), GetLastError());		
-	
+		
+	ErrorIf(NULL == (this->timerSignal = CreateEvent(NULL, TRUE, FALSE, NULL)), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf((HANDLE)-1L == (this->timerThread = (HANDLE) _beginthreadex(NULL, 0, CAsyncManager::TimerWorker, this, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
+
 	ErrorIf(NULL == (this->threads = new HANDLE[this->threadCount]), ERROR_NOT_ENOUGH_MEMORY);
 	
 	for (initializedThreads = 0; initializedThreads < this->threadCount; initializedThreads++)
@@ -54,6 +57,20 @@ Error:
 HRESULT CAsyncManager::Terminate()
 {
 	HRESULT hr;
+
+	if (NULL != this->timerThread)
+	{
+		SetEvent(this->timerSignal);
+		WaitForSingleObject(this->timerThread, INFINITE);
+		CloseHandle(this->timerThread);
+		this->timerThread = NULL;
+	}
+
+	if (NULL != this->timerSignal)
+	{
+		CloseHandle(this->timerSignal);
+		this->timerSignal = NULL;
+	}
 
 	if (NULL != this->threads)
 	{
@@ -89,16 +106,38 @@ HRESULT CAsyncManager::SetTimer(ASYNC_CONTEXT* context, LARGE_INTEGER* dueTime)
 	HRESULT hr;
 
 	CheckNull(context);
-	CheckNull(dueTime);
+	CheckNull(dueTime);	
 	ErrorIf(NULL != context->timer, ERROR_INVALID_OPERATION);
 
 	context->dueTime = *dueTime;
+	context->completionPort = this->completionPort;
 	ErrorIf(NULL == (context->timer = CreateWaitableTimer(NULL, TRUE, NULL)), GetLastError());
-	ErrorIf(0 == PostQueuedCompletionStatus(this->completionPort, 0, -2L, (LPOVERLAPPED)context), ERROR_OPERATION_ABORTED);	
+	ErrorIf(0 == QueueUserAPC(CAsyncManager::OnSetTimerApc, this->timerThread, (ULONG_PTR)context), GetLastError());
 
 	return S_OK;
 Error:
 	return hr;
+}
+
+void CALLBACK CAsyncManager::OnSetTimerApc(ULONG_PTR dwParam)
+{
+	ASYNC_CONTEXT* ctx = (ASYNC_CONTEXT*)dwParam;
+	SetWaitableTimer(ctx->timer, &ctx->dueTime, 0, CAsyncManager::OnTimer, ctx, FALSE);
+}
+
+unsigned int WINAPI CAsyncManager::TimerWorker(void* arg)
+{
+	CAsyncManager* async = (CAsyncManager*)arg;
+	DWORD waitResult = WAIT_IO_COMPLETION;
+
+	// Setting new timers and executing timer callbacks all happens in APCs on this thread.
+	// The timerSignal is only signalled once when the process terminates and needs to clean up.
+	
+	while (WAIT_IO_COMPLETION == waitResult) {
+		waitResult = WaitForSingleObjectEx(async->timerSignal, INFINITE, TRUE);
+	}
+
+	return 0;
 }
 
 unsigned int WINAPI CAsyncManager::Worker(void* arg)
@@ -107,40 +146,37 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 	ASYNC_CONTEXT* ctx;
 	DWORD error;
 	OVERLAPPED_ENTRY entry;
-	ULONG removed;
 
 	while (true) 
 	{
 		error = ERROR_SUCCESS;
-		if (!GetQueuedCompletionStatusEx(completionPort, &entry, 1, &removed, INFINITE, TRUE))
+		RtlZeroMemory(&entry, sizeof entry);
+		if (!GetQueuedCompletionStatus(completionPort, &entry.dwNumberOfBytesTransferred, &entry.lpCompletionKey, &entry.lpOverlapped, INFINITE))
 		{
-			// No I/O completion packets were dequeued, continue waiting.
-			continue;
+			error = GetLastError();
 		}
 		
-		if (removed == 1)
+		if (0L == entry.lpCompletionKey 
+			&& NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) 
+			&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
 		{
-			if (0L == entry.lpCompletionKey 
-				&& NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) 
-				&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
-			{
-				error = (entry.lpOverlapped->Internal == STATUS_SUCCESS) ? ERROR_SUCCESS 
-					: pRtlNtStatusToDosError(entry.lpOverlapped->Internal);
-				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-				ctx->synchronous = FALSE;
-				ctx->completionProcessor(
-					(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
-					entry.dwNumberOfBytesTransferred, 
-					(LPOVERLAPPED)ctx);
-			}
-			else if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
-			{
-				break;
-			}
-			else if (-2L == entry.lpCompletionKey) // setup of an alertable wait state timer from SetTimer
+			ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
+			ctx->synchronous = FALSE;
+			ctx->completionProcessor(
+				(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
+				entry.dwNumberOfBytesTransferred, 
+				(LPOVERLAPPED)ctx);
+		}
+		else if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
+		{
+			break;
+		}
+		else if (NULL != entry.lpOverlapped)
+		{
+			if (-2L == entry.lpCompletionKey) // completion of an alertable wait state timer initialized from OnTimer
 			{
 				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-				SetWaitableTimer(ctx->timer, &ctx->dueTime, 0, CAsyncManager::OnTimer, ctx, FALSE);
+				ctx->completionProcessor(S_OK, 0, (LPOVERLAPPED)ctx);
 			}
 			else if (-3L == entry.lpCompletionKey) // continuation initiated form PostContinuation
 			{
@@ -159,10 +195,10 @@ void APIENTRY CAsyncManager::OnTimer(LPVOID lpArgToCompletionRoutine, DWORD dwTi
 	CloseHandle(ctx->timer);
 	ctx->timer = NULL;
 
-	if (NULL != ctx && NULL != ctx->completionProcessor)
+	if (NULL != ctx && NULL != ctx->completionPort && NULL != ctx->completionProcessor)
 	{
 		ctx->synchronous = FALSE;
-		ctx->completionProcessor(S_OK, 0, (LPOVERLAPPED)ctx);
+		PostQueuedCompletionStatus(ctx->completionPort, 0, -2L, (LPOVERLAPPED)ctx);
 	}
 }
 

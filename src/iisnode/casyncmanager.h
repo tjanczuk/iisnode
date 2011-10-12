@@ -8,6 +8,7 @@ typedef struct {
 	HANDLE timer;
 	LARGE_INTEGER dueTime;
 	BOOL synchronous; // TRUE means we are executing on a thread provided by IIS
+	HANDLE completionPort;
 } ASYNC_CONTEXT;
 
 typedef void (*ContinuationCallback)(void* data);
@@ -19,9 +20,13 @@ private:
 	HANDLE completionPort;
 	HANDLE* threads;
 	int threadCount;
+	HANDLE timerThread;
+	HANDLE timerSignal;
 
 	static unsigned int WINAPI Worker(void* arg);
+	static unsigned int WINAPI TimerWorker(void* arg);
 	static void APIENTRY OnTimer(LPVOID lpArgToCompletionRoutine, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
+	static void CALLBACK OnSetTimerApc(ULONG_PTR dwParam);
 
 public:
 
