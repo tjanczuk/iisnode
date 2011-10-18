@@ -3,9 +3,10 @@
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
 	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE), result(S_OK), 
-	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0)
+	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1)
 {
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
+	CoCreateGuid(&this->activityId);
 	this->asyncContext.data = this;
 }
 
@@ -46,7 +47,7 @@ LPOVERLAPPED CNodeHttpStoredContext::InitializeOverlapped()
 }
 
 void CNodeHttpStoredContext::CleanupStoredContext()
-{
+{	
 	delete this;
 }
 
@@ -180,12 +181,17 @@ void CNodeHttpStoredContext::SetRequestNotificationStatus(REQUEST_NOTIFICATION_S
 	this->requestNotificationStatus = status;
 }
 
-BOOL CNodeHttpStoredContext::GetSynchronous()
+GUID* CNodeHttpStoredContext::GetActivityId()
 {
-	return this->asyncContext.synchronous;
+	return &this->activityId;
 }
 
-void CNodeHttpStoredContext::SetSynchronous(BOOL synchronous)
+long CNodeHttpStoredContext::IncreasePendingAsyncOperationCount()
 {
-	this->asyncContext.synchronous = synchronous;
+	return InterlockedIncrement(&this->pendingAsyncOperationCount);
+}
+
+long CNodeHttpStoredContext::DecreasePendingAsyncOperationCount()
+{
+	return InterlockedDecrement(&this->pendingAsyncOperationCount);
 }

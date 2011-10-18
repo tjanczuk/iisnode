@@ -13,7 +13,7 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult)
 {
 	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode request processing failed", WINEVENT_LEVEL_VERBOSE);
+		L"iisnode request processing failed", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
 	if (INVALID_HANDLE_VALUE != context->GetPipe())
 	{
@@ -22,7 +22,9 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 	}
 
 	context->SetHresult(hresult);
-	context->SetRequestNotificationStatus(RQ_NOTIFICATION_FINISH_REQUEST);
+	context->SetRequestNotificationStatus(RQ_NOTIFICATION_FINISH_REQUEST);	
+	context->SetNextProcessor(NULL);
+	
 	if (NULL != context->GetNodeProcess())
 	{
 		// there is no CNodeProcess assigned to the request yet - something failed before it was moved from the pending queue
@@ -31,11 +33,12 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 		context->GetNodeProcess()->OnRequestCompleted(context);
 	}
 
-	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);
+	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);	
 
-	if (!context->GetSynchronous())
-	{
-		context->SetNextProcessor(NULL);
+	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in CPendingRequestQueue::Push
+	{		
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode posts completion from SendEmtpyResponse", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());		
 		return context->GetHttpContext()->PostCompletion(0);
 	}
 
@@ -86,7 +89,8 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 	ctx->SetPipe(pipe);
 	ctx->GetNodeApplication()->GetApplicationManager()->GetAsyncManager()->AddAsyncCompletionHandle(pipe);
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has created named pipe connection to the node.exe process", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode created named pipe connection to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 	
 	CProtocolBridge::SendHttpRequestHeaders(ctx);
 
@@ -99,19 +103,22 @@ Error:
 	{
 		if (hr == ERROR_PIPE_BUSY)
 		{
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode was unable to establish named pipe connection to the node.exe process because the named pipe server is too busy", WINEVENT_LEVEL_ERROR);
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode was unable to establish named pipe connection to the node.exe process because the named pipe server is too busy", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 			CProtocolBridge::SendEmptyResponse(ctx, 503, _T("Service Unavailable"), hr);
 		}
 		else
 		{
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode was unable to establish named pipe connection to the node.exe process", WINEVENT_LEVEL_ERROR);
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode was unable to establish named pipe connection to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 		}
 	}
 	else 
 	{
 		ctx->SetConnectionRetryCount(retry + 1);
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has scheduled a retry of a named pipe connection to the node.exe process ", WINEVENT_LEVEL_INFO);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode scheduled a retry of a named pipe connection to the node.exe process ", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
 		CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamedPipeConnectionRetryDelay(ctx->GetHttpContext()));
 	}
 
@@ -123,6 +130,10 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	HRESULT hr;
 	DWORD length;
 
+	// capture ETW provider since after a successful call to WriteFile the context may be asynchronously deleted
+
+	CNodeEventProvider* etw = context->GetNodeApplication()->GetApplicationManager()->GetEventProvider();
+
 	// request the named pipe to be closed by the server after the response is sent
 	// since we are not reusing named pipe connections anyway, requesting the server 
 	// to close it after sending the response allows the module to avoid parsing chunked responses
@@ -133,23 +144,46 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	CheckError(CHttpProtocol::SerializeRequestHeaders(context->GetHttpContext(), context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
 	context->SetNextProcessor(CProtocolBridge::SendHttpRequestHeadersCompleted);
-	ErrorIf(!WriteFile(context->GetPipe(), context->GetBuffer(), length, NULL, context->InitializeOverlapped()), GetLastError());
+	
+	if (WriteFile(context->GetPipe(), context->GetBuffer(), length, NULL, context->InitializeOverlapped()))
+	{
+		// completed synchronously
 
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated sending http request headers to the node.exe process", WINEVENT_LEVEL_VERBOSE);
+		etw->Log(L"iisnode initiated sending http request headers to the node.exe process and completed synchronously", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+
+		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
+		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
+	}
+	else if (ERROR_IO_PENDING == GetLastError())
+	{
+		// will complete asynchronously
+
+		etw->Log(L"iisnode initiated sending http request headers to the node.exe process and will complete asynchronously", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+	}
+	else 
+	{
+		// error
+
+		etw->Log(L"iisnode failed initiate sending http request headers to the node.exe process", 
+			WINEVENT_LEVEL_ERROR, 
+			context->GetActivityId());
+
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
+	}
 
 	return;
 
 Error:
 
-	if (ERROR_IO_PENDING != hr)
-	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to send http request headers to the node.exe process", WINEVENT_LEVEL_ERROR);
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
-	}
-	else
-	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated sending http request headers to the node.exe process", WINEVENT_LEVEL_VERBOSE);
-	}
+	etw->Log(L"iisnode failed to serialize http request headers", 
+		WINEVENT_LEVEL_ERROR, 
+		context->GetActivityId());
+
+	CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
 
 	return;
 }
@@ -160,13 +194,15 @@ void WINAPI CProtocolBridge::SendHttpRequestHeadersCompleted(DWORD error, DWORD 
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
 	CheckError(error);
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode finished sending http request headers to the node.exe process", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode finished sending http request headers to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 	CProtocolBridge::ReadRequestBody(ctx);
 
 	return;
 Error:
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to send http request headers to the node.exe process", WINEVENT_LEVEL_ERROR);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode failed to send http request headers to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 
 	return;
@@ -176,14 +212,22 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;	
 	DWORD bytesReceived;
-	BOOL completionPending;
+	BOOL completionPending = FALSE;
 
 	context->SetNextProcessor(CProtocolBridge::ReadRequestBodyCompleted);
 	CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetBuffer(), context->GetBufferSize(), TRUE, &bytesReceived, &completionPending));
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated reading of http request body", WINEVENT_LEVEL_VERBOSE);
+
 	if (!completionPending)
 	{
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnodeinitiated reading http request body chunk and completed synchronously", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
+
 		CProtocolBridge::ReadRequestBodyCompleted(S_OK, bytesReceived, context->GetOverlapped());
+	}
+	else
+	{
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnodeinitiated reading http request body chunk and will complete asynchronously", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 	}
 
 	return;
@@ -191,12 +235,14 @@ Error:
 
 	if (HRESULT_FROM_WIN32(ERROR_HANDLE_EOF) == hr)
 	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE);
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 		CProtocolBridge::StartReadResponse(context);
 	}
 	else
 	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed reading http request body", WINEVENT_LEVEL_ERROR);
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed reading http request body", WINEVENT_LEVEL_ERROR, context->GetActivityId());
 		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), HRESULT_FROM_WIN32(hr));
 	}
 
@@ -209,42 +255,62 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 
 	if (S_OK == error && bytesTransfered > 0)
 	{
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has read a chunk of http request body", WINEVENT_LEVEL_VERBOSE);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnoderead a chunk of http request body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 		CProtocolBridge::SendRequestBody(ctx, bytesTransfered);
 	}
-	else if (ERROR_HANDLE_EOF == error)
+	else if (ERROR_HANDLE_EOF == error || 0 == bytesTransfered)
 	{	
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 		CProtocolBridge::StartReadResponse(ctx);
 	}
 	else 
 	{
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed reading http request body", WINEVENT_LEVEL_ERROR);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed reading http request body", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
 	}
 }
 
 void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chunkLength)
 {
-	HRESULT hr;
+	// capture ETW provider since after a successful call to WriteFile the context may be asynchronously deleted
+
+	CNodeEventProvider* etw = context->GetNodeApplication()->GetApplicationManager()->GetEventProvider();
 
 	context->SetNextProcessor(CProtocolBridge::SendRequestBodyCompleted);
-	ErrorIf(!WriteFile(context->GetPipe(), context->GetBuffer(), chunkLength, NULL, context->InitializeOverlapped()), GetLastError());
 
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated sending http request body chunk to the node.exe process", WINEVENT_LEVEL_VERBOSE);
-
-	return;
-
-Error:
-
-	if (ERROR_IO_PENDING != hr)
+	if (WriteFile(context->GetPipe(), context->GetBuffer(), chunkLength, NULL, context->InitializeOverlapped()))
 	{
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to send http request body chunk to the node.exe process", WINEVENT_LEVEL_ERROR);
+		// completed synchronously
+
+		etw->Log(L"iisnode initiated sending http request body chunk to the node.exe process and completed synchronously", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+
+		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
+		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
 	}
-	else
+	else if (ERROR_IO_PENDING == GetLastError())
 	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated sending http request body chunk to the node.exe process", WINEVENT_LEVEL_VERBOSE);
+		// will complete asynchronously
+
+		etw->Log(L"iisnode initiated sending http request body chunk to the node.exe process and will complete asynchronously", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+	}
+	else 
+	{
+		// error
+
+		HRESULT hr = GetLastError();
+		
+		etw->Log(L"iisnode failed to initiate sending http request body chunk to the node.exe process", 
+			WINEVENT_LEVEL_ERROR, 
+			context->GetActivityId());
+
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
 	}
 
 	return;
@@ -256,12 +322,14 @@ void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTr
 
 	if (S_OK == error)
 	{
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished sending http request body chunk to the node.exe process", WINEVENT_LEVEL_VERBOSE);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode finished sending http request body chunk to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 		CProtocolBridge::ReadRequestBody(ctx);
 	}
 	else 
 	{
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to send http request body chunk to the node.exe process", WINEVENT_LEVEL_ERROR);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to send http request body chunk to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
 	}
 }
@@ -271,7 +339,8 @@ void CProtocolBridge::StartReadResponse(CNodeHttpStoredContext* context)
 	context->SetDataSize(0);
 	context->SetParsingOffset(0);
 	context->SetNextProcessor(CProtocolBridge::ProcessResponseStatusLine);
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode is starting to read http reasponse", WINEVENT_LEVEL_VERBOSE);
+	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode starting to read http response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 	CProtocolBridge::ContinueReadResponse(context);
 }
 
@@ -294,7 +363,8 @@ HRESULT CProtocolBridge::EnsureBuffer(CNodeHttpStoredContext* context)
 		{
 			// allocate more buffer memory
 
-			context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode is allocating more buffer memory to handle http response", WINEVENT_LEVEL_VERBOSE);
+			context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode allocating more buffer memory to handle http response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
 			DWORD* bufferLength = context->GetBufferSizeRef();
 			void** buffer = context->GetBufferRef();
@@ -329,43 +399,66 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
 
+	// capture ETW provider since after a successful call to ReadFile the context may be asynchronously deleted
+
+	CNodeEventProvider* etw = context->GetNodeApplication()->GetApplicationManager()->GetEventProvider();
+
 	CheckError(CProtocolBridge::EnsureBuffer(context));
 
-	ErrorIf(!ReadFile(
+	if (ReadFile(
 			context->GetPipe(), 
 			(char*)context->GetBuffer() + context->GetDataSize(), 
 			context->GetBufferSize() - context->GetDataSize(),
 			NULL,
-			context->InitializeOverlapped()),
-		GetLastError());
+			context->InitializeOverlapped()))
+	{
+		// read completed synchronously 
 
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has synchronously read http response chunk", WINEVENT_LEVEL_VERBOSE);
+		etw->Log(L"iisnode initiated reading http response chunk and completed synchronously", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+
+		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
+		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
+	}
+	else if (ERROR_IO_PENDING == GetLastError())
+	{
+		// read will complete asynchronously
+
+		etw->Log(L"iisnode initiated reading http response chunk and will complete asynchronously", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+	}
+	else if (context->GetResponseContentLength() == -1)
+	{
+		// connection termination with chunked transfer encoding indicates end of response
+		// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
+
+		etw->Log(L"iisnode iniatiated reading http response chunk and synchronously detected the end of the http response", 
+			WINEVENT_LEVEL_VERBOSE, 
+			context->GetActivityId());
+
+		// CR: narrow down this condition to orderly pipe closure
+		CProtocolBridge::FinalizeResponse(context);
+	}
+	else
+	{
+		// error
+
+		etw->Log(L"iisnode failed to initialize reading of http response chunk", 
+			WINEVENT_LEVEL_ERROR, 
+			context->GetActivityId());
+
+		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+	}
 
 	return;
 Error:
 
-	if (ERROR_IO_PENDING != hr)
-	{
-		if (context->GetResponseContentLength() == -1)
-		{
-			// connection termination with chunked transfer encoding indicates end of response
-			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
+	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode failed to allocate memory buffer to read http response chunk", WINEVENT_LEVEL_ERROR, context->GetActivityId());
 
-			context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has detected the end of the http response", WINEVENT_LEVEL_VERBOSE);
-
-			// CR: narrow down this condition to orderly pipe closure
-			CProtocolBridge::FinalizeResponse(context);
-		}
-		else
-		{
-			context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to read http response", WINEVENT_LEVEL_ERROR);
-			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
-		}
-	}
-	else
-	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated reading http response chunk", WINEVENT_LEVEL_VERBOSE);
-	}
+	CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
 
 	return;
 }
@@ -375,13 +468,15 @@ void WINAPI CProtocolBridge::ProcessResponseStatusLine(DWORD error, DWORD bytesT
 	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode is starting to process http response status line", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode starting to process http response status line", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 	CheckError(error);
 	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
 	CheckError(CHttpProtocol::ParseResponseStatusLine(ctx));
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished processing http response status line", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode finished processing http response status line", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseHeaders);
 	CProtocolBridge::ProcessResponseHeaders(S_OK, 0, ctx->GetOverlapped());
@@ -395,7 +490,8 @@ Error:
 	}
 	else
 	{
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to process http response status line", WINEVENT_LEVEL_ERROR);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to process http response status line", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 	}
 
@@ -409,7 +505,8 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	PCSTR contentLength;
 	USHORT contentLengthLength;
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode is starting to process http response headers", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode starting to process http response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 	CheckError(error);
 	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
@@ -435,7 +532,8 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 		ctx->SetResponseContentLength(length);
 	}
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished processing http response headers", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode finished processing http response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
@@ -449,7 +547,8 @@ Error:
 	}
 	else
 	{
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to process http response headers", WINEVENT_LEVEL_ERROR);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to process http response headers", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 	}
 
@@ -464,7 +563,8 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	DWORD bytesSent;
 	BOOL completionExpected;
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode is starting to process http response body chunk", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode starting to process http response body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 	if (S_OK != error)
 	{
@@ -473,14 +573,16 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			// connection termination with chunked transfer encoding indicates end of response
 			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
 
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has detected the end of the http response", WINEVENT_LEVEL_VERBOSE);
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode detected the end of the http response", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 			// CR: check the other commend for finalizing response
 			CProtocolBridge::FinalizeResponse(ctx);
 		}
 		else
 		{
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to read http response body chunk", WINEVENT_LEVEL_ERROR);
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode failed to read http response body", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
 		}
 
@@ -513,7 +615,8 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			&bytesSent,
 			&completionExpected));
 
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has started sending http response body chunk", WINEVENT_LEVEL_VERBOSE);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode started sending http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 		
 		if (!completionExpected)
 		{
@@ -536,7 +639,8 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	return;
 Error:
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to send http response body chunk", WINEVENT_LEVEL_ERROR);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode failed to send http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 
 	return;
@@ -560,7 +664,8 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 			// TODO, tjanczuk, is flushing chunked responses requried
 
 			ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has initiated flushing of http response body chunk", WINEVENT_LEVEL_VERBOSE);
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode initiated flushing http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 			ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
 		}
 
@@ -577,7 +682,8 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	return;
 Error:
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to send http response body chunk", WINEVENT_LEVEL_ERROR);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode failed to flush http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 
 	return;
@@ -589,14 +695,16 @@ void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD 
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
 	CheckError(error);	
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished flushing of http response body chunk", WINEVENT_LEVEL_VERBOSE);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode finished flushing http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ContinueReadResponse(ctx);
 
 	return;
 Error:
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has failed to flush http response body chunk", WINEVENT_LEVEL_ERROR);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode failed to flush http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
 	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 	
 	return;
@@ -604,19 +712,19 @@ Error:
 
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 {
-	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(L"iisnode has finished processing http request/response", WINEVENT_LEVEL_VERBOSE);
-
 	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode request processing succeeded", WINEVENT_LEVEL_VERBOSE);
+		L"iisnode finished processing http request/response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
 	CloseHandle(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
-
 	context->GetNodeProcess()->OnRequestCompleted(context);
 	context->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
-	if (!context->GetSynchronous())
+	context->SetNextProcessor(NULL);
+
+	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in the ctor of CPendingRequestQueue::Push
 	{
-		context->SetNextProcessor(NULL);
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode posts completion from FinalizeResponse", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());		
 		context->GetHttpContext()->PostCompletion(0);
 	}
 }

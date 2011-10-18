@@ -70,12 +70,12 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 
 	this->initialized = TRUE;
 
-	this->GetEventProvider()->Log(L"iisnode has initialized the application manager", WINEVENT_LEVEL_INFO);
+	this->GetEventProvider()->Log(L"iisnode initialized the application manager", WINEVENT_LEVEL_INFO);
 
 	return S_OK;
 Error:
 
-	this->GetEventProvider()->Log(L"iisnode has failed to initialize the application manager", WINEVENT_LEVEL_ERROR);
+	this->GetEventProvider()->Log(L"iisnode failed to initialize the application manager", WINEVENT_LEVEL_ERROR);
 
 	if (NULL != this->asyncManager)
 	{
@@ -156,13 +156,15 @@ CAsyncManager* CNodeApplicationManager::GetAsyncManager()
 	return this->asyncManager;
 }
 
-HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvider* pProvider)
+HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx)
 {
 	HRESULT hr;
 	CNodeApplication* application;
 
+	CheckNull(ctx);
+	*ctx = NULL;
 	CheckError(this->GetOrCreateNodeApplication(context, &application));
-	CheckError(application->Enqueue(context, pProvider));
+	CheckError(application->Enqueue(context, pProvider, ctx));
 
 	return S_OK;
 Error:

@@ -26,6 +26,10 @@ HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
 	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxPendingRequestsPerApplication(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
 	this->requests.push(context);
 
+	// increase the pending async opertation count; corresponding decrease happens either from CProtocolBridge::SendEmptyResponse or 
+	// CProtocolBridge::FinalizeResponse, possibly after severl context switches
+	context->IncreasePendingAsyncOperationCount();
+
 	LEAVE_CS(this->syncRoot)
 
 	return S_OK;

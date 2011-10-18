@@ -161,7 +161,6 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 			&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
 		{
 			ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-			ctx->synchronous = FALSE;
 			ctx->completionProcessor(
 				(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
 				entry.dwNumberOfBytesTransferred, 
@@ -197,7 +196,6 @@ void APIENTRY CAsyncManager::OnTimer(LPVOID lpArgToCompletionRoutine, DWORD dwTi
 
 	if (NULL != ctx && NULL != ctx->completionPort && NULL != ctx->completionProcessor)
 	{
-		ctx->synchronous = FALSE;
 		PostQueuedCompletionStatus(ctx->completionPort, 0, -2L, (LPOVERLAPPED)ctx);
 	}
 }

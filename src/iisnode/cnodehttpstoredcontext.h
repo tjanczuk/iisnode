@@ -8,6 +8,7 @@ class CNodeHttpStoredContext : public IHttpStoredContext
 {
 private:
 
+	GUID activityId;
 	CNodeApplication* nodeApplication;
 	IHttpContext* context;
 	ASYNC_CONTEXT asyncContext;
@@ -21,7 +22,8 @@ private:
 	LONGLONG responseContentTransmitted;
 	LONGLONG responseContentLength;
 	HRESULT result;
-	REQUEST_NOTIFICATION_STATUS requestNotificationStatus;
+	REQUEST_NOTIFICATION_STATUS requestNotificationStatus;	
+	long pendingAsyncOperationCount;
 
 public:
 
@@ -46,7 +48,7 @@ public:
 	LONGLONG GetResponseContentLength();
 	HRESULT GetHresult();
 	REQUEST_NOTIFICATION_STATUS GetRequestNotificationStatus();
-	BOOL GetSynchronous();
+	GUID* GetActivityId();
 
 	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 	void SetNodeProcess(CNodeProcess* process);
@@ -60,8 +62,9 @@ public:
 	void SetResponseContentLength(LONGLONG length);
 	void SetHresult(HRESULT result);
 	void SetRequestNotificationStatus(REQUEST_NOTIFICATION_STATUS status);
-	void SetSynchronous(BOOL synchronous);
 	LPOVERLAPPED InitializeOverlapped();
+	long IncreasePendingAsyncOperationCount();
+	long DecreasePendingAsyncOperationCount();
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

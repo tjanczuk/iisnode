@@ -45,7 +45,7 @@ public:
 
 	HRESULT Initialize();
 	bool IsEnabled(UCHAR level);
-	HRESULT Log(PCWSTR message, UCHAR level);
+	HRESULT Log(PCWSTR message, UCHAR level, GUID* activityId = NULL);
 
 };
 

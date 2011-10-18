@@ -56,13 +56,25 @@ bool CNodeEventProvider::IsEnabled(UCHAR level)
 	return result;
 }
 
-HRESULT CNodeEventProvider::Log(PCWSTR message, UCHAR level)
+HRESULT CNodeEventProvider::Log(PCWSTR message, UCHAR level, GUID* activityId)
 {
 	HRESULT hr;
 
-	if (this->eventWriteString) 
+	if (this->eventWriteString && this->IsEnabled(level)) 
 	{
-		CheckError(this->eventWriteString(this->handle, level, 0, message));
+		// TODO, tjanczuk, use activityId through EventWrite instead
+		if (activityId)
+		{
+			WCHAR m[256];
+			StringFromGUID2(*activityId, m, 256);
+			wcscat(m, L": ");
+			wcscat(m, message);
+			CheckError(this->eventWriteString(this->handle, level, 0, m));
+		}
+		else
+		{
+			CheckError(this->eventWriteString(this->handle, level, 0, message));
+		}
 	}
 
 	return S_OK;

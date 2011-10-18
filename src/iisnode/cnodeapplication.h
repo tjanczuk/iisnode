@@ -4,6 +4,7 @@
 class CPendingRequestQueue;
 class CNodeProcessManager;
 class CFileWatcher;
+class CNodeHttpStoredContext;
 
 class CNodeApplication
 {
@@ -26,7 +27,7 @@ public:
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
 	CPendingRequestQueue* GetPendingRequestQueue();
-	HRESULT Enqueue(IHttpContext* context, IHttpEventProvider* pProvider);
+	HRESULT Enqueue(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
 };
 
 #endif

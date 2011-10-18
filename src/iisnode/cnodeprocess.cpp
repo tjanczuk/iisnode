@@ -302,7 +302,7 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 		{
 			process->FlushStdHandles();
 			process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode has flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
+				L"iisnode flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
 		}
 		else if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
 		{
@@ -375,8 +375,12 @@ void CNodeProcess::OnProcessExited()
 		HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
 		if (NULL != drainHandle)
 		{
+			this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode started draining the active request pool for a terminated node.exe process", WINEVENT_LEVEL_INFO);
 			this->activeRequestPool.SignalWhenDrained(drainHandle);
 			WaitForSingleObject(drainHandle, INFINITE);
+			this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode finished draining the active request pool for a terminated node.exe process", WINEVENT_LEVEL_INFO);
 			CloseHandle(drainHandle);
 		}
 

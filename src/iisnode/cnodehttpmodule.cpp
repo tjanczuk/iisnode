@@ -10,14 +10,23 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 	IN IHttpEventProvider* pProvider)
 {
 	HRESULT hr;
+	CNodeHttpStoredContext* ctx = NULL;
 
 	CheckError(this->applicationManager->Initialize(pHttpContext));
 
 	this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
 
-	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider));
+	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider, &ctx));
 
-	return RQ_NOTIFICATION_PENDING;
+	if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count set to 1 in the ctor of CNodeHttpStoredContext
+	{
+		return ctx->GetRequestNotificationStatus();
+	}
+	else
+	{
+		return RQ_NOTIFICATION_PENDING;
+	}
+
 Error:
 
 	this->applicationManager->GetEventProvider()->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
@@ -44,14 +53,30 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 	if (NULL != pCompletionInfo && NULL != pHttpContext)
 	{
 		CNodeHttpStoredContext* ctx = (CNodeHttpStoredContext*)pHttpContext->GetModuleContextContainer()->GetModuleContext(this->applicationManager->GetModuleId());		
+
+		ctx->IncreasePendingAsyncOperationCount();
+
+		WCHAR message[256];
+		wsprintfW(message, L"iisnode enters CNodeHttpModule::OnAsyncCompletion callback with request notification status of %d", ctx->GetRequestNotificationStatus());
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
 		ASYNC_CONTEXT* async = ctx->GetAsyncContext();
 		if (NULL != async->completionProcessor)
 		{
-			ctx->SetSynchronous(TRUE);
 			async->completionProcessor(pCompletionInfo->GetCompletionStatus(), pCompletionInfo->GetCompletionBytes(), ctx->GetOverlapped());
 		}
 
-		return ctx->GetRequestNotificationStatus();
+		wsprintfW(message, L"iisnode leaves CNodeHttpModule::OnAsyncCompletion callback with request notification status of %d", ctx->GetRequestNotificationStatus());
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
+		if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased on entering OnAsyncCompletion
+		{
+			return ctx->GetRequestNotificationStatus();
+		}
+		else
+		{
+			return RQ_NOTIFICATION_PENDING;
+		}
 	}
 
 	return RQ_NOTIFICATION_CONTINUE;

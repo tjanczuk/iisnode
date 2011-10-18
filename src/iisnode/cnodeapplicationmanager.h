@@ -5,6 +5,7 @@ class CNodeApplication;
 class CAsyncManager;
 class CFileWatcher;
 class CNodeEventProvider;
+class CNodeHttpStoredContext;
 
 class CNodeApplicationManager
 {
@@ -43,7 +44,7 @@ public:
 	BOOL GetBreakAwayFromJobObject();
 
 	HRESULT Initialize(IHttpContext* context);
-	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider);
+	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
 };
 
 #endif

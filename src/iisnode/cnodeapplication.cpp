@@ -76,21 +76,26 @@ CPendingRequestQueue* CNodeApplication::GetPendingRequestQueue()
 	return this->pendingRequests;
 }
 
-HRESULT CNodeApplication::Enqueue(IHttpContext* context, IHttpEventProvider* pProvider)
+HRESULT CNodeApplication::Enqueue(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx)
 {
 	HRESULT hr;
-	CNodeHttpStoredContext* nodeContext;
 
+	CheckNull(ctx);
 	CheckNull(context);
 	CheckNull(pProvider);
 
-	ErrorIf(NULL == (nodeContext = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);	
+	ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);	
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
-	moduleContextContainer->SetModuleContext(nodeContext, this->GetApplicationManager()->GetModuleId());
+	moduleContextContainer->SetModuleContext(*ctx, this->GetApplicationManager()->GetModuleId());
 
-	CheckError(this->pendingRequests->Push(nodeContext));
-	
-	this->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this->processManager);
+	if (S_OK == (hr = this->pendingRequests->Push(*ctx)))
+	{		
+		this->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this->processManager);
+	}
+	else
+	{
+		return hr;
+	}
 
 	return S_OK;
 Error:

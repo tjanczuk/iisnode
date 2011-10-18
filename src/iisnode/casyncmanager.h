@@ -7,7 +7,6 @@ typedef struct {
 	void* data;
 	HANDLE timer;
 	LARGE_INTEGER dueTime;
-	BOOL synchronous; // TRUE means we are executing on a thread provided by IIS
 	HANDLE completionPort;
 } ASYNC_CONTEXT;
 
