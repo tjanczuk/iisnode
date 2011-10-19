@@ -59,7 +59,7 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 	context->SetNextProcessor(CProtocolBridge::CreateNamedPipeConnection);
 	CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->InitializeOverlapped());
 
-	return context->GetHresult(); // synchronous completion HRESULT
+	return S_OK; 
 }
 
 void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
