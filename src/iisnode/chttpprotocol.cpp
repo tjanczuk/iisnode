@@ -243,6 +243,12 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	return S_OK;
 Error:
 
+	if (ERROR_MORE_DATA != hr)
+	{
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to parse response status line", WINEVENT_LEVEL_ERROR, context->GetActivityId());
+	}
+
 	return hr;
 }
 
