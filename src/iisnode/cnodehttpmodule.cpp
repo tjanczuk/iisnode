@@ -16,6 +16,12 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 
 	this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
 
+	// reject websocket connections since iisnode does not support them
+	// http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#page-17
+
+	PCSTR upgrade = pHttpContext->GetRequest()->GetHeader(HttpHeaderUpgrade, NULL);
+	ErrorIf(upgrade && 0 == strcmp("websocket", upgrade), ERROR_NOT_SUPPORTED);		
+
 	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider, &ctx));
 
 	if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count set to 1 in the ctor of CNodeHttpStoredContext
@@ -38,6 +44,11 @@ Error:
 	else if (ERROR_FILE_NOT_FOUND == hr)
 	{
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 404, _T("Not Found"), hr);
+	}
+	else if (ERROR_NOT_SUPPORTED == hr)
+	{
+		this->applicationManager->GetEventProvider()->Log(L"iisnode rejected websocket connection request", WINEVENT_LEVEL_INFO);
+		CProtocolBridge::SendEmptyResponse(pHttpContext, 501, _T("Not Implemented"), hr);
 	}
 	else
 	{
