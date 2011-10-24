@@ -19,6 +19,7 @@ private:
 	DWORD uncFileChangesPollingInterval;
 	DWORD gracefulShutdownTimeout;
 	LPWSTR logDirectoryNameSuffix;
+	LPWSTR debuggerPathSegment;
 	DWORD logFileFlushInterval;
 	DWORD maxLogFileSizeInKB;
 	BOOL loggingEnabled;
@@ -51,6 +52,7 @@ public:
 	static DWORD GetUNCFileChangesPollingInterval(IHttpContext* ctx); 
 	static DWORD GetGracefulShutdownTimeout(IHttpContext* ctx);
 	static LPWSTR GetLogDirectoryNameSuffix(IHttpContext* ctx);
+	static LPWSTR GetDebuggerPathSegment(IHttpContext* ctx);
 	static DWORD GetLogFileFlushInterval(IHttpContext* ctx);
 	static DWORD GetMaxLogFileSizeInKB(IHttpContext* ctx);
 	static BOOL GetLoggingEnabled(IHttpContext* ctx);

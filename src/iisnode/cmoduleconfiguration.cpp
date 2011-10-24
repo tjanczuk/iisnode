@@ -5,7 +5,7 @@ IHttpServer* CModuleConfiguration::server = NULL;
 HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 CModuleConfiguration::CModuleConfiguration()
-	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL)
+	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL)
 {
 }
 
@@ -21,6 +21,12 @@ CModuleConfiguration::~CModuleConfiguration()
 	{
 		delete [] this->logDirectoryNameSuffix;
 		this->logDirectoryNameSuffix = NULL;
+	}
+
+	if (NULL != this->debuggerPathSegment)
+	{
+		delete [] this->debuggerPathSegment;
+		this->debuggerPathSegment = NULL;
 	}
 }
 
@@ -386,6 +392,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
 		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
+		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
 		CheckError(GetString(section, L"nodeProcessCommandLine", &commandLine));
 		ErrorIf(NULL == (c->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(0 != wcstombs_s(&i, c->nodeProcessCommandLine, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
@@ -494,6 +501,11 @@ DWORD CModuleConfiguration::GetGracefulShutdownTimeout(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetLogDirectoryNameSuffix(IHttpContext* ctx)
 {
 	GETCONFIG(logDirectoryNameSuffix)
+}
+
+LPWSTR CModuleConfiguration::GetDebuggerPathSegment(IHttpContext* ctx)
+{
+	GETCONFIG(debuggerPathSegment)
 }
 
 DWORD CModuleConfiguration::GetLogFileFlushInterval(IHttpContext* ctx)
