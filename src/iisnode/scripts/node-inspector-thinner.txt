@@ -1,0 +1,36 @@
+The ..\node-inspector directory has been populated by:
+
+1. Installing node-inspector using ryppi install node-inspector
+2. Replacing the node_modules\node-inspector directory with the fork of node-inspector sources from https://github.com/tjanczuk/node-inspector (they enable xhr-polling transport and make node-inspector iisnode-friendly)
+2. Removing components that are not required in the iisnode scenario - below is the list of the components to remove. 
+
+At this point there is no automation to refresh the contents of the ..\node-inspector bits, the process is manual.
+
+rmdir /s /q node_modules\policyfile
+rmdir /s /q node_modules\redis
+rmdir /s /q node_modules\websocket-client
+rmdir /s /q node_modules\node-inspector\test
+rmdir /s /q node_modules\paperboy\example
+rmdir /s /q node_modules\socket.io\examples
+rmdir /s /q node_modules\socket.io\support
+rmdir /s /q node_modules\socket.io\test
+rmdir /s /q node_modules\socket.io-client\support
+rmdir /s /q node_modules\socket.io-client\test
+del /q      node_modules\socket.io-client\dist\WebSocketMain.swf
+del /q      node_modules\socket.io-client\dist\WebSocketMainInsecure.swf
+rmdir /s /q node_modules\socket.io-client\lib\vendor
+rmdir /s /q node_modules\uglify-js\bin
+rmdir /s /q node_modules\uglify-js\test
+rmdir /s /q node_modules\uglify-js\tmp
+rmdir /s /q node_modules\xmlhttprequest\tests
+del /s /q   .gitignore
+del /s /q   .npmignore
+del /s /q   makefile
+del /s /q   readme.md
+del /s /q   history.md
+del /s /q   changelog
+del /s /q   autotest.watchr
+del /s /q   package.json~
+del /s /q   README.html
+del /s /q   README.org
+del /s /q   .package.json.un~

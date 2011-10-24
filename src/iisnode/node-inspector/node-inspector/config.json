@@ -1,0 +1,7 @@
+{
+  "webPort": 8080,
+  "debugPort": 5858,
+  "saveLiveEdit": false,
+  "transports": ["xhr-polling", "websocket"],
+  "hidden": []
+}
