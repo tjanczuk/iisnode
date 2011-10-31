@@ -95,12 +95,6 @@ Error:
 		this->fileWatcher = NULL;
 	}
 
-	if (NULL != this->eventProvider)
-	{
-		delete this->eventProvider;
-		this->eventProvider = NULL;
-	}
-
 	return hr;
 }
 

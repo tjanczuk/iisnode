@@ -20,14 +20,6 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 		CloseHandle(context->GetPipe());
 		context->SetPipe(INVALID_HANDLE_VALUE);
 	}
-	
-	if (NULL != context->GetNodeProcess())
-	{
-		// there is no CNodeProcess assigned to the request yet - something failed before it was moved from the pending queue
-		// to an active request queue of a specific process
-
-		context->GetNodeProcess()->OnRequestCompleted(context);
-	}
 
 	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);	
 
@@ -143,12 +135,13 @@ void WINAPI CProtocolBridge::ChildContextCompleted(DWORD error, DWORD bytesTrans
 	ctx->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);	
 	ctx->SetNextProcessor(NULL);
 	
-	if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased in CPendingRequestQueue::Push
-	{		
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-			L"iisnode posts completion from ChildContextCompleted", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());		
-		ctx->GetHttpContext()->PostCompletion(0);
-	}
+	CProtocolBridge::FinalizeResponseCore(
+		ctx, 
+		RQ_NOTIFICATION_CONTINUE, 
+		error, 
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider(), 
+		L"iisnode posts completion from ChildContextCompleted", 
+		WINEVENT_LEVEL_VERBOSE);
 	
 	return;
 }
@@ -814,7 +807,6 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 
 	CloseHandle(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
-	context->GetNodeProcess()->OnRequestCompleted(context);
 	CProtocolBridge::FinalizeResponseCore(
 		context, 
 		RQ_NOTIFICATION_CONTINUE, 
@@ -829,6 +821,14 @@ HRESULT CProtocolBridge::FinalizeResponseCore(CNodeHttpStoredContext* context, R
 	context->SetRequestNotificationStatus(status);
 	context->SetNextProcessor(NULL);
 	context->SetHresult(error);
+
+	if (NULL != context->GetNodeProcess())
+	{
+		// there is no CNodeProcess assigned to the request yet - something failed before it was moved from the pending queue
+		// to an active request queue of a specific process
+
+		context->GetNodeProcess()->OnRequestCompleted(context);
+	}
 
 	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in the ctor of CPendingRequestQueue::Push
 	{

@@ -35,7 +35,12 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 
 Error:
 
-	this->applicationManager->GetEventProvider()->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
+	CNodeEventProvider* log = this->applicationManager->GetEventProvider();
+
+	if (log)
+	{
+		log->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
+	}
 
 	if (ERROR_NOT_ENOUGH_QUOTA == hr)
 	{
@@ -47,7 +52,10 @@ Error:
 	}
 	else if (ERROR_NOT_SUPPORTED == hr)
 	{
-		this->applicationManager->GetEventProvider()->Log(L"iisnode rejected websocket connection request", WINEVENT_LEVEL_INFO);
+		if (log)
+		{
+			log->Log(L"iisnode rejected websocket connection request", WINEVENT_LEVEL_INFO);
+		}
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 501, _T("Not Implemented"), hr);
 	}
 	else if (IISNODE_ERROR_UNRECOGNIZED_DEBUG_COMMAND == hr)
