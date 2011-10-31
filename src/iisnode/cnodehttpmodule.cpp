@@ -50,6 +50,10 @@ Error:
 		this->applicationManager->GetEventProvider()->Log(L"iisnode rejected websocket connection request", WINEVENT_LEVEL_INFO);
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 501, _T("Not Implemented"), hr);
 	}
+	else if (IISNODE_ERROR_UNRECOGNIZED_DEBUG_COMMAND == hr)
+	{
+		CProtocolBridge::SendEmptyResponse(pHttpContext, 400, _T("Unrecognized Debugger Command"), hr);
+	}
 	else
 	{
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 500, _T("Internal Server Error"), hr);
@@ -69,7 +73,7 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 
 		WCHAR message[256];
 		wsprintfW(message, L"iisnode enters CNodeHttpModule::OnAsyncCompletion callback with request notification status of %d", ctx->GetRequestNotificationStatus());
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+		this->applicationManager->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 		ASYNC_CONTEXT* async = ctx->GetAsyncContext();
 		if (NULL != async->completionProcessor)
@@ -78,7 +82,7 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 		}
 
 		wsprintfW(message, L"iisnode leaves CNodeHttpModule::OnAsyncCompletion callback with request notification status of %d", ctx->GetRequestNotificationStatus());
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+		this->applicationManager->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
 		if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased on entering OnAsyncCompletion
 		{

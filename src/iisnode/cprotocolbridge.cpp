@@ -20,10 +20,6 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 		CloseHandle(context->GetPipe());
 		context->SetPipe(INVALID_HANDLE_VALUE);
 	}
-
-	context->SetHresult(hresult);
-	context->SetRequestNotificationStatus(RQ_NOTIFICATION_FINISH_REQUEST);	
-	context->SetNextProcessor(NULL);
 	
 	if (NULL != context->GetNodeProcess())
 	{
@@ -35,12 +31,13 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 
 	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);	
 
-	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in CPendingRequestQueue::Push
-	{		
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-			L"iisnode posts completion from SendEmtpyResponse", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());		
-		return context->GetHttpContext()->PostCompletion(0);
-	}
+	CProtocolBridge::FinalizeResponseCore(
+		context, 
+		RQ_NOTIFICATION_FINISH_REQUEST, 
+		hresult, 
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider(),
+		L"iisnode posts completion from SendEmtpyResponse", 
+		WINEVENT_LEVEL_VERBOSE);
 
 	return S_OK;
 }
@@ -56,10 +53,104 @@ void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PC
 
 HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 {
-	context->SetNextProcessor(CProtocolBridge::CreateNamedPipeConnection);
-	CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->InitializeOverlapped());
+	HRESULT hr;
+	BOOL requireChildContext = FALSE;	
+	IHttpContext* child = NULL;
+	BOOL completionExpected;
+
+	// determine what the target path of the request is
+
+	if (context->GetNodeApplication()->IsDebugger())
+	{
+		// All debugger URLs require rewriting. Requests for static content will be processed using a child http context and served
+		// by a static file handler. Debugging protocol requests will continue executing in the current context and be processed 
+		// by the node-inspector application.
+
+		CheckError(CNodeDebugger::DispatchDebuggingRequest(context, &requireChildContext));
+	}
+	else
+	{
+		// For application requests, if the URL rewrite module had been used to rewrite the URL, 
+		// present the original URL to the node.js application instead of the re-written one.
+
+		PCSTR url;
+		USHORT urlLength;
+		IHttpRequest* request = context->GetHttpContext()->GetRequest();
+
+		if (NULL == (url = request->GetHeader("X-Original-URL", &urlLength)))
+		{
+			HTTP_REQUEST* raw = request->GetRawHttpRequest();
+			context->SetTargetUrl(raw->pRawUrl, raw->RawUrlLength);
+		}
+		else
+		{
+			context->SetTargetUrl(url, urlLength);
+		}
+	}
+
+	// determine how to process the request
+
+	if (requireChildContext)
+	{		
+		CheckError(context->GetHttpContext()->CloneContext(CLONE_FLAG_BASICS | CLONE_FLAG_ENTITY | CLONE_FLAG_HEADERS, &child));
+		CheckError(child->GetRequest()->SetUrl(context->GetTargetUrl(), context->GetTargetUrlLength(), FALSE));
+		context->SetChildContext(child);
+		context->SetNextProcessor(CProtocolBridge::ChildContextCompleted);
+		CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, 0, NULL, &completionExpected));
+		if (!completionExpected)
+		{
+			CProtocolBridge::ChildContextCompleted(S_OK, 0, context->GetOverlapped());
+		}
+	}
+	else
+	{
+		context->SetNextProcessor(CProtocolBridge::CreateNamedPipeConnection);
+		CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->InitializeOverlapped());
+	}
 
 	return S_OK; 
+Error:
+
+	if (child)
+	{		
+		child->ReleaseClonedContext();
+		child = NULL;
+		context->SetChildContext(NULL);
+	}
+
+	return hr;
+}
+
+void WINAPI CProtocolBridge::ChildContextCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	ctx->GetChildContext()->ReleaseClonedContext();
+	ctx->SetChildContext(NULL);
+
+	if (S_OK == error)
+	{
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode finished processing child http request", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+	}
+	else
+	{
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to process child http request", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+	}
+
+	ctx->SetHresult(error);
+	ctx->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);	
+	ctx->SetNextProcessor(NULL);
+	
+	if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased in CPendingRequestQueue::Push
+	{		
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode posts completion from ChildContextCompleted", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());		
+		ctx->GetHttpContext()->PostCompletion(0);
+	}
+	
+	return;
 }
 
 void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
@@ -143,7 +234,7 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 
 	CheckError(context->GetHttpContext()->GetRequest()->SetHeader("Connection", "close", 5, TRUE));
 
-	CheckError(CHttpProtocol::SerializeRequestHeaders(context->GetHttpContext(), context->GetBufferRef(), context->GetBufferSizeRef(), &length));
+	CheckError(CHttpProtocol::SerializeRequestHeaders(context, context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
 	context->SetNextProcessor(CProtocolBridge::SendHttpRequestHeadersCompleted);
 	
@@ -724,13 +815,59 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 	CloseHandle(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
 	context->GetNodeProcess()->OnRequestCompleted(context);
-	context->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
+	CProtocolBridge::FinalizeResponseCore(
+		context, 
+		RQ_NOTIFICATION_CONTINUE, 
+		S_OK, 
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider(),
+		L"iisnode posts completion from FinalizeResponse", 
+		WINEVENT_LEVEL_VERBOSE);
+}
+
+HRESULT CProtocolBridge::FinalizeResponseCore(CNodeHttpStoredContext* context, REQUEST_NOTIFICATION_STATUS status, HRESULT error, CNodeEventProvider* log, PCWSTR etw, UCHAR level)
+{
+	context->SetRequestNotificationStatus(status);
 	context->SetNextProcessor(NULL);
+	context->SetHresult(error);
 
 	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in the ctor of CPendingRequestQueue::Push
 	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-			L"iisnode posts completion from FinalizeResponse", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());		
+		log->Log(etw, level, context->GetActivityId());		
 		context->GetHttpContext()->PostCompletion(0);
 	}
+
+	return S_OK;
+}
+
+HRESULT CProtocolBridge::SendDebugRedirect(CNodeHttpStoredContext* context, CNodeEventProvider* log)
+{
+	HRESULT hr;
+
+	IHttpContext* ctx = context->GetHttpContext();
+	IHttpResponse* response = ctx->GetResponse();
+	HTTP_REQUEST* raw = ctx->GetRequest()->GetRawHttpRequest();
+
+	// redirect app.js/debug to app.js/debug/ by appending '/' at the end of the path
+
+	PSTR path;
+	int pathSizeA;
+	ErrorIf(0 == (pathSizeA = WideCharToMultiByte(CP_ACP, 0, raw->CookedUrl.pAbsPath, raw->CookedUrl.AbsPathLength >> 1, NULL, 0, NULL, NULL)), E_FAIL);
+	ErrorIf(NULL == (path = (TCHAR*)ctx->AllocateRequestMemory(pathSizeA + 2)), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(pathSizeA != WideCharToMultiByte(CP_ACP, 0, raw->CookedUrl.pAbsPath, raw->CookedUrl.AbsPathLength >> 1, path, pathSizeA, NULL, NULL), E_FAIL);
+	path[pathSizeA] = '/';
+	path[pathSizeA + 1] = 0;
+
+	response->SetStatus(301, "Moved Permanently"); 
+	CheckError(context->GetHttpContext()->GetResponse()->Redirect(path, FALSE, TRUE));
+	CProtocolBridge::FinalizeResponseCore(
+		context, 
+		RQ_NOTIFICATION_FINISH_REQUEST, 
+		S_OK, 
+		log,
+		L"iisnode redirected debugging request", 
+		WINEVENT_LEVEL_VERBOSE);
+
+	return S_OK;
+Error:
+	return hr;
 }

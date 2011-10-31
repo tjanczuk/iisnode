@@ -393,6 +393,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
 		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
+		c->debuggerPathSegmentLength = wcslen(c->debuggerPathSegment);
 		CheckError(GetString(section, L"nodeProcessCommandLine", &commandLine));
 		ErrorIf(NULL == (c->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(0 != wcstombs_s(&i, c->nodeProcessCommandLine, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
@@ -506,6 +507,11 @@ LPWSTR CModuleConfiguration::GetLogDirectoryNameSuffix(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetDebuggerPathSegment(IHttpContext* ctx)
 {
 	GETCONFIG(debuggerPathSegment)
+}
+
+DWORD CModuleConfiguration::GetDebuggerPathSegmentLength(IHttpContext* ctx)
+{
+	GETCONFIG(debuggerPathSegmentLength)
 }
 
 DWORD CModuleConfiguration::GetLogFileFlushInterval(IHttpContext* ctx)

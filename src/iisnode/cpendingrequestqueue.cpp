@@ -7,6 +7,15 @@ CPendingRequestQueue::CPendingRequestQueue()
 
 CPendingRequestQueue::~CPendingRequestQueue()
 {
+	CNodeHttpStoredContext* context;
+
+	while (NULL != (context = this->Peek()))
+	{
+		this->Pop();
+
+		CProtocolBridge::SendEmptyResponse(context, 503, "Service Unavailable", S_OK);
+	}
+
 	DeleteCriticalSection(&this->syncRoot);
 }
 

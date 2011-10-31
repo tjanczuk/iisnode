@@ -3,7 +3,15 @@
 CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpContext* context)
 	: application(application), processes(NULL), processCount(0), currentProcess(0)
 {
-	this->maxProcessCount = CModuleConfiguration::GetMaxProcessCountPerApplication(context);
+	if (this->GetApplication()->IsDebugMode())
+	{
+		this->maxProcessCount = 1;
+	}
+	else
+	{
+		this->maxProcessCount = CModuleConfiguration::GetMaxProcessCountPerApplication(context);
+	}
+
 	this->gracefulShutdownTimeout = CModuleConfiguration::GetGracefulShutdownTimeout(context);
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -29,12 +37,19 @@ CNodeApplication* CNodeProcessManager::GetApplication()
 	return this->application;
 }
 
-HRESULT CNodeProcessManager::Initialize()
+HRESULT CNodeProcessManager::Initialize(IHttpContext* context)
 {
 	HRESULT hr;
 
 	ErrorIf(NULL == (this->processes = new CNodeProcess* [this->maxProcessCount]), ERROR_NOT_ENOUGH_MEMORY);
 	RtlZeroMemory(this->processes, this->maxProcessCount * sizeof(CNodeProcess*));
+	if (this->GetApplication()->IsDebuggee())
+	{
+		// ensure the debugee process is started without activating message
+		// this is to make sure it is available for the debugger to connect to
+
+		CheckError(this->AddOneProcess(NULL, context));
+	}
 
 	return S_OK;
 Error:
@@ -205,7 +220,7 @@ void CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 	LEAVE_CS(this->syncRoot)
 }
 
-void CNodeProcessManager::RecycleAllProcesses()
+void CNodeProcessManager::RecycleAllProcesses(BOOL deleteSelfAndApplicationAfterRecycle)
 {
 	HRESULT hr;
 	ProcessRecycleArgs* args;
@@ -224,6 +239,7 @@ void CNodeProcessManager::RecycleAllProcesses()
 	memcpy(args->processes, this->processes, args->count * sizeof (CNodeProcess*));
 	this->processCount = 0;
 	this->currentProcess = 0;
+	args->processManager = deleteSelfAndApplicationAfterRecycle ? this : NULL;
 
 	LEAVE_CS(this->syncRoot)
 
@@ -263,6 +279,8 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 	HANDLE* drainHandles;
 	DWORD drainHandleCount = 0;
 
+	// drain active requests 
+
 	ErrorIf(NULL == (drainHandles = new HANDLE[args->count]), ERROR_NOT_ENOUGH_MEMORY);
 	RtlZeroMemory(drainHandles, args->count * sizeof HANDLE);
 	for (int i = 0; i < args->count; i++)
@@ -285,11 +303,20 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 	}
 	delete[] drainHandles;
 
+	// detele CNodeProcess instances
+
 	for (int i = 0; i < args->count; i++)
 	{
 		delete args->processes[i];
 	}
 	delete args->processes;
+
+	// if requested, delete CNodeApplication and CNodeProcessManager (debugging code path)
+
+	if (args->processManager)
+	{
+		delete args->processManager->GetApplication();
+	}
 
 	delete args;
 

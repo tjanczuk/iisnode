@@ -24,6 +24,9 @@ private:
 	HRESULT result;
 	REQUEST_NOTIFICATION_STATUS requestNotificationStatus;	
 	long pendingAsyncOperationCount;
+	PCSTR targetUrl;
+	DWORD targetUrlLength;
+	IHttpContext* childContext;
 
 public:
 
@@ -49,6 +52,11 @@ public:
 	HRESULT GetHresult();
 	REQUEST_NOTIFICATION_STATUS GetRequestNotificationStatus();
 	GUID* GetActivityId();
+	PCSTR GetTargetUrl();
+	DWORD GetTargetUrlLength();
+	void SetTargetUrl(PCSTR targetUrl, DWORD targetUrlLength);
+	void SetChildContext(IHttpContext* context);
+	IHttpContext* GetChildContext();
 
 	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 	void SetNodeProcess(CNodeProcess* process);

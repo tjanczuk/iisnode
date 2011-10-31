@@ -3,7 +3,8 @@
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
 	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE), result(S_OK), 
-	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1)
+	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
+	targetUrl(NULL), targetUrlLength(0), childContext(NULL)
 {
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
 	CoCreateGuid(&this->activityId);
@@ -194,4 +195,30 @@ long CNodeHttpStoredContext::IncreasePendingAsyncOperationCount()
 long CNodeHttpStoredContext::DecreasePendingAsyncOperationCount()
 {
 	return InterlockedDecrement(&this->pendingAsyncOperationCount);
+}
+
+PCSTR CNodeHttpStoredContext::GetTargetUrl()
+{
+	return this->targetUrl;
+}
+
+DWORD CNodeHttpStoredContext::GetTargetUrlLength()
+{
+	return this->targetUrlLength;
+}
+
+void CNodeHttpStoredContext::SetTargetUrl(PCSTR targetUrl, DWORD targetUrlLength)
+{
+	this->targetUrl = targetUrl;
+	this->targetUrlLength = targetUrlLength;
+}
+
+void CNodeHttpStoredContext::SetChildContext(IHttpContext* context)
+{
+	this->childContext = context;
+}
+
+IHttpContext* CNodeHttpStoredContext::GetChildContext()
+{
+	return this->childContext;
 }

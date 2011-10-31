@@ -12,7 +12,7 @@ private:
 
 public:
 
-	static HRESULT SerializeRequestHeaders(IHttpContext* context, void** result, DWORD* resultSize, DWORD* resultLength);
+	static HRESULT SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void** result, DWORD* resultSize, DWORD* resultLength);
 	static HRESULT ParseResponseStatusLine(CNodeHttpStoredContext* context);
 	static HRESULT ParseResponseHeaders(CNodeHttpStoredContext* context);
 };

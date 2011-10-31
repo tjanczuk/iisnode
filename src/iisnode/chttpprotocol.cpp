@@ -83,16 +83,18 @@ Error:
 	return hr;
 }
 
-HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** result, DWORD* resultSize, DWORD* resultLength)
+HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void** result, DWORD* resultSize, DWORD* resultLength)
 {
 	HRESULT hr;
 	PCSTR originalUrl = NULL;
-	USHORT originalUrlLength;
+	USHORT originalUrlLength;	
 
-	CheckNull(context);
+	CheckNull(ctx);
 	CheckNull(result);
 	CheckNull(resultSize);
 	CheckNull(resultLength);
+
+	IHttpContext* context = ctx->GetHttpContext();
 
 	DWORD bufferLength = CModuleConfiguration::GetInitialRequestBufferSize(context);
 	DWORD offset = 0;
@@ -107,18 +109,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(IHttpContext* context, void** res
 
 	CheckError(CHttpProtocol::Append(context, request->GetHttpMethod(), 0, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, " ", 1, result, &bufferLength, &offset));
-
-	// if the URL rewrite module had been used to rewrite the URL, send the original URL to node instead of the re-written one
-
-	if (NULL == (originalUrl = request->GetHeader("X-Original-URL", &originalUrlLength)))
-	{
-		CheckError(CHttpProtocol::Append(context, raw->pRawUrl, raw->RawUrlLength, result, &bufferLength, &offset));
-	}
-	else
-	{
-		CheckError(CHttpProtocol::Append(context, originalUrl, originalUrlLength, result, &bufferLength, &offset));
-	}
-
+	CheckError(CHttpProtocol::Append(context, ctx->GetTargetUrl(), ctx->GetTargetUrlLength(), result, &bufferLength, &offset));
 	request->GetHttpVersion(&major, &minor);
 	sprintf(tmp, " HTTP/%d.%d\r\n", major, minor);
 	CheckError(CHttpProtocol::Append(context, tmp, 0, result, &bufferLength, &offset));

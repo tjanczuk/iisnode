@@ -1,7 +1,8 @@
 #include "precomp.h"
 
-CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager)
-	: applicationManager(applicationManager), scriptName(NULL), pendingRequests(NULL), processManager(NULL)
+CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand)
+	: applicationManager(applicationManager), scriptName(NULL), pendingRequests(NULL), processManager(NULL),
+	isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand)
 {
 }
 
@@ -40,10 +41,10 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context, C
 
 	DWORD len = wcslen(scriptName) + 1;
 	ErrorIf(NULL == (this->scriptName = new WCHAR[len]), ERROR_NOT_ENOUGH_MEMORY);
-	memcpy(this->scriptName, scriptName, sizeof(WCHAR) * len);
+	wcscpy(this->scriptName, scriptName);
 
 	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this, context)), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(this->processManager->Initialize());
+	CheckError(this->processManager->Initialize(context));
 
 	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);
 
@@ -107,5 +108,45 @@ Error:
 
 void CNodeApplication::OnScriptModified(PCWSTR fileName, void* data)
 {
-	((CNodeApplication*)data)->processManager->RecycleAllProcesses();
+	CNodeApplication* application = (CNodeApplication*)data;
+	application->processManager->RecycleAllProcesses();
+	if (application->IsDebugMode())
+	{
+		application->GetPeerApplication()->processManager->RecycleAllProcesses();
+	}
+}
+
+CNodeApplication* CNodeApplication::GetPeerApplication()
+{
+	return this->peerApplication;
+}
+
+void CNodeApplication::SetPeerApplication(CNodeApplication* peerApplication)
+{
+	this->peerApplication = peerApplication;
+}
+
+BOOL CNodeApplication::IsDebugger()
+{
+	return this->isDebugger;
+}
+
+BOOL CNodeApplication::IsDebuggee()
+{
+	return !this->IsDebugger() && NULL != this->GetPeerApplication();
+}
+
+BOOL CNodeApplication::IsDebugMode()
+{
+	return this->IsDebuggee() || this->IsDebugger();
+}
+
+NodeDebugCommand CNodeApplication::GetDebugCommand()
+{
+	return this->debugCommand;
+}
+
+void CNodeApplication::RecycleApplication()
+{
+	this->processManager->RecycleAllProcesses(TRUE);
 }

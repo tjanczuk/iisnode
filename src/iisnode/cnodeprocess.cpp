@@ -57,6 +57,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	PSTR currentDirectoryA = NULL;
 	DWORD currentDirectorySize = 0;
 	DWORD currentDirectorySizeA = 0;
+	CNodeApplication* app = this->GetProcessManager()->GetApplication();
 
 	RtlZeroMemory(&processInformation, sizeof processInformation);
 	RtlZeroMemory(&startupInfo, sizeof startupInfo);
@@ -85,19 +86,43 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	coreCommandLineLength = _tcslen(coreCommandLine);
 	scriptNameLengthW = wcslen(scriptName) + 1;
 	ErrorIf(0 != wcstombs_s(&scriptNameLength, NULL, 0, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
-	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + scriptNameLength + 2 + 1]), ERROR_NOT_ENOUGH_MEMORY); // script name must be enclosed in quotes
+	// allocate memory for command line to allow for debugging options plus enclosing the script name in quotes
+	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + scriptNameLength + 256]), ERROR_NOT_ENOUGH_MEMORY); 
 	_tcscpy(fullCommandLine, coreCommandLine);
-	_tcscat(fullCommandLine, _T(" \""));
-	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + 1 + 1, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+	DWORD offset;
+	if (app->IsDebuggee())
+	{
+		if (ND_DEBUG_BRK == this->GetProcessManager()->GetApplication()->GetDebugCommand())
+		{
+			_tcscat(fullCommandLine, _T(" --debug-brk \""));
+			offset = 14;
+		}
+		else if (ND_DEBUG == this->GetProcessManager()->GetApplication()->GetDebugCommand())
+		{
+			_tcscat(fullCommandLine, _T(" --debug \""));
+			offset = 10;
+		}
+		else
+		{
+			CheckError(ERROR_INVALID_PARAMETER);
+		}
+	}
+	else 
+	{
+		_tcscat(fullCommandLine, _T(" \""));
+		offset = 2;
+	}	
+	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + offset, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);	
 	_tcscat(fullCommandLine, _T("\""));
 
 	// create the environment block for the node.js process 	
 
 	CheckError(CModuleConfiguration::CreateNodeEnvironment(context, this->namedPipe, &newEnvironment));
 
-	// establish the current directory for node.exe process to be the same as the location of the *.js file
+	// establish the current directory for node.exe process to be the same as the location of the application *.js file
+	// (in case of the debugger process, it is still the debuggee application file)
 
-	currentDirectory = (PWSTR)context->GetPhysicalPath(&currentDirectorySize);
+	currentDirectory = (PWSTR)context->GetScriptTranslated(&currentDirectorySize);
 	while (currentDirectorySize && currentDirectory[currentDirectorySize] != L'\\' && currentDirectory[currentDirectorySize] != L'/')
 		currentDirectorySize--;
 	ErrorIf(0 == (currentDirectorySizeA = WideCharToMultiByte(CP_ACP, 0, currentDirectory, currentDirectorySize, NULL, 0, NULL, NULL)), E_FAIL);
@@ -199,14 +224,30 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	CloseHandle(processInformation.hThread);
 	processInformation.hThread = NULL;	
 
-	this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode initialized a new node.exe process", WINEVENT_LEVEL_INFO);
+	if (this->GetProcessManager()->GetApplication()->IsDebugger())
+	{
+		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode initialized a new node.exe debugger process", WINEVENT_LEVEL_INFO);
+	}
+	else
+	{
+		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode initialized a new node.exe process", WINEVENT_LEVEL_INFO);
+	}
 
 	return S_OK;
 Error:
 
-	this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode failed to initialize a new node.exe process", WINEVENT_LEVEL_ERROR);
+	if (this->GetProcessManager()->GetApplication()->IsDebugger())
+	{
+		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to initialize a new node.exe debugger process", WINEVENT_LEVEL_ERROR);
+	}
+	else
+	{
+		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to initialize a new node.exe process", WINEVENT_LEVEL_ERROR);
+	}
 
 	if (currentDirectoryA)
 	{
@@ -301,13 +342,30 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE))
 		{
 			process->FlushStdHandles();
-			process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
+			if (process->GetProcessManager()->GetApplication()->IsDebugger())
+			{
+				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+					L"iisnode flushed standard handles of the node.exe debugger process", WINEVENT_LEVEL_VERBOSE);
+			}
+			else
+			{
+				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+					L"iisnode flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
+			}
 		}
 		else if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
 		{
-			process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_INFO);
+			if (process->GetProcessManager()->GetApplication()->IsDebugger())
+			{
+				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+					L"iisnode detected termination of node.exe debugger process", WINEVENT_LEVEL_ERROR);
+			}
+			else
+			{
+				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+					L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_ERROR);
+			}
+
 			process->OnProcessExited();
 			return exitCode;
 		}
@@ -327,7 +385,7 @@ HRESULT CNodeProcess::AcceptRequest(CNodeHttpStoredContext* context)
 
 	CheckError(this->activeRequestPool.Add(context));
 	context->SetNodeProcess(this);
-	CProtocolBridge::InitiateRequest(context);
+	CheckError(CProtocolBridge::InitiateRequest(context));
 
 	return S_OK;
 Error:
@@ -440,7 +498,13 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	if (!CreateDirectoryW(logName, NULL))
 	{
 		hr = GetLastError();
-		ErrorIf(ERROR_ALREADY_EXISTS != hr, hr);
+		if (ERROR_ALREADY_EXISTS != hr)
+		{
+			this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode failed to create directory to store log files for the node.exe process", WINEVENT_LEVEL_ERROR);
+
+			CheckError(hr);
+		}
 	}
 
 	// create log file name

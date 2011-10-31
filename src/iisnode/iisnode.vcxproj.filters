@@ -141,6 +141,9 @@
     <ClCompile Include="cnodeeventprovider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cnodedebugger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h">
@@ -195,6 +198,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cnodeeventprovider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cnodedebugger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="errors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

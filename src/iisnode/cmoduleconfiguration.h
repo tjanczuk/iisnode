@@ -20,6 +20,7 @@ private:
 	DWORD gracefulShutdownTimeout;
 	LPWSTR logDirectoryNameSuffix;
 	LPWSTR debuggerPathSegment;
+	DWORD debuggerPathSegmentLength;
 	DWORD logFileFlushInterval;
 	DWORD maxLogFileSizeInKB;
 	BOOL loggingEnabled;
@@ -53,6 +54,7 @@ public:
 	static DWORD GetGracefulShutdownTimeout(IHttpContext* ctx);
 	static LPWSTR GetLogDirectoryNameSuffix(IHttpContext* ctx);
 	static LPWSTR GetDebuggerPathSegment(IHttpContext* ctx);
+	static DWORD GetDebuggerPathSegmentLength(IHttpContext* ctx);
 	static DWORD GetLogFileFlushInterval(IHttpContext* ctx);
 	static DWORD GetMaxLogFileSizeInKB(IHttpContext* ctx);
 	static BOOL GetLoggingEnabled(IHttpContext* ctx);

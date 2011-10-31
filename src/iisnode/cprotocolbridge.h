@@ -1,6 +1,9 @@
 #ifndef __CPROTOCOLBRIDGE_H__
 #define __CPROTOCOLBRIDGE_H__
 
+class CNodeEventProvider;
+class CNodeHttpStoredContext;
+
 class CProtocolBridge
 {
 private:
@@ -8,8 +11,10 @@ private:
 	// utility
 	static HRESULT PostponeProcessing(CNodeHttpStoredContext* context, DWORD dueTime);	
 	static HRESULT EnsureBuffer(CNodeHttpStoredContext* context);
+	static HRESULT FinalizeResponseCore(CNodeHttpStoredContext * context, REQUEST_NOTIFICATION_STATUS status, HRESULT error, CNodeEventProvider* log, PCWSTR etw, UCHAR level);
 
 	// processing stages
+	static void WINAPI ChildContextCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 	static void WINAPI CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 
 	static void SendHttpRequestHeaders(CNodeHttpStoredContext* context);
@@ -36,6 +41,7 @@ public:
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
 	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult);
 	static void SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult);
+	static HRESULT SendDebugRedirect(CNodeHttpStoredContext* context, CNodeEventProvider* log);
 
 };
 

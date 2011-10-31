@@ -1,7 +1,9 @@
 
 // Wire up websocket to talk to backend
 WebInspector.loaded = function() {
-  WebInspector.socket = io.connect("http://" + window.location.host + '/');
+  WebInspector.socket = io.connect(
+    "http://" + window.location.host + '/', 
+    { resource: window.location.pathname.substr(1) + 'socket.io'});
   WebInspector.socket.on('message', function(message) {
     if (message && message !== 'ping') {
       WebInspector_syncDispatch(message);

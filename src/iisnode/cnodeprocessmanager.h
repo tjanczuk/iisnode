@@ -3,6 +3,7 @@
 
 class CNodeProcess;
 class CNodeHttpStoredContext;
+class CNodeProcessManager;
 
 class CNodeProcessManager
 {
@@ -12,6 +13,7 @@ private:
 		CNodeProcess** processes;
 		DWORD count;
 		DWORD gracefulShutdownTimeout;
+		CNodeProcessManager* processManager;
 	} ProcessRecycleArgs;
 
 	CNodeApplication* application;
@@ -34,12 +36,12 @@ public:
 	~CNodeProcessManager();
 
 	CNodeApplication* GetApplication();
-	HRESULT Initialize();
+	HRESULT Initialize(IHttpContext* context);
 
 	static void TryDispatchOneRequest(void* data);
 
 	void RecycleProcess(CNodeProcess* process);
-	void RecycleAllProcesses();
+	void RecycleAllProcesses(BOOL deleteSelfAndApplicationAfterRecycle = FALSE);
 };
 
 #endif

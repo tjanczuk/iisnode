@@ -20,6 +20,7 @@
 #include "httpserv.h"
 
 //  Project header files
+#include "errors.h"
 #include "utils.h"
 #include "cnodeeventprovider.h"
 #include "casyncmanager.h"
@@ -36,6 +37,7 @@
 #include "cprotocolbridge.h"
 #include "cnodehttpstoredcontext.h"
 #include "cfilewatcher.h"
+#include "cnodedebugger.h"
 
 #ifndef NTSTATUS
 typedef LONG NTSTATUS;

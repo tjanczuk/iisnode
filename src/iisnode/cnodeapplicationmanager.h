@@ -6,6 +6,7 @@ class CAsyncManager;
 class CFileWatcher;
 class CNodeEventProvider;
 class CNodeHttpStoredContext;
+enum NodeDebugCommand;
 
 class CNodeApplicationManager
 {
@@ -15,6 +16,13 @@ private:
 		CNodeApplication* nodeApplication;
 		struct _NodeApplicationEntry* next;
 	} NodeApplicationEntry;
+
+	typedef struct _DebuggerFileEnumeratorParams {
+		HRESULT hr;
+		PWSTR physicalFile;
+		DWORD physicalFileLength;
+		DWORD physicalFileSize;
+	} DebuggerFileEnumeratorParams;
 
 	IHttpServer* server;
 	HTTP_MODULE_ID moduleId;
@@ -27,9 +35,15 @@ private:
 	CNodeEventProvider* eventProvider;
 	BOOL initialized;
 
-	HRESULT GetOrCreateNodeApplication(IHttpContext* context, CNodeApplication** application);
-	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, IHttpContext* context, CNodeApplication** application);
-	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath);
+	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
+	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);
+	HRESULT EnsureNodeApplicationKilled(CNodeApplication* app);
+	HRESULT GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, CNodeApplication** application);
+	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, IHttpContext* context, CNodeApplication** application);
+	HRESULT GetOrCreateDebuggedNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, NodeDebugCommand debugCommand, IHttpContext* context, CNodeApplication** application);
+	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath, DWORD physicalPathLength, BOOL debuggerRequest);
+	HRESULT EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize);
+	static BOOL CALLBACK EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam);
 
 public:
 

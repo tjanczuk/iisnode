@@ -1,0 +1,6 @@
+#ifndef __ERRORS_H__
+#define __ERRORS_H__
+
+#define IISNODE_ERROR_UNRECOGNIZED_DEBUG_COMMAND 1024L
+
+#endif

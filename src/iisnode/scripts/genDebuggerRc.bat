@@ -11,5 +11,5 @@ exit /b 0
 
 set line=%1
 call set line=%%line:%2=%%
-call set line=%%line:\=\\%%
-echo ^"%line%^" DEBUGGERFILE ^"node-inspector\\%line%^"
+call set file=%%line:\=\\%%
+echo %line% DEBUGGERFILE ^"node-inspector\\%file%^"
