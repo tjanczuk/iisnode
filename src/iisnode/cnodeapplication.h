@@ -38,7 +38,7 @@ public:
 	BOOL IsDebuggee();
 	BOOL IsDebugMode();
 	NodeDebugCommand GetDebugCommand();
-	void RecycleApplication();
+	HRESULT Recycle();
 };
 
 #endif

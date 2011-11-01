@@ -1,7 +1,8 @@
 #include "precomp.h"
 
 CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpContext* context)
-	: application(application), processes(NULL), processCount(0), currentProcess(0)
+	: application(application), processes(NULL), processCount(0), currentProcess(0), isClosing(FALSE),
+	refCount(1)
 {
 	if (this->GetApplication()->IsDebugMode())
 	{
@@ -98,12 +99,7 @@ HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process, IHttpContext*
 	}
 
 	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
-
-	ENTER_CS(this->syncRoot)
-
 	CheckError(this->AddOneProcessCore(process, context));
-
-	LEAVE_CS(this->syncRoot)
 
 	return S_OK;
 Error:
@@ -119,35 +115,42 @@ void CNodeProcessManager::TryDispatchOneRequest(void* data)
 void CNodeProcessManager::TryDispatchOneRequestImpl()
 {
 	HRESULT hr;
-	CNodeHttpStoredContext* request = NULL;
-	CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
+	CNodeHttpStoredContext* request = NULL;		
 
-	if (!queue->IsEmpty())
+	if (0 < this->DecRef())
 	{
-		ENTER_CS(this->syncRoot)
-
-		request = queue->Peek();		
-		if (NULL != request)
+		if (!this->isClosing) // incremented in CNodeProcessManager::PostDispatchOneRequest
 		{
-			queue->Pop();
+			ENTER_CS(this->syncRoot)
 
-			this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
-
-			if (!this->TryRouteRequestToExistingProcess(request))
+			if (!this->isClosing)
 			{
-				CNodeProcess* newProcess = NULL;
-				CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
-				CheckError(newProcess->AcceptRequest(request));
-			}
-		}
+				CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
+				request = queue->Peek();		
 
-		LEAVE_CS(this->syncRoot)
-	}
-	else
-	{
-		this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-			L"iisnode attempted to dequeue a request for processing from the pending request queue but the queue is empty", WINEVENT_LEVEL_VERBOSE);
+				if (NULL != request)
+				{
+					queue->Pop();
+
+					this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+						L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
+
+					if (!this->TryRouteRequestToExistingProcess(request))
+					{
+						CNodeProcess* newProcess = NULL;
+						CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
+						CheckError(newProcess->AcceptRequest(request));
+					}
+				}
+			}
+
+			LEAVE_CS(this->syncRoot)
+		}
+		else
+		{
+			this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode attempted to dequeue a request for processing from the pending request queue but the queue is empty", WINEVENT_LEVEL_VERBOSE);
+		}
 	}
 
 	return;
@@ -187,96 +190,142 @@ BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContex
 	return false;
 }
 
-void CNodeProcessManager::RecycleProcess(CNodeProcess* process)
+HRESULT CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 {
+	HRESULT hr;
+	HANDLE recycler;
+	ProcessRecycleArgs* args = NULL;
+	BOOL gracefulRecycle = FALSE;
+	CNodeApplication* appToRecycle = NULL;
+
 	// remove the process from the process pool
 
 	ENTER_CS(this->syncRoot)
 
-	int i;
-	for (i = 0; i < this->processCount; i++)
+	if (!this->isClosing)
 	{
-		if (this->processes[i] == process)
+		appToRecycle = this->GetApplication();
+
+		if (!appToRecycle->IsDebugMode())
 		{
-			break;
+			appToRecycle = NULL;
+
+			int i;
+			for (i = 0; i < this->processCount; i++)
+			{
+				if (this->processes[i] == process)
+				{
+					break;
+				}
+			}
+
+			if (i == this->processCount)
+			{
+				// process not found in the active process list
+
+				return S_OK;
+			}
+
+			if (i < (this->processCount - 1))
+			{
+				memcpy(this->processes + i, this->processes + i + 1, sizeof (CNodeProcess*) * (this->processCount - i - 1));
+			}
+
+			this->processCount--;
+			this->currentProcess = 0;
+
+			gracefulRecycle = TRUE;
 		}
 	}
 
-	if (i == this->processCount)
-	{
-		// process not found in the active process list
-
-		return;
-	}
-
-	if (i < (this->processCount - 1))
-	{
-		memcpy(this->processes + i, this->processes + i + 1, sizeof (CNodeProcess*) * (this->processCount - i - 1));
-	}
-
-	this->processCount--;
-	this->currentProcess = 0;
-
 	LEAVE_CS(this->syncRoot)
+
+	// graceful recycle
+
+	if (gracefulRecycle)
+	{
+		ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
+		args->count = 1;
+		args->process = process;
+		args->processes = &args->process;
+		args->processManager = this;
+		args->disposeApplication = FALSE;
+		args->disposeProcess = TRUE;
+		ErrorIf((HANDLE)-1L == (recycler = (HANDLE) _beginthreadex(NULL, 0, CNodeProcessManager::GracefulShutdown, args, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
+		CloseHandle(recycler);
+	}
+
+	if (appToRecycle)
+	{
+		appToRecycle->GetApplicationManager()->RecycleApplication(appToRecycle);
+	}
+
+	return S_OK;
+Error:
+
+	if (args)
+	{
+		delete args;
+	}
+
+	return hr;
 }
 
-void CNodeProcessManager::RecycleAllProcesses(BOOL deleteSelfAndApplicationAfterRecycle)
+HRESULT CNodeProcessManager::Recycle()
 {
 	HRESULT hr;
-	ProcessRecycleArgs* args;
 	HANDLE recycler;
-
-	ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
-	RtlZeroMemory(args, sizeof ProcessRecycleArgs);
-	args->gracefulShutdownTimeout = this->gracefulShutdownTimeout;
+	ProcessRecycleArgs* args = NULL;
+	BOOL deleteApplication = FALSE;
 
 	ENTER_CS(this->syncRoot)
 
-	ErrorIf(0 == this->processCount, S_OK); // bail out if there is no process to recycle
+	this->isClosing = TRUE;	
 
-	args->count = this->processCount;
-	ErrorIf(NULL == (args->processes = new CNodeProcess* [args->count]), ERROR_NOT_ENOUGH_MEMORY);
-	memcpy(args->processes, this->processes, args->count * sizeof (CNodeProcess*));
-	this->processCount = 0;
-	this->currentProcess = 0;
-	args->processManager = deleteSelfAndApplicationAfterRecycle ? this : NULL;
+	if (0 > this->processCount)
+	{
+		// perform actual recycling on a diffrent thread to free up the file watcher thread
+
+		ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
+		args->count = this->processCount;
+		args->process = NULL;
+		args->processes = this->processes;
+		args->processManager = this;
+		args->disposeApplication = TRUE;
+		args->disposeProcess = FALSE;
+		ErrorIf((HANDLE)-1L == (recycler = (HANDLE) _beginthreadex(NULL, 0, CNodeProcessManager::GracefulShutdown, args, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
+		CloseHandle(recycler);
+	}
+	else
+	{
+		deleteApplication = TRUE;
+	}
 
 	LEAVE_CS(this->syncRoot)
 
-	// perform actual recycling on a diffrent thread to free up the file watcher thread
+	if (deleteApplication)
+	{
+		delete this->GetApplication();
+	}
 
-	ErrorIf((HANDLE)-1L == (recycler = (HANDLE) _beginthreadex(NULL, 0, CNodeProcessManager::GracefulShutdown, args, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
-	CloseHandle(recycler);
-
-	return;
+	return S_OK;
 Error:
 
-	if (NULL != args)
+	if (args)
 	{
-		if (NULL != args->processes)
-		{			
-			// fallback to ungraceful shutdown
-			for (int i = 0; i < args->count; i++)
-			{
-				delete args->processes[i];
-			}
-
-			delete [] args->processes;
-		}
-
 		delete args;
 	}
 
 	// if lack of memory is preventing us from initiating shutdown, we will just not provide auto update
 
-	return;
+	return hr;
 }
 
 unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 {
 	ProcessRecycleArgs* args = (ProcessRecycleArgs*)arg;
 	HRESULT hr;
-	HANDLE* drainHandles;
+	HANDLE* drainHandles = NULL;
 	DWORD drainHandleCount = 0;
 
 	// drain active requests 
@@ -292,35 +341,78 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 		}
 	}
 	
-	if (args->gracefulShutdownTimeout > 0)
+	if (args->processManager->gracefulShutdownTimeout > 0)
 	{
-		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, args->gracefulShutdownTimeout);
+		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, args->processManager->gracefulShutdownTimeout);
 	}
 
 	for (int i = 0; i < drainHandleCount; i++)
 	{
 		CloseHandle(drainHandles[i]);
 	}
-	delete[] drainHandles;
+	delete[] drainHandles;	
+	drainHandles = NULL;
 
-	// detele CNodeProcess instances
-
-	for (int i = 0; i < args->count; i++)
+	if (args->disposeApplication)
 	{
-		delete args->processes[i];
-	}
-	delete args->processes;
+		// delete the application if requested (this will also delete process manager and all processes)
+		// this is the application recycling code path
 
-	// if requested, delete CNodeApplication and CNodeProcessManager (debugging code path)
-
-	if (args->processManager)
-	{
 		delete args->processManager->GetApplication();
+	}
+	else if (args->disposeProcess)
+	{
+		// delete a single process if requested
+		// this is the single process recycling code path (e.g. node.exe died)
+
+		delete args->processes[0];
 	}
 
 	delete args;
+	args = NULL;
 
 	return S_OK;
 Error:
+
+	if (args)
+	{
+		delete args;
+		args = NULL;
+	}
+
+	if (drainHandles)
+	{
+		delete [] drainHandles;
+		drainHandles = NULL;
+	}
+
 	return hr;
+}
+
+HRESULT CNodeProcessManager::PostDispatchOneRequest()
+{
+	if (!this->isClosing)
+	{
+		this->AddRef(); // decreased in CNodeProcessManager::TryDispatchOneRequestImpl
+		this->GetApplication()->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this);
+	}
+
+	return S_OK;
+}
+
+long CNodeProcessManager::AddRef()
+{
+	return InterlockedIncrement(&this->refCount);
+}
+
+long CNodeProcessManager::DecRef()
+{
+	long result = InterlockedDecrement(&this->refCount);
+
+	if (0 == result)
+	{
+		delete this;
+	}
+
+	return result;
 }

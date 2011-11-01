@@ -208,9 +208,9 @@ HRESULT CNodeApplicationManager::EnsureDebuggedApplicationKilled(IHttpContext* c
 	PCWSTR physicalPath = context->GetScriptTranslated(&physicalPathLength);
 
 	CNodeApplication* app = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, TRUE);
-	CheckError(this->EnsureNodeApplicationKilled(app));
+	CheckError(this->RecycleApplication(app));
 	app = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, FALSE);
-	CheckError(this->EnsureNodeApplicationKilled(app));
+	CheckError(this->RecycleApplication(app));
 
 	if (ctx)
 	{
@@ -226,26 +226,52 @@ Error:
 	return hr;
 }
 
-HRESULT CNodeApplicationManager::EnsureNodeApplicationKilled(CNodeApplication* app)
+HRESULT CNodeApplicationManager::RecycleApplication(CNodeApplication* app)
 {
+	if (app)
+	{
+		ENTER_CS(this->syncRoot)
+
+		this->RecycleApplicationCore(app->GetPeerApplication());
+		this->RecycleApplicationCore(app);
+
+		LEAVE_CS(this->syncRoot)
+	}
+
+	return S_OK;
+}
+
+// this must be called under lock
+HRESULT CNodeApplicationManager::RecycleApplicationCore(CNodeApplication* app)
+{
+	HRESULT hr;
+
 	if (app)
 	{
 		NodeApplicationEntry* previous = NULL;
 		NodeApplicationEntry* applicationEntry = this->applications;
-		while (applicationEntry->nodeApplication != app) 
+		while (applicationEntry && applicationEntry->nodeApplication != app) 
 		{
 			previous = applicationEntry;
 			applicationEntry = applicationEntry->next;
 		}
-		applicationEntry->nodeApplication->RecycleApplication();
-		if (previous)
-			previous->next = applicationEntry->next;
-		else
-			this->applications = applicationEntry->next;
-		delete applicationEntry;
+
+		if (applicationEntry && applicationEntry->nodeApplication == app)
+		{
+			CheckError(applicationEntry->nodeApplication->Recycle());
+			if (previous)
+				previous->next = applicationEntry->next;
+			else
+				this->applications = applicationEntry->next;
+			delete applicationEntry;
+		}
+
+		// beyond this point, the the application manager will not be dispatching new messages to the application
 	}
 
 	return S_OK;
+Error:
+	return hr;
 }
 
 HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, IHttpContext* context, CNodeApplication** application)
@@ -487,13 +513,13 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 
 	physicalPath = context->GetScriptTranslated(&physicalPathLength);
 
+	ENTER_CS(this->syncRoot)
+
 	*application = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, ND_NONE != debugCommand);
 
 	if (NULL == *application)
 	{
-		ErrorIf(INVALID_FILE_ATTRIBUTES == GetFileAttributesW(physicalPath), GetLastError());
-
-		ENTER_CS(this->syncRoot)
+		ErrorIf(INVALID_FILE_ATTRIBUTES == GetFileAttributesW(physicalPath), GetLastError());		
 
 		if (ND_NONE != debugCommand)
 		{
@@ -506,10 +532,10 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 			// regular application request, e.g. http://foo.com/bar/hello.js					
 
 			CheckError(this->GetOrCreateNodeApplicationCore(physicalPath, physicalPathLength, context, application));
-		}
-
-		LEAVE_CS(this->syncRoot)
+		}		
 	}
+
+	LEAVE_CS(this->syncRoot)
 
 	return S_OK;
 Error:

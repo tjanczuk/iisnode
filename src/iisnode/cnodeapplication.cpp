@@ -27,7 +27,7 @@ void CNodeApplication::Cleanup()
 
 	if (NULL != this->processManager)
 	{
-		delete this->processManager;
+		this->processManager->DecRef(); // incremented in CNodeProcessManager::ctor
 		this->processManager = NULL;
 	}
 }
@@ -91,7 +91,7 @@ HRESULT CNodeApplication::Enqueue(IHttpContext* context, IHttpEventProvider* pPr
 
 	if (S_OK == (hr = this->pendingRequests->Push(*ctx)))
 	{		
-		this->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this->processManager);
+		this->processManager->PostDispatchOneRequest();		
 	}
 	else
 	{
@@ -109,11 +109,7 @@ Error:
 void CNodeApplication::OnScriptModified(PCWSTR fileName, void* data)
 {
 	CNodeApplication* application = (CNodeApplication*)data;
-	application->processManager->RecycleAllProcesses();
-	if (application->IsDebugMode())
-	{
-		application->GetPeerApplication()->processManager->RecycleAllProcesses();
-	}
+	application->GetApplicationManager()->RecycleApplication(application);
 }
 
 CNodeApplication* CNodeApplication::GetPeerApplication()
@@ -146,7 +142,7 @@ NodeDebugCommand CNodeApplication::GetDebugCommand()
 	return this->debugCommand;
 }
 
-void CNodeApplication::RecycleApplication()
+HRESULT CNodeApplication::Recycle()
 {
-	this->processManager->RecycleAllProcesses(TRUE);
+	return this->processManager->Recycle();
 }

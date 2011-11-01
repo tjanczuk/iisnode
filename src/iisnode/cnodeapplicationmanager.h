@@ -36,14 +36,14 @@ private:
 	BOOL initialized;
 
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
-	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);
-	HRESULT EnsureNodeApplicationKilled(CNodeApplication* app);
+	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);	
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, CNodeApplication** application);
 	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, IHttpContext* context, CNodeApplication** application);
 	HRESULT GetOrCreateDebuggedNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, NodeDebugCommand debugCommand, IHttpContext* context, CNodeApplication** application);
 	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath, DWORD physicalPathLength, BOOL debuggerRequest);
 	HRESULT EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize);
 	static BOOL CALLBACK EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam);
+	HRESULT RecycleApplicationCore(CNodeApplication* app);
 
 public:
 
@@ -59,6 +59,7 @@ public:
 
 	HRESULT Initialize(IHttpContext* context);
 	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
+	HRESULT RecycleApplication(CNodeApplication* app);
 };
 
 #endif

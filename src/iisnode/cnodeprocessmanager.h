@@ -12,8 +12,10 @@ private:
 	typedef struct {
 		CNodeProcess** processes;
 		DWORD count;
-		DWORD gracefulShutdownTimeout;
+		CNodeProcess* process;
 		CNodeProcessManager* processManager;
+		BOOL disposeApplication;
+		BOOL disposeProcess;
 	} ProcessRecycleArgs;
 
 	CNodeApplication* application;
@@ -23,11 +25,14 @@ private:
 	DWORD currentProcess;
 	CRITICAL_SECTION syncRoot;
 	DWORD gracefulShutdownTimeout;
+	BOOL isClosing;
+	long refCount;
 
 	HRESULT AddOneProcessCore(CNodeProcess** process, IHttpContext* context);
 	HRESULT AddOneProcess(CNodeProcess** process, IHttpContext* context);
 	BOOL TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context);
 	void TryDispatchOneRequestImpl();
+	static void TryDispatchOneRequest(void* data);
 	static unsigned int WINAPI GracefulShutdown(void* arg);
 
 public:
@@ -36,12 +41,12 @@ public:
 	~CNodeProcessManager();
 
 	CNodeApplication* GetApplication();
-	HRESULT Initialize(IHttpContext* context);
-
-	static void TryDispatchOneRequest(void* data);
-
-	void RecycleProcess(CNodeProcess* process);
-	void RecycleAllProcesses(BOOL deleteSelfAndApplicationAfterRecycle = FALSE);
+	HRESULT Initialize(IHttpContext* context);	
+	HRESULT RecycleProcess(CNodeProcess* process);
+	HRESULT Recycle();
+	HRESULT PostDispatchOneRequest();
+	long AddRef();
+	long DecRef();
 };
 
 #endif

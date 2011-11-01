@@ -15,12 +15,13 @@ private:
 	HANDLE process;
 	HANDLE processWatcher;
 	DWORD maxConcurrentRequestsPerProcess;
-	unsigned int isClosing;
+	BOOL isClosing;
 	DWORD ordinal;
 	STARTUPINFO startupInfo;
 	BOOL loggingEnabled;
 	DWORD logFlushInterval;
 	LONGLONG maxLogSizeInBytes;
+	BOOL hasProcessExited;
 
 	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();

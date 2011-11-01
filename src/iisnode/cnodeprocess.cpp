@@ -1,7 +1,8 @@
 #include "precomp.h"
 
 CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal)
-	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(0), ordinal(ordinal)
+	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE), ordinal(ordinal),
+	hasProcessExited(FALSE)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
@@ -10,7 +11,7 @@ CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* co
 
 CNodeProcess::~CNodeProcess()
 {
-	this->isClosing = 1;
+	this->isClosing = TRUE;
 
 	if (NULL != this->process)
 	{
@@ -21,7 +22,14 @@ CNodeProcess::~CNodeProcess()
 
 	if (NULL != this->processWatcher)
 	{
-		WaitForSingleObject(this->processWatcher, INFINITE);
+		// The following check prevents a dead-lock between process watcher thread calling OnProcessExited 
+		// which results in CNodeProcess::~ctor being called, 
+		// and the wait for process watcher thread to exit in CNodeProcess::~ctor itself. 
+
+		if (!this->hasProcessExited)
+		{
+			WaitForSingleObject(this->processWatcher, INFINITE);
+		}
 		CloseHandle(this->processWatcher);
 		this->processWatcher = NULL;
 	}
@@ -336,42 +344,47 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 {
 	CNodeProcess* process = (CNodeProcess*)arg;
 	DWORD exitCode;
+	CNodeEventProvider* log = process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider();
+	BOOL isDebugger = process->GetProcessManager()->GetApplication()->IsDebugger();
 
-	while (process->process)
+	while (!process->isClosing && process->process)
 	{
 		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE))
 		{
 			process->FlushStdHandles();
-			if (process->GetProcessManager()->GetApplication()->IsDebugger())
+
+			if (isDebugger)
 			{
-				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-					L"iisnode flushed standard handles of the node.exe debugger process", WINEVENT_LEVEL_VERBOSE);
+				log->Log(L"iisnode flushed standard handles of the node.exe debugger process", WINEVENT_LEVEL_VERBOSE);
 			}
 			else
 			{
-				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-					L"iisnode flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
+				log->Log(L"iisnode flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
 			}
 		}
 		else if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
 		{
-			if (process->GetProcessManager()->GetApplication()->IsDebugger())
+			process->FlushStdHandles();
+
+			if (isDebugger)
 			{
-				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-					L"iisnode detected termination of node.exe debugger process", WINEVENT_LEVEL_ERROR);
+				log->Log(L"iisnode detected termination of node.exe debugger process", WINEVENT_LEVEL_ERROR);
 			}
 			else
 			{
-				process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-					L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_ERROR);
+				log->Log(L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_ERROR);
 			}
 
-			process->OnProcessExited();
+			if (!process->isClosing)
+			{
+				process->OnProcessExited();
+			}
+
 			return exitCode;
 		}
 	}
 
-	return 0;
+	return S_OK;
 }
 
 CNodeProcessManager* CNodeProcess::GetProcessManager()
@@ -400,69 +413,30 @@ LPCTSTR CNodeProcess::GetNamedPipeName()
 
 void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
 {
-	// capture asyncManager and processManager before call to Remove, since Remove may cause a race condition 
-	// with 'delete this' in CNodeProcess::OnProcessExited which executes on a different thread
-
 	CAsyncManager* asyncManager = this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetAsyncManager();
 	CNodeProcessManager* processManager = this->GetProcessManager();
 	
 	this->activeRequestPool.Remove(context);
 	
-	asyncManager->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, processManager);
+	if (!this->isClosing)
+	{
+		processManager->PostDispatchOneRequest();
+	}
 }
 
 void CNodeProcess::OnProcessExited()
-{
-	CloseHandle(this->process);
-	this->process = NULL;
-	CloseHandle(this->processWatcher);
-	this->processWatcher = NULL;
-
-	// OnProcessExited should be mutually exclusive with CreateDrainHandle
-	// Both will eventually recycle the process, and only one of them may execute in the 
-	// lifetime of CNodeProcess.
-
-	if (0 == InterlockedExchange(&this->isClosing, 1))
-	{
-		this->GetProcessManager()->RecycleProcess(this);
-
-		// at this point no new requests will be dispatched to this process;
-		// wait for active requests to gracefully drain, then destruct itself
-		// this should be reasonably prompt since all named pipes are broken
-		
-		HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
-		if (NULL != drainHandle)
-		{
-			this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode started draining the active request pool for a terminated node.exe process", WINEVENT_LEVEL_INFO);
-			this->activeRequestPool.SignalWhenDrained(drainHandle);
-			WaitForSingleObject(drainHandle, INFINITE);
-			this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode finished draining the active request pool for a terminated node.exe process", WINEVENT_LEVEL_INFO);
-			CloseHandle(drainHandle);
-		}
-
-		delete this;
-	}
+{	
+	this->isClosing = TRUE;
+	this->hasProcessExited = TRUE;
+	this->GetProcessManager()->RecycleProcess(this);
 }
 
 HANDLE CNodeProcess::CreateDrainHandle()
 {
-	// OnProcessExited should be mutually exclusive with CreateDrainHandle
-	// Both will eventually recycle the process, and only one of them may execute in the 
-	// lifetime of CNodeProcess.
+	HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
+	this->activeRequestPool.SignalWhenDrained(drainHandle);
 
-	if (0 == InterlockedExchange(&this->isClosing, 1))
-	{
-		HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
-		this->activeRequestPool.SignalWhenDrained(drainHandle);
-
-		return drainHandle;
-	}
-	else
-	{
-		return NULL;
-	}
+	return S_OK;
 }
 
 HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
