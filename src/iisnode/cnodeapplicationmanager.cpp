@@ -241,6 +241,27 @@ HRESULT CNodeApplicationManager::RecycleApplication(CNodeApplication* app)
 	return S_OK;
 }
 
+void CNodeApplicationManager::OnScriptModified(CNodeApplicationManager* manager, CNodeApplication* application)
+{
+	ENTER_CS(manager->syncRoot)
+	
+	// ensure the application still exists to avoid race condition with other recycling code paths
+
+	NodeApplicationEntry* current = manager->applications;
+	while (current)
+	{
+		if (current->nodeApplication == application)
+		{
+			manager->RecycleApplication(application);
+			break;
+		}
+
+		current = current->next;
+	}
+	
+	LEAVE_CS(manager->syncRoot)
+}
+
 // this must be called under lock
 HRESULT CNodeApplicationManager::RecycleApplicationCore(CNodeApplication* app)
 {
@@ -283,7 +304,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalP
 	{
 		ErrorIf(NULL == (applicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this, FALSE, ND_NONE)), ERROR_NOT_ENOUGH_MEMORY);
-		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context, this->fileWatcher));
+		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context));
 
 		*application = applicationEntry->nodeApplication;
 		applicationEntry->next = this->applications;
@@ -460,9 +481,9 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
 
 		debuggerEntry->nodeApplication->SetPeerApplication(applicationEntry->nodeApplication);
 		applicationEntry->nodeApplication->SetPeerApplication(debuggerEntry->nodeApplication);
-		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context, this->fileWatcher));
+		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context));
 		wcscat(debuggerPath, L"node_modules\\node-inspector\\bin\\inspector.js");
-		CheckError(debuggerEntry->nodeApplication->Initialize(debuggerPath, context, this->fileWatcher));
+		CheckError(debuggerEntry->nodeApplication->Initialize(debuggerPath, context));
 
 		// add debugger and debuggee to the list of applications and return the debugger application
 
@@ -575,4 +596,9 @@ BOOL CNodeApplicationManager::GetBreakAwayFromJobObject()
 CNodeEventProvider* CNodeApplicationManager::GetEventProvider()
 {
 	return this->eventProvider;
+}
+
+CFileWatcher* CNodeApplicationManager::GetFileWatcher()
+{
+	return this->fileWatcher;
 }

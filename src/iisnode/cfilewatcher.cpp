@@ -3,6 +3,7 @@
 CFileWatcher::CFileWatcher()
 	: completionPort(NULL), worker(NULL), directories(NULL), uncFileSharePollingInterval(0)
 {
+	InitializeCriticalSection(&this->syncRoot);
 }
 
 CFileWatcher::~CFileWatcher()
@@ -25,17 +26,19 @@ CFileWatcher::~CFileWatcher()
 	{
 		WatchedDirectory* currentDirectory = this->directories;
 		CloseHandle(currentDirectory->watchHandle);
-		delete currentDirectory->directoryName;
+		delete [] currentDirectory->directoryName;
 		while (NULL != currentDirectory->files)
 		{
 			WatchedFile* currentFile = currentDirectory->files;
-			delete currentFile->fileName;
+			delete [] currentFile->fileName;
 			currentDirectory->files = currentFile->next;
 			delete currentFile;
 		}
 		this->directories = currentDirectory->next;
 		delete currentDirectory;
 	}
+
+	DeleteCriticalSection(&this->syncRoot);
 }
 
 HRESULT CFileWatcher::Initialize(IHttpContext* context)
@@ -57,7 +60,7 @@ Error:
 	return hr;
 }
 
-HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, void* data)
+HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, CNodeApplicationManager* manager, CNodeApplication* application)
 {
 	HRESULT hr;
 	WatchedFile* file;
@@ -80,7 +83,8 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 	ErrorIf(NULL == (file = new WatchedFile), ERROR_NOT_ENOUGH_MEMORY);
 	RtlZeroMemory(file, sizeof WatchedFile);
 	file->callback = callback;
-	file->data = data;
+	file->manager = manager;
+	file->application = application;
 	ErrorIf(!GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes), GetLastError());
 	memcpy(&file->lastWrite, &attributes.ftLastWriteTime, sizeof attributes.ftLastWriteTime);
 
@@ -123,6 +127,8 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 		memcpy(directoryName + 4, fileName, directoryLength * sizeof WCHAR);
 		directoryName[4 + directoryLength] = L'\0';	
 	}
+
+	ENTER_CS(this->syncRoot)
 
 	// find matching directory watcher entry
 
@@ -198,6 +204,8 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 		file = NULL;
 	}
 
+	LEAVE_CS(this->syncRoot)
+
 	return S_OK;
 Error:
 
@@ -230,6 +238,65 @@ Error:
 	return hr;
 }
 
+HRESULT CFileWatcher::RemoveWatch(CNodeApplication* application)
+{
+	ENTER_CS(this->syncRoot)
+
+	WatchedDirectory* directory = this->directories;
+	WatchedDirectory* previousDirectory = NULL;
+	while (directory)
+	{
+		WatchedFile* file = directory->files;
+		WatchedFile* previousFile = NULL;
+		while (file && file->application != application)
+		{
+			previousFile = file;
+			file = file->next;
+		}
+
+		if (file)
+		{
+			delete [] file->fileName;
+			if (previousFile)
+			{
+				previousFile->next = file->next;
+			}
+			else
+			{
+				directory->files = file->next;
+			}
+
+			delete file;
+
+			if (!directory->files)
+			{
+				delete [] directory->directoryName;
+				CloseHandle(directory->watchHandle);
+
+				if (previousDirectory)
+				{
+					previousDirectory->next = directory->next;
+				}
+				else
+				{
+					this->directories = directory->next;
+				}
+
+				delete directory;
+			}
+
+			break;
+		}
+
+		previousDirectory = directory;
+		directory = directory->next;
+	}
+
+	LEAVE_CS(this->syncRoot)
+
+	return S_OK;
+}
+
 unsigned int CFileWatcher::Worker(void* arg)
 {
 	CFileWatcher* watcher = (CFileWatcher*)arg;
@@ -255,34 +322,61 @@ unsigned int CFileWatcher::Worker(void* arg)
 		{
 			WatchedDirectory* directory = (WatchedDirectory*)key;
 			
-			watcher->ScanDirectory(directory, FALSE);
+			ENTER_CS(watcher->syncRoot)
 
-			RtlZeroMemory(&directory->overlapped, sizeof directory->overlapped);
-			ReadDirectoryChangesW(
-				directory->watchHandle,
-				&directory->info,
-				sizeof directory->info,
-				FALSE,
-				FILE_NOTIFY_CHANGE_LAST_WRITE,
-				NULL,
-				&directory->overlapped,
-				NULL);
+			// make sure the directory is still watched
+
+			WatchedDirectory* current = watcher->directories;
+			while (current && current != directory)
+				current = current->next;
+
+			if (current)
+			{
+				watcher->ScanDirectory(current, FALSE);
+
+				// make sure the directory is still watched - it could have been removed by a recursive call to RemoveWatch
+
+				current = watcher->directories;
+				while (current && current != directory)
+					current = current->next;
+
+				if (current)
+				{
+					RtlZeroMemory(&current->overlapped, sizeof current->overlapped);
+					ReadDirectoryChangesW(
+						current->watchHandle,
+						&current->info,
+						sizeof directory->info,
+						FALSE,
+						FILE_NOTIFY_CHANGE_LAST_WRITE,
+						NULL,
+						&current->overlapped,
+						NULL);
+				}
+			}
+
+			LEAVE_CS(watcher->syncRoot)
 		}
 		else // timeout - scan all registered UNC files for changes
 		{
+			ENTER_CS(watcher->syncRoot)
+
 			WatchedDirectory* current = watcher->directories;
 			while (current)
 			{
-				watcher->ScanDirectory(current, TRUE);
+				if (watcher->ScanDirectory(current, TRUE))
+					break;
 				current = current->next;
 			}
+
+			LEAVE_CS(watcher->syncRoot)
 		}		
 	}
 
 	return 0;
 }
 
-void CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
+BOOL CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
 {
 	WatchedFile* file = directory->files;
 	WIN32_FILE_ATTRIBUTE_DATA attributes;
@@ -295,11 +389,12 @@ void CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
 				&& 0 != memcmp(&attributes.ftLastWriteTime, &file->lastWrite, sizeof FILETIME))
 			{
 				memcpy(&file->lastWrite, &attributes.ftLastWriteTime, sizeof FILETIME);
-				file->callback(file->fileName, file->data);
+				file->callback(file->manager, file->application);
+				return TRUE;
 			}
 		}
 		file = file->next;
 	}
-}
 
-// CR: watched files should be unregistered if the file is deleted (CNodeApplication should also be removed)
+	return FALSE;
+}

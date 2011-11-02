@@ -19,15 +19,14 @@ private:
 	BOOL isDebugger;
 	NodeDebugCommand debugCommand;
 
-	void Cleanup();
-	static void OnScriptModified(PCWSTR fileName, void* data);
+	void Cleanup();	
 
 public:
 
 	CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand);	
 	~CNodeApplication();
 
-	HRESULT Initialize(PCWSTR scriptName, IHttpContext* context, CFileWatcher* fileWatcher);
+	HRESULT Initialize(PCWSTR scriptName, IHttpContext* context);
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
 	CPendingRequestQueue* GetPendingRequestQueue();

@@ -13,6 +13,8 @@ CNodeApplication::~CNodeApplication()
 
 void CNodeApplication::Cleanup()
 {
+	this->GetApplicationManager()->GetFileWatcher()->RemoveWatch(this);
+
 	if (NULL != this->scriptName)
 	{
 		delete [] this->scriptName;
@@ -32,12 +34,11 @@ void CNodeApplication::Cleanup()
 	}
 }
 
-HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context, CFileWatcher* fileWatcher)
+HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context)
 {
 	HRESULT hr;
 
 	CheckNull(scriptName);
-	CheckNull(fileWatcher);
 
 	DWORD len = wcslen(scriptName) + 1;
 	ErrorIf(NULL == (this->scriptName = new WCHAR[len]), ERROR_NOT_ENOUGH_MEMORY);
@@ -48,7 +49,11 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context, C
 
 	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);
 
-	CheckError(fileWatcher->WatchFile(scriptName, CNodeApplication::OnScriptModified, this));
+	CheckError(this->GetApplicationManager()->GetFileWatcher()->WatchFile(
+		scriptName, 
+		CNodeApplicationManager::OnScriptModified, 
+		this->GetApplicationManager(), 
+		this));
 
 	this->GetApplicationManager()->GetEventProvider()->Log(L"iisnode initialized a new node.js application", WINEVENT_LEVEL_INFO);
 
@@ -104,12 +109,6 @@ Error:
 	// nodeContext need not be freed here as it will be deallocated through IHttpStoredContext when the request is finished
 
 	return hr;
-}
-
-void CNodeApplication::OnScriptModified(PCWSTR fileName, void* data)
-{
-	CNodeApplication* application = (CNodeApplication*)data;
-	application->GetApplicationManager()->RecycleApplication(application);
 }
 
 CNodeApplication* CNodeApplication::GetPeerApplication()

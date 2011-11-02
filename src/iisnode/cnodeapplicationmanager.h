@@ -43,7 +43,7 @@ private:
 	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath, DWORD physicalPathLength, BOOL debuggerRequest);
 	HRESULT EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize);
 	static BOOL CALLBACK EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam);
-	HRESULT RecycleApplicationCore(CNodeApplication* app);
+	HRESULT RecycleApplicationCore(CNodeApplication* app);	
 
 public:
 
@@ -54,8 +54,11 @@ public:
 	HTTP_MODULE_ID GetModuleId();
 	CAsyncManager* GetAsyncManager();
 	CNodeEventProvider* GetEventProvider();
+	CFileWatcher* GetFileWatcher();
 	HANDLE GetJobObject();
 	BOOL GetBreakAwayFromJobObject();
+
+	static void OnScriptModified(CNodeApplicationManager* manager, CNodeApplication* application);
 
 	HRESULT Initialize(IHttpContext* context);
 	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);

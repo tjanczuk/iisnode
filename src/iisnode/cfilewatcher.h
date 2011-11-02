@@ -1,7 +1,10 @@
 #ifndef __CFILEWATCHER_H__
 #define __CFILEWATCHER_H__
 
-typedef void (*FileModifiedCallback)(PCWSTR fileName, void* data);
+class CNodeApplicationManager;
+class CNodeApplication;
+
+typedef void (*FileModifiedCallback)(CNodeApplicationManager* manager, CNodeApplication* application);
 
 class CFileWatcher
 {
@@ -10,7 +13,8 @@ private:
 	typedef struct _WatchedFile {
 		WCHAR* fileName;
 		FileModifiedCallback callback;
-		void* data;
+		CNodeApplicationManager* manager;
+		CNodeApplication* application;
 		BOOL unc;
 		FILETIME lastWrite;
 		struct _WatchedFile* next;
@@ -29,9 +33,10 @@ private:
 	HANDLE completionPort;
 	WatchedDirectory* directories;
 	DWORD uncFileSharePollingInterval;
+	CRITICAL_SECTION syncRoot;
 
 	static unsigned int WINAPI Worker(void* arg);
-	void ScanDirectory(WatchedDirectory* directory, BOOL unc);
+	BOOL ScanDirectory(WatchedDirectory* directory, BOOL unc);
 
 public:
 
@@ -39,7 +44,8 @@ public:
 	~CFileWatcher();
 
 	HRESULT Initialize(IHttpContext* context);
-	HRESULT WatchFile(PCWSTR fileName, FileModifiedCallback callback, void* data);
+	HRESULT WatchFile(PCWSTR fileName, FileModifiedCallback callback, CNodeApplicationManager* manager, CNodeApplication* application);
+	HRESULT RemoveWatch(CNodeApplication* application);
 };
 
 #endif
