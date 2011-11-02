@@ -34,6 +34,26 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 	return S_OK;
 }
 
+HRESULT CProtocolBridge::SendSyncResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache, PCSTR htmlBody)
+{
+	HRESULT hr;
+	DWORD bytesSent;
+	HTTP_DATA_CHUNK body;
+
+	CProtocolBridge::SendEmptyResponse(httpCtx, status, reason, hresult, disableCache);
+
+	IHttpResponse* response = httpCtx->GetResponse();
+	response->SetHeader(HttpHeaderContentType, "text/html", 9, TRUE);
+	body.DataChunkType = HttpDataChunkFromMemory;
+	body.FromMemory.pBuffer = (PVOID)htmlBody;
+	body.FromMemory.BufferLength = strlen(htmlBody);
+	CheckError(response->WriteEntityChunks(&body, 1, FALSE, FALSE, &bytesSent));
+
+	return S_OK;
+Error:
+	return hr;
+}
+
 void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache)
 {
 	if (!httpCtx->GetResponseHeadersSent())

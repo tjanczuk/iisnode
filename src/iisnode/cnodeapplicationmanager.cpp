@@ -206,10 +206,13 @@ HRESULT CNodeApplicationManager::EnsureDebuggedApplicationKilled(IHttpContext* c
 	HRESULT hr;
 	DWORD physicalPathLength;
 	PCWSTR physicalPath = context->GetScriptTranslated(&physicalPathLength);
+	DWORD killCount = 0;
 
 	CNodeApplication* app = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, TRUE);
+	if (app) killCount++;
 	CheckError(this->RecycleApplication(app));
 	app = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, FALSE);
+	if (app) killCount++;
 	CheckError(this->RecycleApplication(app));
 
 	if (ctx)
@@ -218,7 +221,14 @@ HRESULT CNodeApplicationManager::EnsureDebuggedApplicationKilled(IHttpContext* c
 		IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 		moduleContextContainer->SetModuleContext(*ctx, this->GetModuleId());		
 		(*ctx)->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
-		CProtocolBridge::SendEmptyResponse(context, 200, "OK", S_OK, TRUE);
+		if (killCount > 0)
+		{
+			CProtocolBridge::SendSyncResponse(context, 200, "OK", S_OK, TRUE, "The debugger and debugee processes have been killed.");
+		}
+		else
+		{
+			CProtocolBridge::SendSyncResponse(context, 200, "OK", S_OK, TRUE, "The debugger for the application is not running.");
+		}
 	}
 
 	return S_OK;
