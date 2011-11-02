@@ -10,7 +10,7 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 	return async->SetTimer(context->GetAsyncContext(), &delay);
 }
 
-HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult)
+HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache)
 {
 	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode request processing failed", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
@@ -21,7 +21,7 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 		context->SetPipe(INVALID_HANDLE_VALUE);
 	}
 
-	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult);	
+	CProtocolBridge::SendEmptyResponse(context->GetHttpContext(), status, reason, hresult, disableCache);	
 
 	CProtocolBridge::FinalizeResponseCore(
 		context, 
@@ -34,12 +34,16 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
 	return S_OK;
 }
 
-void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult)
+void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache)
 {
 	if (!httpCtx->GetResponseHeadersSent())
 	{
 		httpCtx->GetResponse()->Clear();
 		httpCtx->GetResponse()->SetStatus(status, reason, 0, hresult);
+		if (disableCache)
+		{
+			httpCtx->GetResponse()->SetHeader(HttpHeaderCacheControl, "no-cache", 8, TRUE);
+		}
 	}
 }
 
@@ -83,11 +87,28 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 	// determine how to process the request
 
 	if (requireChildContext)
-	{		
+	{
+#if FALSE // TODO, tjanczuk, figure out a way to prevent caching of iniating debugger requests
+		// prevent caching on requests to debugger entry points e.g. app.js/debug or app.js/debug?brk
+		HTTP_REQUEST* raw = context->GetHttpContext()->GetRequest()->GetRawHttpRequest();
+		DWORD physicalPathLength;
+		PCWSTR physicalPath = context->GetHttpContext()->GetPhysicalPath(&physicalPathLength);
+		DWORD compareLength = CModuleConfiguration::GetDebuggerPathSegmentLength(context->GetHttpContext()) + 2;
+		if (raw->CookedUrl.QueryStringLength > 0
+			|| (physicalPathLength > compareLength 
+			    && 0 == wcsnicmp(physicalPath + physicalPathLength - compareLength + 1, CModuleConfiguration::GetDebuggerPathSegment(context->GetHttpContext()), compareLength - 2)
+				&& *(physicalPath + physicalPathLength - compareLength) == L'\\'
+				&& *(physicalPath + physicalPathLength - 1) == L'\\'))
+		{
+			context->GetHttpContext()->GetResponse()->SetHeader("Cache-Control", "no-cache", 8, TRUE);
+		}
+#endif
+
 		CheckError(context->GetHttpContext()->CloneContext(CLONE_FLAG_BASICS | CLONE_FLAG_ENTITY | CLONE_FLAG_HEADERS, &child));
 		CheckError(child->GetRequest()->SetUrl(context->GetTargetUrl(), context->GetTargetUrlLength(), FALSE));
 		context->SetChildContext(child);
 		context->SetNextProcessor(CProtocolBridge::ChildContextCompleted);
+		
 		CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, 0, NULL, &completionExpected));
 		if (!completionExpected)
 		{

@@ -218,7 +218,7 @@ HRESULT CNodeApplicationManager::EnsureDebuggedApplicationKilled(IHttpContext* c
 		IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 		moduleContextContainer->SetModuleContext(*ctx, this->GetModuleId());		
 		(*ctx)->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
-		CProtocolBridge::SendEmptyResponse(context, 200, "OK", S_OK);
+		CProtocolBridge::SendEmptyResponse(context, 200, "OK", S_OK, TRUE);
 	}
 
 	return S_OK;
