@@ -60,7 +60,25 @@ Error:
 	}
 	else if (IISNODE_ERROR_UNRECOGNIZED_DEBUG_COMMAND == hr)
 	{
-		CProtocolBridge::SendEmptyResponse(pHttpContext, 400, _T("Unrecognized Debugger Command"), hr);
+		CProtocolBridge::SendSyncResponse(
+			pHttpContext, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"Unrecognized debugging command. Supported commands are ?debug, ?brk, and ?kill.");
+	}
+	else if (IISNODE_ERROR_UNABLE_TO_FIND_DEBUGGING_PORT == hr)
+	{
+		CProtocolBridge::SendSyncResponse(
+			pHttpContext, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The debugger was unable to acquire a TCP port to establish communication with the debugee. "
+			"This may be due to lack of free TCP ports in the range specified in the system.webServer/iisnode/@debuggerPortRange configuration "
+			"section, or due to lack of permissions to create TCP listeners by the identity of the IIS worker process.");
 	}
 	else
 	{

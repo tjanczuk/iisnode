@@ -18,12 +18,13 @@ private:
 	CNodeApplication* peerApplication;
 	BOOL isDebugger;
 	NodeDebugCommand debugCommand;
+	DWORD debugPort;
 
 	void Cleanup();	
 
 public:
 
-	CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand);	
+	CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort);	
 	~CNodeApplication();
 
 	HRESULT Initialize(PCWSTR scriptName, IHttpContext* context);
@@ -38,6 +39,7 @@ public:
 	BOOL IsDebugMode();
 	NodeDebugCommand GetDebugCommand();
 	HRESULT Recycle();
+	DWORD GetDebugPort();
 };
 
 #endif

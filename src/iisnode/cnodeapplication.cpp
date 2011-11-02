@@ -1,8 +1,8 @@
 #include "precomp.h"
 
-CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand)
+CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort)
 	: applicationManager(applicationManager), scriptName(NULL), pendingRequests(NULL), processManager(NULL),
-	isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand)
+	isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand), debugPort(debugPort)
 {
 }
 
@@ -144,4 +144,9 @@ NodeDebugCommand CNodeApplication::GetDebugCommand()
 HRESULT CNodeApplication::Recycle()
 {
 	return this->processManager->Recycle();
+}
+
+DWORD CNodeApplication::GetDebugPort()
+{
+	return this->debugPort;
 }

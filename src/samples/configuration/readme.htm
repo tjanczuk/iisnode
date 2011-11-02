@@ -88,6 +88,9 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       http://localhost/node/hello.js, log files would by default be stored at http://localhost/node/hello.js.logs/0.txt (thrugh 3.txt); 
       SECURITY NOTE: if log files contain sensitive information, this setting should be modified to contain enough entropy to be considered
       cryptographically secure; in most situations, a GUID is sufficient
+
+    * debuggerPortRange - range of TCP ports that can be used for communication between the node-inspector debugger and the debugee; iisnode
+      will round robin through this port range for subsequent debugging sessions and pick the next available (free) port to use from the range
     
     * debuggerPathSegment - URL path segment used to access the built-in node-inspector debugger; given a node.js application at 
       http://foo.com/bar/baz.js, the debugger can be accessed at http://foo.com/bar/baz.js/{debuggerPathSegment}, by default
@@ -113,6 +116,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       gracefulShutdownTimeout="60000"
       loggingEnabled="true"
       logDirectoryNameSuffix="logs"
+      debuggerPortRange="5058-6058"
       debuggerPathSegment="debug"
       maxLogFileSizeInKB="128"
       appendToExistingLog="false"

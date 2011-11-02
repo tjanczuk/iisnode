@@ -25,6 +25,9 @@ private:
 	DWORD maxLogFileSizeInKB;
 	BOOL loggingEnabled;
 	BOOL appendToExistingLog;
+	LPWSTR debugPortRange;
+	DWORD debugPortStart;
+	DWORD debugPortEnd;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
@@ -59,8 +62,9 @@ public:
 	static DWORD GetMaxLogFileSizeInKB(IHttpContext* ctx);
 	static BOOL GetLoggingEnabled(IHttpContext* ctx);
 	static BOOL GetAppendToExistingLog(IHttpContext* ctx);
+	static HRESULT GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end);
 
-	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, PCH namedPipe, PCH* env);
+	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
 
 	virtual void CleanupStoredContext();
 };

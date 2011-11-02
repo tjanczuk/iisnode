@@ -40,6 +40,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="gracefulShutdownTimeout" type="uint" defaultValue="60000"/>
     <attribute name="logDirectoryNameSuffix" type="string" expanded="true" defaultValue="logs"/>
     <attribute name="debuggerPathSegment" type="string" expanded="true" defaultValue="debug"/>
+    <attribute name="debuggerPortRange" type="string" expanded="true" defaultValue="5058-6058"/>
     <attribute name="logFileFlushInterval" type="uint" defaultValue="5000"/>
     <attribute name="maxLogFileSizeInKB" type="uint" defaultValue="128"/>
     <attribute name="loggingEnabled" type="bool" defaultValue="true"/>

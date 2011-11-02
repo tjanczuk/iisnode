@@ -2,7 +2,8 @@
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
 	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
-	breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL)
+	breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL),
+	currentDebugPort(0)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -313,7 +314,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalP
 	if (NULL == (*application = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, FALSE)))
 	{
 		ErrorIf(NULL == (applicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this, FALSE, ND_NONE)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this, FALSE, ND_NONE, 0)), ERROR_NOT_ENOUGH_MEMORY);
 		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context));
 
 		*application = applicationEntry->nodeApplication;
@@ -456,6 +457,7 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
 	NodeApplicationEntry* applicationEntry = NULL;
 	NodeApplicationEntry* debuggerEntry = NULL;
 	PWSTR debuggerPath;
+	DWORD debugPort;
 
 	// This method encures there is a CNodeApplication representing the debugger application 
 	// and that it is paired with a debugged node.js application.
@@ -477,15 +479,19 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
 
 		CheckError(this->EnsureDebuggedApplicationKilled(context, NULL));
 
+		// determine next available debugging port
+
+		CheckError(this->FindNextDebugPort(context, &debugPort));
+
 		// create debuggee
 
 		ErrorIf(NULL == (applicationEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this, FALSE, debugCommand)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(NULL == (applicationEntry->nodeApplication = new CNodeApplication(this, FALSE, debugCommand, debugPort)), ERROR_NOT_ENOUGH_MEMORY);
 
 		// create debugger
 
 		ErrorIf(NULL == (debuggerEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(NULL == (debuggerEntry->nodeApplication = new CNodeApplication(this, TRUE, debugCommand)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(NULL == (debuggerEntry->nodeApplication = new CNodeApplication(this, TRUE, debugCommand, debugPort)), ERROR_NOT_ENOUGH_MEMORY);
 
 		// associate debugger with debuggee and initialize them
 
@@ -611,4 +617,62 @@ CNodeEventProvider* CNodeApplicationManager::GetEventProvider()
 CFileWatcher* CNodeApplicationManager::GetFileWatcher()
 {
 	return this->fileWatcher;
+}
+
+HRESULT CNodeApplicationManager::FindNextDebugPort(IHttpContext* context, DWORD* port)
+{
+	HRESULT hr;
+	DWORD start, end;
+
+	CheckError(CModuleConfiguration::GetDebugPortRange(context, &start, &end));
+	if (this->currentDebugPort < start || this->currentDebugPort > end)
+	{
+		this->currentDebugPort = start;
+	}
+
+	*port = this->currentDebugPort;
+	BOOL found = FALSE;
+
+	do {
+		SOCKET listenSocket = INVALID_SOCKET;
+		sockaddr_in service;
+		if (INVALID_SOCKET != (listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)))
+		{
+			service.sin_family = AF_INET;
+			service.sin_addr.s_addr = inet_addr("127.0.0.1");
+			service.sin_port = htons(*port);
+			if (SOCKET_ERROR != bind(listenSocket, (SOCKADDR*)&service, sizeof service))
+			{
+				if (SOCKET_ERROR != listen(listenSocket, 1))
+				{
+					found = TRUE;
+				}
+			}
+
+			closesocket(listenSocket);
+		}
+
+		if (!found)
+		{
+			(*port)++;
+			if ((*port) > end)
+				(*port) = start;
+		}
+
+	} while (!found && (*port) != this->currentDebugPort);
+
+	if (found)
+	{
+		this->currentDebugPort = *port + 1;
+		if (this->currentDebugPort > end)
+			this->currentDebugPort = start;
+	}
+	else
+	{
+		*port = 0;
+	}
+
+	return found ? S_OK : IISNODE_ERROR_UNABLE_TO_FIND_DEBUGGING_PORT;
+Error:
+	return hr;
 }

@@ -5,7 +5,8 @@ IHttpServer* CModuleConfiguration::server = NULL;
 HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 CModuleConfiguration::CModuleConfiguration()
-	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL)
+	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
+	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0)
 {
 }
 
@@ -45,7 +46,7 @@ Error:
 	return hr;
 }
 
-HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, PCH namedPipe, PCH* env)
+HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env)
 {
 	HRESULT hr;
 	LPCH currentEnvironment = NULL;
@@ -92,6 +93,17 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, PCH named
 	sprintf(tmpIndex, "IISNODE_VERSION=%s", IISNODE_VERSION);
 	tmpIndex += strlen(IISNODE_VERSION) + 17;
 
+	// set DEBUGPORT environment variable if requested (used by node-inspector)
+
+	if (debugPort > 0)
+	{
+		char debugPortS[64];
+		sprintf(debugPortS, "%d", debugPort);
+		ErrorIf((tmpSize - (tmpIndex - tmpStart)) < (strlen(debugPortS) + 11), ERROR_NOT_ENOUGH_MEMORY);
+		sprintf(tmpIndex, "DEBUGPORT=%s", debugPortS);
+		tmpIndex += strlen(debugPortS) + 11;
+	}
+		
 	// add environment variables from the appSettings section of config
 
 	ErrorIf(NULL == (keyPropertyName = SysAllocString(L"key")), ERROR_NOT_ENOUGH_MEMORY);
@@ -392,6 +404,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
 		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
+		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
 		c->debuggerPathSegmentLength = wcslen(c->debuggerPathSegment);
 		CheckError(GetString(section, L"nodeProcessCommandLine", &commandLine));
@@ -532,4 +545,48 @@ BOOL CModuleConfiguration::GetLoggingEnabled(IHttpContext* ctx)
 BOOL CModuleConfiguration::GetAppendToExistingLog(IHttpContext* ctx)
 {
 	GETCONFIG(appendToExistingLog)
+}
+
+HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)
+{
+	HRESULT hr;
+
+	CheckNull(start);
+	CheckNull(end);
+
+	CModuleConfiguration* c = NULL; 
+	GetConfig(ctx, &c); 
+
+	if (0 == c->debugPortStart)
+	{
+		CheckNull(c->debugPortRange);
+		LPWSTR dash = c->debugPortRange;
+		while (*dash != L'\0' && *dash != L'-')
+			dash++;
+		ErrorIf(dash == c->debugPortRange, ERROR_INVALID_PARAMETER);
+		c->debugPortStart = _wtoi(c->debugPortRange);
+		ErrorIf(c->debugPortStart < 1025, ERROR_INVALID_PARAMETER);
+		if (*dash != L'\0')
+		{
+			c->debugPortEnd = _wtoi(dash + 1);
+			ErrorIf(c->debugPortEnd < c->debugPortStart || c->debugPortEnd > 65535, ERROR_INVALID_PARAMETER);
+		}
+		else
+		{
+			c->debugPortEnd = c->debugPortStart;
+		}
+	}
+
+	*start = c->debugPortStart;
+	*end = c->debugPortEnd;
+
+	return S_OK;
+Error:
+
+	if (c)
+	{
+		c->debugPortStart = c->debugPortEnd = 0;
+	}
+
+	return hr;
 }

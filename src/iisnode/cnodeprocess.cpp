@@ -100,20 +100,23 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	DWORD offset;
 	if (app->IsDebuggee())
 	{
-		if (ND_DEBUG_BRK == this->GetProcessManager()->GetApplication()->GetDebugCommand())
+		char buffer[64];
+
+		if (ND_DEBUG_BRK == app->GetDebugCommand())
 		{
-			_tcscat(fullCommandLine, _T(" --debug-brk \""));
-			offset = 14;
+			sprintf(buffer, " --debug-brk=%d \"", app->GetDebugPort());					
 		}
-		else if (ND_DEBUG == this->GetProcessManager()->GetApplication()->GetDebugCommand())
+		else if (ND_DEBUG == app->GetDebugCommand())
 		{
-			_tcscat(fullCommandLine, _T(" --debug \""));
-			offset = 10;
+			sprintf(buffer, " --debug=%d \"", app->GetDebugPort());	
 		}
 		else
 		{
 			CheckError(ERROR_INVALID_PARAMETER);
 		}
+
+		_tcscat(fullCommandLine, buffer);	
+		offset = strlen(buffer);
 	}
 	else 
 	{
@@ -125,7 +128,11 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	// create the environment block for the node.js process 	
 
-	CheckError(CModuleConfiguration::CreateNodeEnvironment(context, this->namedPipe, &newEnvironment));
+	CheckError(CModuleConfiguration::CreateNodeEnvironment(
+		context, 
+		app->IsDebugger() ? app->GetDebugPort() : 0, 
+		this->namedPipe, 
+		&newEnvironment));
 
 	// establish the current directory for node.exe process to be the same as the location of the application *.js file
 	// (in case of the debugger process, it is still the debuggee application file)

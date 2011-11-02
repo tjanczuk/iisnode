@@ -34,6 +34,7 @@ private:
 	CFileWatcher* fileWatcher;
 	CNodeEventProvider* eventProvider;
 	BOOL initialized;
+	DWORD currentDebugPort;
 
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
 	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);	
@@ -44,6 +45,7 @@ private:
 	HRESULT EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize);
 	static BOOL CALLBACK EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam);
 	HRESULT RecycleApplicationCore(CNodeApplication* app);	
+	HRESULT FindNextDebugPort(IHttpContext* context, DWORD* port);
 
 public:
 
