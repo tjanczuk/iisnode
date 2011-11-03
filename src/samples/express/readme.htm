@@ -22,23 +22,22 @@
         <li>The URL rewrite module is recommended for all but the most simple express applications
             hosted in IIS. The sample below shows how to use it, but also check out the <a href="../urlrewrite/readme.htm">
                 urlrewrite sample</a>.</li>
-        <li>Remember to exclude the node_modules directory from serving from IIS - see web.config
-            below.</li>
     </ul>
-    visit the foo endpoint at <a href="hello/foo">hello/foo</a><br />
-    visit the bar endpoint at <a href="hello/bar">hello/bar</a><br />
-    visit the nonexistent endpoint at <a href="hello/idontexist">hello/idontexist</a><br />
+    visit the foo endpoint at <a href="myapp/foo">myapp/foo</a><br />
+    visit the bar endpoint at <a href="myapp/bar">myapp/bar</a><br />
+    visit the nonexistent endpoint at <a href="myapp/idontexist">myapp/idontexist</a><br />
+    debug the application at <a href="hello.js/debug" target="_blank">hello.js/debug</a> (requires WebKit enabled browser)<br />
     <p>
         <b>code</b></p>
     <pre>var express = require('express');
 
 var app = express.createServer();
 
-app.get('/node/express/hello/foo', function (req, res) {
+app.get('/node/express/myapp/foo', function (req, res) {
     res.send('Hello from foo! [express sample]');
 });
 
-app.get('/node/express/hello/bar', function (req, res) {
+app.get('/node/express/myapp/bar', function (req, res) {
     res.send('Hello from bar! [express sample]');
 });
 
@@ -59,30 +58,19 @@ app.listen(process.env.PORT);</pre>
     to hello.js node.js application; for example, the following URLs will 
     all be handled by hello.js:
     
-        http://localhost/node/express/hello/foo
-        http://localhost/node/express/hello/bar
+        http://localhost/node/express/myapp/foo
+        http://localhost/node/express/myapp/bar
         
     --&gt;
 
     &lt;rewrite&gt;
       &lt;rules&gt;
-        &lt;rule name="hello"&gt;
-          &lt;match url="hello/*" /&gt;
+        &lt;rule name="myapp"&gt;
+          &lt;match url="myapp/*" /&gt;
           &lt;action type="Rewrite" url="hello.js" /&gt;
         &lt;/rule&gt;
       &lt;/rules&gt;
-    &lt;/rewrite&gt;
-
-    &lt;!-- exclude node_modules directory and subdirectories from serving
-    by IIS since these are implementation details of node.js applications --&gt;
-    
-    &lt;security&gt;
-      &lt;requestFiltering&gt;
-        &lt;hiddenSegments&gt;
-          &lt;add segment="node_modules" /&gt;
-        &lt;/hiddenSegments&gt;
-      &lt;/requestFiltering&gt;
-    &lt;/security&gt;    
+    &lt;/rewrite&gt; 
     
   &lt;/system.webServer&gt;
 &lt;/configuration&gt;</pre>

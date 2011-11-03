@@ -16,8 +16,9 @@
         branch of the URL namespace to a single node.js application. This mechanism allows
         more control over the URL structure of a node.js web service as well as removes
         the *.js file name from the URL.</p>
-    visit the endpoint at <a href="hello/foo/bar/baz">hello/foo/bar/baz</a><br />
-    visit the endpoint at <a href="hello/1/2/3?param=4">hello/1/2/3?param=4</a><br />
+    visit the endpoint at <a href="myapp/foo/bar/baz">myapp/foo/bar/baz</a><br />
+    visit the endpoint at <a href="myapp/1/2/3?param=4">myapp/1/2/3?param=4</a><br />
+    debug the hello.js application at <a href="hello.js/debug" target="_blank">hello.js/debug</a> (requires WebKit enabled browser)<br />
     <p>
         <b>code</b></p>
     <pre>var http = require('http');
@@ -42,16 +43,16 @@ http.createServer(function (req, res) {
     to hello.js node.js application; for example, the following URLs will 
     all be handled by hello.js:
     
-        http://localhost/node/urlrewrite/hello
-        http://localhost/node/urlrewrite/hello/foo
-        http://localhost/node/urlrewrite/hello/foo/bar/baz?param=bat
+        http://localhost/node/urlrewrite/myapp
+        http://localhost/node/urlrewrite/myapp/foo
+        http://localhost/node/urlrewrite/myapp/foo/bar/baz?param=bat
         
     --&gt;
     
     &lt;rewrite&gt;
       &lt;rules&gt;
-        &lt;rule name="hello"&gt;
-          &lt;match url="hello/*" /&gt;
+        &lt;rule name="myapp"&gt;
+          &lt;match url="myapp/*" /&gt;
           &lt;action type="Rewrite" url="hello.js" /&gt;
         &lt;/rule&gt;
       &lt;/rules&gt;
