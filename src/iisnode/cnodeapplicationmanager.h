@@ -46,6 +46,7 @@ private:
 	static BOOL CALLBACK EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam);
 	HRESULT RecycleApplicationCore(CNodeApplication* app);	
 	HRESULT FindNextDebugPort(IHttpContext* context, DWORD* port);
+	HRESULT EnsureDebugeeReady(IHttpContext* context, DWORD debugPort);
 
 public:
 

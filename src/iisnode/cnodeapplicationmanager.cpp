@@ -493,11 +493,18 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
 		ErrorIf(NULL == (debuggerEntry = new NodeApplicationEntry()), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(NULL == (debuggerEntry->nodeApplication = new CNodeApplication(this, TRUE, debugCommand, debugPort)), ERROR_NOT_ENOUGH_MEMORY);
 
-		// associate debugger with debuggee and initialize them
+		// associate debugger with debuggee
 
 		debuggerEntry->nodeApplication->SetPeerApplication(applicationEntry->nodeApplication);
 		applicationEntry->nodeApplication->SetPeerApplication(debuggerEntry->nodeApplication);
+
+		// initialize debugee
+
 		CheckError(applicationEntry->nodeApplication->Initialize(physicalPath, context));
+		CheckError(this->EnsureDebugeeReady(context, debugPort));
+
+		// initialize debugger
+
 		wcscat(debuggerPath, L"node_modules\\node-inspector\\bin\\inspector.js");
 		CheckError(debuggerEntry->nodeApplication->Initialize(debuggerPath, context));
 
@@ -675,4 +682,37 @@ HRESULT CNodeApplicationManager::FindNextDebugPort(IHttpContext* context, DWORD*
 	return found ? S_OK : IISNODE_ERROR_UNABLE_TO_FIND_DEBUGGING_PORT;
 Error:
 	return hr;
+}
+
+HRESULT CNodeApplicationManager::EnsureDebugeeReady(IHttpContext* context, DWORD debugPort)
+{
+	DWORD retryCount = CModuleConfiguration::GetMaxNamedPipeConnectionRetry(context);
+	DWORD delay = CModuleConfiguration::GetNamedPipeConnectionRetryDelay(context);
+
+	DWORD retry = 0;
+	do {
+		SOCKET client = INVALID_SOCKET;
+		sockaddr_in service;
+		if (INVALID_SOCKET != (client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)))
+		{
+			service.sin_family = AF_INET;
+			service.sin_addr.s_addr = inet_addr("127.0.0.1");
+			service.sin_port = htons(debugPort);
+			int result = connect(client, (SOCKADDR*)&service, sizeof service);
+			closesocket(client);
+			if (SOCKET_ERROR != result)
+			{
+				return S_OK;
+			}
+		}
+
+		retry++;
+		if (retry <= retryCount)
+		{
+			Sleep(delay);
+		}
+
+	} while (retry <= retryCount);
+
+	return IISNODE_ERROR_UNABLE_TO_CONNECT_TO_DEBUGEE;
 }
