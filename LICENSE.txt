@@ -1,13 +1,68 @@
+iisnode's license follows:
+
+====
+
 Copyright 2011 Microsoft Corporation
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
   http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
 limitations under the License.
+
+====
+
+This license applies to all parts of iisnode that are not externally maintained components.
+
+The externally maintained components are:
+
+Component: node-inspector  
+Location: src/iisnode/node-inspector/node_modules/node-inspector
+Copyright: Copyright (c) 2011, Danny Coates 
+License: https://github.com/tjanczuk/iisnode/blob/master/src/iisnode/node-inspector/node_modules/LICENSE
+
+Component: Paperboy
+Location: src/iisnode/node-inspector/node_modules/paperboy
+Copyright: Copyright (c) 2010 Debuggable Limited <felix@debuggable.com>
+License: https://github.com/tjanczuk/iisnode/blob/master/src/iisnode/node-inspector/node_modules/paperboy/LICENSE.txt
+
+Component: socket.io
+Location: src/iisnode/node-inspector/node_modules/socket.io, src/iisnode/node-inspector/node_modules/socket.io-client
+Copyright: Copyright LearnBoost 2011
+License: MIT (http://socket.io)
+
+Component: uglify-js
+Location: src/iisnode/node-inspector/node_modules/uglify-js
+Copyright: Copyright 2010 (c) Mihai Bazon <mihai.bazon@gmail.com>
+License: BSD (https://github.com/mishoo/UglifyJS)
+
+Component: xmlhttprequest
+Location: src/iisnode/node-inspector/node_modules/xmlhttprequest
+Copyright: Copyright (C) 2011 Sergey Ilinsky (http://www.ilinsky.com)
+License: GNU Lesser General Public License (https://github.com/ilinsky/xmlhttprequest/blob/master/LICENSE)
+
+Component: node-inspector front-end
+Location: src/iisnode/node-inspector/node_modules/node-inspector/front-end
+Copyright: Copyright (C) 2006, 2007, 2008 Apple Inc.  All rights reserved.
+License: https://github.com/tjanczuk/iisnode/blob/master/src/iisnode/node-inspector/node_modules/node-inspector/front-end/index.html
+
+Component: express
+Location: src/samples/express/node_modules/express
+Copyright: Copyright (c) 2009-2011 TJ Holowaychuk <tj@vision-media.ca>
+License: MIT (https://github.com/tjanczuk/iisnode/tree/master/src/samples/express/node_modules/express/LICENSE)
+
+Component: connect
+Location: src/samples/express/node_modules/connect
+Copyright: Copyright (c) 2010 Sencha Inc., Copyright (c) 2011 LearnBoost, Copyright (c) 2011 TJ Holowaychuk
+License: MIT (https://github.com/tjanczuk/iisnode/blob/master/src/samples/express/node_modules/connect/LICENSE)
+
+Component: mime
+Location: src/samples/express/node_modules/mime
+Copyright: Copyright (c) 2010 Benjamin Thomas, Robert Kieffer
+License: https://github.com/tjanczuk/iisnode/tree/master/src/samples/express/node_modules/mime/LICENSE
+
+Component: qs
+Location: src/samples/express/node_modules/qs
+Copyright: Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+License: MIT (https://github.com/visionmedia/node-querystring)
