@@ -117,9 +117,9 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 	HRESULT hr;
 	CNodeHttpStoredContext* request = NULL;		
 
-	if (0 < this->DecRef())
+	if (0 < this->DecRef()) // incremented in CNodeProcessManager::PostDispatchOneRequest
 	{
-		if (!this->isClosing) // incremented in CNodeProcessManager::PostDispatchOneRequest
+		if (!this->isClosing) 
 		{
 			ENTER_CS(this->syncRoot)
 
