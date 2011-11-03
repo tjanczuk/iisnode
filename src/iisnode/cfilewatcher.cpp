@@ -179,7 +179,7 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 			NULL),
 			GetLastError());
 
-		if (NULL == this->directories)
+		if (NULL == this->worker)
 		{
 			// no watchers exist yet, start the watcher thread
 
