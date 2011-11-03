@@ -4,6 +4,7 @@
 class CNodeProcess;
 class CNodeHttpStoredContext;
 class CNodeProcessManager;
+class CNodeEventProvider;
 
 class CNodeProcessManager
 {
@@ -27,6 +28,7 @@ private:
 	DWORD gracefulShutdownTimeout;
 	BOOL isClosing;
 	long refCount;
+	CNodeEventProvider* eventProvider;
 
 	HRESULT AddOneProcessCore(CNodeProcess** process, IHttpContext* context);
 	HRESULT AddOneProcess(CNodeProcess** process, IHttpContext* context);
@@ -45,6 +47,7 @@ public:
 	HRESULT RecycleProcess(CNodeProcess* process);
 	HRESULT Recycle();
 	HRESULT PostDispatchOneRequest();
+	CNodeEventProvider* GetEventProvider();
 	long AddRef();
 	long DecRef();
 };

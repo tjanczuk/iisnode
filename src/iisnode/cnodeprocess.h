@@ -38,7 +38,7 @@ public:
 	LPCTSTR GetNamedPipeName();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
 	void OnRequestCompleted(CNodeHttpStoredContext* context);	
-	HANDLE CreateDrainHandle();
+	void SignalWhenDrained(HANDLE handle);
 };
 
 #endif

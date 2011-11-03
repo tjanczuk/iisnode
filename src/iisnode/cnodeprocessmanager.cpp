@@ -13,6 +13,9 @@ CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpCon
 		this->maxProcessCount = CModuleConfiguration::GetMaxProcessCountPerApplication(context);
 	}
 
+	// cache event provider since the application can be disposed prior to CNodeProcessManager
+	this->eventProvider = this->GetApplication()->GetApplicationManager()->GetEventProvider();
+
 	this->gracefulShutdownTimeout = CModuleConfiguration::GetGracefulShutdownTimeout(context);
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -117,52 +120,53 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 	HRESULT hr;
 	CNodeHttpStoredContext* request = NULL;		
 
-	if (0 < this->DecRef()) // incremented in CNodeProcessManager::PostDispatchOneRequest
+	if (!this->isClosing) 
 	{
-		if (!this->isClosing) 
+		ENTER_CS(this->syncRoot)
+
+		if (!this->isClosing)
 		{
-			ENTER_CS(this->syncRoot)
+			CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
+			request = queue->Peek();		
 
-			if (!this->isClosing)
+			if (NULL != request)
 			{
-				CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
-				request = queue->Peek();		
+				queue->Pop();
 
-				if (NULL != request)
+				this->GetEventProvider()->Log(
+					L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
+
+				if (!this->TryRouteRequestToExistingProcess(request))
 				{
-					queue->Pop();
-
-					this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-						L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
-
-					if (!this->TryRouteRequestToExistingProcess(request))
-					{
-						CNodeProcess* newProcess = NULL;
-						CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
-						CheckError(newProcess->AcceptRequest(request));
-					}
+					CNodeProcess* newProcess = NULL;
+					CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
+					CheckError(newProcess->AcceptRequest(request));
 				}
 			}
+		}
 
-			LEAVE_CS(this->syncRoot)
-		}
-		else
-		{
-			this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode attempted to dequeue a request for processing from the pending request queue but the queue is empty", WINEVENT_LEVEL_VERBOSE);
-		}
+		LEAVE_CS(this->syncRoot)
 	}
+	else
+	{
+		this->GetEventProvider()->Log(
+			L"iisnode attempted to dequeue a request for processing from the pending request queue but the queue is empty", WINEVENT_LEVEL_VERBOSE);
+	}
+
+	this->DecRef(); // incremented in CNodeProcessManager::PostDispatchOneRequest
 
 	return;
 Error:
 
 	if (request != NULL)
 	{
-		this->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		this->GetEventProvider()->Log(
 			L"iisnode failed to initiate processing of a request dequeued from the pending request queue", WINEVENT_LEVEL_ERROR);
 
 		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
 	}
+
+	this->DecRef(); // incremented in CNodeProcessManager::PostDispatchOneRequest
 
 	return;
 }
@@ -282,7 +286,7 @@ HRESULT CNodeProcessManager::Recycle()
 
 	this->isClosing = TRUE;	
 
-	if (0 > this->processCount)
+	if (0 < this->processCount)
 	{
 		// perform actual recycling on a diffrent thread to free up the file watcher thread
 
@@ -326,7 +330,6 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 	ProcessRecycleArgs* args = (ProcessRecycleArgs*)arg;
 	HRESULT hr;
 	HANDLE* drainHandles = NULL;
-	DWORD drainHandleCount = 0;
 
 	// drain active requests 
 
@@ -334,19 +337,16 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 	RtlZeroMemory(drainHandles, args->count * sizeof HANDLE);
 	for (int i = 0; i < args->count; i++)
 	{
-		drainHandles[drainHandleCount] = args->processes[i]->CreateDrainHandle();
-		if (INVALID_HANDLE_VALUE != drainHandles[drainHandleCount])
-		{
-			drainHandleCount++;
-		}
+		drainHandles[i] = CreateEvent(NULL, TRUE, FALSE, NULL);
+		args->processes[i]->SignalWhenDrained(drainHandles[i]);
 	}
 	
 	if (args->processManager->gracefulShutdownTimeout > 0)
 	{
-		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, args->processManager->gracefulShutdownTimeout);
+		WaitForMultipleObjects(args->count, drainHandles, TRUE, args->processManager->gracefulShutdownTimeout);
 	}
 
-	for (int i = 0; i < drainHandleCount; i++)
+	for (int i = 0; i < args->count; i++)
 	{
 		CloseHandle(drainHandles[i]);
 	}
@@ -415,4 +415,9 @@ long CNodeProcessManager::DecRef()
 	}
 
 	return result;
+}
+
+CNodeEventProvider* CNodeProcessManager::GetEventProvider()
+{
+	return this->eventProvider;
 }

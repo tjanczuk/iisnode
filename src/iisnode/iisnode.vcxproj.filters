@@ -391,6 +391,9 @@
     <None Include="..\scripts\etw.bat">
       <Filter>Scripts</Filter>
     </None>
+    <None Include="..\..\test\functional\tests\109_helloworld_debug.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="debugger.rc">

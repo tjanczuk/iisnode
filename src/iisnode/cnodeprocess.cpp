@@ -241,12 +241,12 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	if (this->GetProcessManager()->GetApplication()->IsDebugger())
 	{
-		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		this->GetProcessManager()->GetEventProvider()->Log(
 			L"iisnode initialized a new node.exe debugger process", WINEVENT_LEVEL_INFO);
 	}
 	else
 	{
-		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		this->GetProcessManager()->GetEventProvider()->Log(
 			L"iisnode initialized a new node.exe process", WINEVENT_LEVEL_INFO);
 	}
 
@@ -255,12 +255,12 @@ Error:
 
 	if (this->GetProcessManager()->GetApplication()->IsDebugger())
 	{
-		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		this->GetProcessManager()->GetEventProvider()->Log(
 			L"iisnode failed to initialize a new node.exe debugger process", WINEVENT_LEVEL_ERROR);
 	}
 	else
 	{
-		this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		this->GetProcessManager()->GetEventProvider()->Log(
 			L"iisnode failed to initialize a new node.exe process", WINEVENT_LEVEL_ERROR);
 	}
 
@@ -351,7 +351,7 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 {
 	CNodeProcess* process = (CNodeProcess*)arg;
 	DWORD exitCode;
-	CNodeEventProvider* log = process->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider();
+	CNodeEventProvider* log = process->GetProcessManager()->GetEventProvider();
 	BOOL isDebugger = process->GetProcessManager()->GetApplication()->IsDebugger();
 
 	while (!process->isClosing && process->process)
@@ -420,12 +420,12 @@ LPCTSTR CNodeProcess::GetNamedPipeName()
 
 void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
 {
-	CAsyncManager* asyncManager = this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetAsyncManager();
 	CNodeProcessManager* processManager = this->GetProcessManager();
+	BOOL isClosing = this->isClosing; // this is just an optimization to save on context switch
 	
-	this->activeRequestPool.Remove(context);
+	this->activeRequestPool.Remove(context); // this call may results in "this" being disposed on a different thread
 	
-	if (!this->isClosing)
+	if (!isClosing)
 	{
 		processManager->PostDispatchOneRequest();
 	}
@@ -438,12 +438,9 @@ void CNodeProcess::OnProcessExited()
 	this->GetProcessManager()->RecycleProcess(this);
 }
 
-HANDLE CNodeProcess::CreateDrainHandle()
-{
-	HANDLE drainHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
-	this->activeRequestPool.SignalWhenDrained(drainHandle);
-
-	return S_OK;
+void CNodeProcess::SignalWhenDrained(HANDLE handle)
+{	
+	this->activeRequestPool.SignalWhenDrained(handle);
 }
 
 HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
@@ -481,7 +478,7 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 		hr = GetLastError();
 		if (ERROR_ALREADY_EXISTS != hr)
 		{
-			this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			this->GetProcessManager()->GetEventProvider()->Log(
 				L"iisnode failed to create directory to store log files for the node.exe process", WINEVENT_LEVEL_ERROR);
 
 			CheckError(hr);
