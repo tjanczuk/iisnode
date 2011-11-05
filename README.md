@@ -34,8 +34,8 @@ Hosting node.js applications in IIS on Windows
 [using with mongodb](http://www.amazedsaint.com/2011/09/creating-10-minute-todo-listing-app-on.html)  
 [diagnosing problems with ETW traces](http://tomasz.janczuk.org/2011/09/using-event-tracing-for-windows-to.html)  
 [using with MVC](http://weblogs.asp.net/jgalloway/archive/2011/10/26/using-node-js-in-an-asp-net-mvc-application-with-iisnode.aspx)  
-[Portuguese: Node.js no Windows: Instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)
-
+[portuguese: node.js no windows: instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)  
+[integrated debugging](http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html)  
 
 **Prerequisites for building**
 
