@@ -686,6 +686,11 @@ Error:
 
 HRESULT CNodeApplicationManager::EnsureDebugeeReady(IHttpContext* context, DWORD debugPort)
 {
+#if TRUE // TODO, tjanczuk, figure out timing issues with debugee connectivity; connecting and disconnecting here
+		 // was causing later connect by the debugger to be unsuccessful for some reason
+	Sleep(1000);
+	return S_OK;
+#else
 	DWORD retryCount = CModuleConfiguration::GetMaxNamedPipeConnectionRetry(context);
 	DWORD delay = CModuleConfiguration::GetNamedPipeConnectionRetryDelay(context);
 
@@ -715,4 +720,5 @@ HRESULT CNodeApplicationManager::EnsureDebugeeReady(IHttpContext* context, DWORD
 	} while (retry <= retryCount);
 
 	return IISNODE_ERROR_UNABLE_TO_CONNECT_TO_DEBUGEE;
+#endif
 }
