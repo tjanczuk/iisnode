@@ -22,11 +22,14 @@ private:
 	DWORD logFlushInterval;
 	LONGLONG maxLogSizeInBytes;
 	BOOL hasProcessExited;
+	OVERLAPPED overlapped;
+	BOOL truncatePending;
 
 	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();
 	HRESULT CreateStdHandles(IHttpContext* context);
 	void FlushStdHandles();	
+	static void CALLBACK TruncateLogFileCompleted(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
 
 public:
 

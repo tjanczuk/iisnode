@@ -2,7 +2,7 @@
 
 CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal)
 	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE), ordinal(ordinal),
-	hasProcessExited(FALSE)
+	hasProcessExited(FALSE), truncatePending(FALSE)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
@@ -326,37 +326,55 @@ Error:
 
 void CNodeProcess::FlushStdHandles()
 {
+	const char* truncateMessage = ">>>> iisnode truncated the log file because it exceeded the configured maximum size\n";
 	LARGE_INTEGER fileSize;
-
-	// truncate the log file back to 0 if the max size is exceeded
-
-	if (GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
-	{
-		if (fileSize.QuadPart > this->maxLogSizeInBytes)
-		{
-			fileSize.QuadPart = 0;
-			if (SetFilePointerEx(this->startupInfo.hStdOutput, fileSize, NULL, FILE_BEGIN))
-			{
-				SetEndOfFile(this->startupInfo.hStdOutput);
-			}
-		}
-	}
 
 	// flush the file
 
 	FlushFileBuffers(this->startupInfo.hStdOutput);
+
+	// truncate the log file back to 0 if the max size is exceeded
+
+	if (!this->truncatePending && GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
+	{
+		if (fileSize.QuadPart > this->maxLogSizeInBytes)
+		{			
+			RtlZeroMemory(&this->overlapped, sizeof this->overlapped); // this also sets the Offset and OffsetHigh to 0		
+			this->overlapped.hEvent = this;
+			this->truncatePending = TRUE; // this will be reset to FALSE in the completion routine of WriteFileEx below
+			if (!WriteFileEx(
+				this->startupInfo.hStdOutput, 
+				(void*)truncateMessage, 
+				strlen(truncateMessage), 
+				&this->overlapped, 
+				CNodeProcess::TruncateLogFileCompleted)) 
+			{
+				this->truncatePending = FALSE;
+			}
+		}
+	}
+}
+
+void CALLBACK CNodeProcess::TruncateLogFileCompleted(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
+{
+	CNodeProcess* process = (CNodeProcess*)lpOverlapped->hEvent;
+	process->truncatePending = FALSE;
+	SetEndOfFile(process->startupInfo.hStdOutput);
+	FlushFileBuffers(process->startupInfo.hStdOutput);
 }
 
 unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 {
 	CNodeProcess* process = (CNodeProcess*)arg;
 	DWORD exitCode;
+	DWORD waitResult;
 	CNodeEventProvider* log = process->GetProcessManager()->GetEventProvider();
 	BOOL isDebugger = process->GetProcessManager()->GetApplication()->IsDebugger();
 
 	while (!process->isClosing && process->process)
 	{
-		if (WAIT_TIMEOUT == WaitForSingleObject(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE))
+		waitResult = WaitForSingleObjectEx(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE, TRUE);
+		if (WAIT_TIMEOUT == waitResult)
 		{
 			process->FlushStdHandles();
 
@@ -498,7 +516,7 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	creationDisposition = CModuleConfiguration::GetAppendToExistingLog(context) ? OPEN_ALWAYS : CREATE_ALWAYS;
 	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
 		logName,
-		GENERIC_READ | FILE_APPEND_DATA,
+		GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		&security,
 		creationDisposition,

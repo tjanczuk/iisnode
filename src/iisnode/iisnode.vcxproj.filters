@@ -88,6 +88,9 @@
     <Filter Include="Tests\functional\www\108_appsettings">
       <UniqueIdentifier>{f56c1f46-66cb-4585-adde-0ae7b04c5ee4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\110_log_size_quota">
+      <UniqueIdentifier>{babb03c5-c688-4393-beaa-65f34782c77c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -392,6 +395,15 @@
       <Filter>Scripts</Filter>
     </None>
     <None Include="..\..\test\functional\tests\109_helloworld_debug.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\110_log_size_quota\hello.js">
+      <Filter>Tests\functional\www\110_log_size_quota</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\110_log_size_quota\web.config">
+      <Filter>Tests\functional\www\110_log_size_quota</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\110_log_size_quota.js">
       <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
