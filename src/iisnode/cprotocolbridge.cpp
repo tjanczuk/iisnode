@@ -202,16 +202,8 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 		0,
 		NULL,
 		OPEN_EXISTING,
-		FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
+		FILE_FLAG_OVERLAPPED,
 		NULL)), 
-		GetLastError());
-
-	DWORD mode = PIPE_READMODE_BYTE;// | PIPE_NOWAIT;
-	ErrorIf(!SetNamedPipeHandleState(
-		pipe, 
-		&mode,
-		NULL,
-		NULL), 
 		GetLastError());
 
 	ctx->SetPipe(pipe);
@@ -286,23 +278,27 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
 		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
 	}
-	else if (ERROR_IO_PENDING == GetLastError())
-	{
-		// will complete asynchronously
-
-		etw->Log(L"iisnode initiated sending http request headers to the node.exe process and will complete asynchronously", 
-			WINEVENT_LEVEL_VERBOSE, 
-			&activityId);
-	}
 	else 
 	{
-		// error
+		hr = GetLastError();
+		if (ERROR_IO_PENDING == hr)
+		{
+			// will complete asynchronously
 
-		etw->Log(L"iisnode failed initiate sending http request headers to the node.exe process", 
-			WINEVENT_LEVEL_ERROR, 
-			&activityId);
+			etw->Log(L"iisnode initiated sending http request headers to the node.exe process and will complete asynchronously", 
+				WINEVENT_LEVEL_VERBOSE, 
+				&activityId);
+		}
+		else 
+		{
+			// error
 
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
+			etw->Log(L"iisnode failed to initiate sending http request headers to the node.exe process", 
+				WINEVENT_LEVEL_ERROR, 
+				&activityId);
+
+			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
+		}
 	}
 
 	return;
@@ -424,25 +420,41 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
 		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
 	}
-	else if (ERROR_IO_PENDING == GetLastError())
-	{
-		// will complete asynchronously
-
-		etw->Log(L"iisnode initiated sending http request body chunk to the node.exe process and will complete asynchronously", 
-			WINEVENT_LEVEL_VERBOSE, 
-			&activityId);
-	}
 	else 
 	{
-		// error
-
 		HRESULT hr = GetLastError();
-		
-		etw->Log(L"iisnode failed to initiate sending http request body chunk to the node.exe process", 
-			WINEVENT_LEVEL_ERROR, 
-			&activityId);
 
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+		if (ERROR_IO_PENDING == hr)
+		{
+			// will complete asynchronously
+
+			etw->Log(L"iisnode initiated sending http request body chunk to the node.exe process and will complete asynchronously", 
+				WINEVENT_LEVEL_VERBOSE, 
+				&activityId);
+		}
+		else if (ERROR_NO_DATA == hr)
+		{
+			// Node.exe has closed the named pipe. This means it does not expect any more request data, but it does not mean there is no response.
+			// This may happen even for POST requests if the node.js application does not register event handlers for the 'data' or 'end' request events.
+			// Ignore the write error and attempt to read the response instead (which might have been written by node.exe before the named pipe connection 
+			// was closed). 
+
+			etw->Log(L"iisnode detected the node.exe process closed the named pipe connection", 
+				WINEVENT_LEVEL_VERBOSE, 
+				&activityId);
+
+			CProtocolBridge::StartReadResponse(context);
+		}
+		else
+		{
+			// error
+
+			etw->Log(L"iisnode failed to initiate sending http request body chunk to the node.exe process", 
+				WINEVENT_LEVEL_ERROR, 
+				&activityId);
+
+			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+		}
 	}
 
 	return;
