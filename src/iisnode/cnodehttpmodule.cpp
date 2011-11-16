@@ -92,6 +92,19 @@ Error:
 			"This may be due to the debugee process terminating during startup (e.g. due to an unhandled exception) or "
 			"failing to establish a TCP listener on the debugging port. ");
 	}
+	else if (IISNODE_ERROR_INSPECTOR_NOT_FOUND == hr)
+	{
+		CProtocolBridge::SendSyncResponse(
+			pHttpContext, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The version of iisnode installed on the server does not support remote debugging. "
+			"To use remote debugging, please update your iisnode installation on the server to one available from "
+			"<a href=""http://github.com/tjanczuk/iisnode/downloads"">http://github.com/tjanczuk/iisnode/downloads</a>. "
+			"We apologize for inconvenience.");
+	}
 	else
 	{
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 500, _T("Internal Server Error"), hr);

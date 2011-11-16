@@ -35,6 +35,7 @@ private:
 	CNodeEventProvider* eventProvider;
 	BOOL initialized;
 	DWORD currentDebugPort;
+	HMODULE inspector;
 
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
 	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);	

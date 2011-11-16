@@ -2,10 +2,15 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iisnode", "iisnode.vcxproj", "{D1F7201F-064B-48AB-868C-FED22464841C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D1F7201F-064B-48AB-868C-FED22464841D} = {D1F7201F-064B-48AB-868C-FED22464841D}
+	EndProjectSection
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "iisnode-msi", "..\setup\iisnode-msi\iisnode-msi.wixproj", "{E2C84D6A-20EA-48A8-858E-BDD64D98A94B}"
 EndProject
-Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "iisnode-express-msi", "..\setup\iisnode-express-msi\iisnode-express-msi.wixproj", "{36D6E303-E057-4963-A093-C7AAE0FD92B3}"
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DE}") = "iisnode-express-msi", "..\setup\iisnode-express-msi\iisnode-express-msi.wixproj", "{36D6E303-E057-4963-A093-C7AAE0FD92B3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iisnode-inspector", "iisnode-inspector.vcxproj", "{D1F7201F-064B-48AB-868C-FED22464841D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,6 +42,14 @@ Global
 		{36D6E303-E057-4963-A093-C7AAE0FD92B3}.Release|Win32.ActiveCfg = Release|x86
 		{36D6E303-E057-4963-A093-C7AAE0FD92B3}.Release|Win32.Build.0 = Release|x86
 		{36D6E303-E057-4963-A093-C7AAE0FD92B3}.Release|x64.ActiveCfg = Release|x86
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Debug|Win32.Build.0 = Debug|Win32
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Debug|x64.ActiveCfg = Debug|x64
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Debug|x64.Build.0 = Debug|x64
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Release|Win32.ActiveCfg = Release|Win32
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Release|Win32.Build.0 = Release|Win32
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Release|x64.ActiveCfg = Release|x64
+		{D1F7201F-064B-48AB-868C-FED22464841D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

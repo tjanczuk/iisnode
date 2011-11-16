@@ -44,6 +44,10 @@
           <File Id="fil10F3E910C80F806A860F37AA30660F84" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode.pdb" />
         </Component>
       <?endif?>
+      <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68245A8CA28CCC" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BCCC">
+        <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCC" KeyPath="yes" Source="$(var.sourcedir)\iisnode-inspector.dll" />
+        <Condition>NOT NO_TOXIC_ASSETS</Condition>
+      </Component>
       <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" Guid="*">
         <File Id="fil0F1847FEE89C137D02C1A6B34753D195" KeyPath="yes" Source="$(var.wowsourcedir)\LICENSE.txt" />
       </Component>
@@ -61,6 +65,7 @@
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68235A8CA281C6" />
       <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120B" />
+      <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28CCC" />
     </ComponentGroup>
   </Fragment>
 </Include>

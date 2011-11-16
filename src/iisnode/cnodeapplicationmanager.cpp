@@ -3,7 +3,7 @@
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
 	: server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
 	breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL),
-	currentDebugPort(0)
+	currentDebugPort(0), inspector(NULL)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -351,8 +351,21 @@ HRESULT CNodeApplicationManager::EnsureDebuggerFilesInstalled(PWSTR physicalPath
 
 	// Process all resources of DEBUGGERFILE type (256) defined in resource.rc and save to disk if necessary
 	
-	ErrorIf(NULL == (iisnode = GetModuleHandle("iisnode.dll")), GetLastError());
-	ErrorIf(!EnumResourceNames(iisnode, "DEBUGGERFILE", CNodeApplicationManager::EnsureDebuggerFile, (LONG_PTR)&params), GetLastError());
+	if (NULL == this->inspector)
+	{
+		// try loading iisnode-inspector.dll from the same location where iisnode.dll is located
+
+		char path[MAX_PATH];
+		DWORD size;
+		ErrorIf(NULL == (iisnode = GetModuleHandle("iisnode.dll")), GetLastError());
+		ErrorIf(0 == (size = GetModuleFileName(iisnode, path, MAX_PATH)), GetLastError());
+		ErrorIf(size == MAX_PATH || S_OK != GetLastError(), E_FAIL);
+		ErrorIf((size + 10) >= MAX_PATH, E_FAIL);
+		strcpy(path + size - 4, "-inspector.dll");
+		ErrorIf(NULL == (this->inspector = LoadLibraryEx(path, NULL, LOAD_LIBRARY_AS_DATAFILE)), IISNODE_ERROR_INSPECTOR_NOT_FOUND);
+	}
+
+	ErrorIf(!EnumResourceNames(this->inspector, "DEBUGGERFILE", CNodeApplicationManager::EnsureDebuggerFile, (LONG_PTR)&params), GetLastError());
 	CheckError(params.hr);
 
 	this->GetEventProvider()->Log(
@@ -688,6 +701,7 @@ HRESULT CNodeApplicationManager::EnsureDebugeeReady(IHttpContext* context, DWORD
 {
 #if TRUE // TODO, tjanczuk, figure out timing issues with debugee connectivity; connecting and disconnecting here
 		 // was causing later connect by the debugger to be unsuccessful for some reason
+		 // https://github.com/tjanczuk/iisnode/issues/71
 	Sleep(1000);
 	return S_OK;
 #else

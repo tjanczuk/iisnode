@@ -567,7 +567,7 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
 		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
 	}
-	else if (ERROR_IO_PENDING == GetLastError())
+	else if (ERROR_IO_PENDING == (hr = GetLastError()))
 	{
 		// read will complete asynchronously
 
