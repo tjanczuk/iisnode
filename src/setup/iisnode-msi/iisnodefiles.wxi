@@ -46,7 +46,7 @@
       <?endif?>
       <Component Id="cmpF6505586D2A7DD2F0C68245A8CA28AAA" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BAAA">
         <File Id="fil7FAEA07CDAF0588E758688EFA95F0AAA" KeyPath="yes" Source="$(var.sourcedir)\iisnode-inspector.dll" />
-        <Condition>NOT NO_TOXIC_ASSETS</Condition>
+        <Condition>NOT CORE_ONLY</Condition>
       </Component>
       <Component Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" Guid="D67F8169-9A64-4ABB-8BDE-D331C90B0198">
         <File Id="fil0F1847FEE89C137D02C1A6B34753D194" KeyPath="yes" Source="$(var.sourcedir)\LICENSE.txt" />
