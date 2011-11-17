@@ -27,6 +27,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
 
 <configSchema>
   <sectionSchema name="system.webServer/iisnode">
+    <attribute name="node_env" type="string" expanded="true" defaultValue="%node_env%"/>
     <attribute name="maxPendingRequestsPerApplication" type="uint" allowInfinite="true" defaultValue="1024"/>
     <attribute name="asyncCompletionThreadCount" type="uint" defaultValue="4"/>
     <attribute name="maxProcessCountPerApplication" type="uint" defaultValue="4"/>
@@ -39,6 +40,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="uncFileChangesPollingInterval" type="uint" defaultValue="5000"/>
     <attribute name="gracefulShutdownTimeout" type="uint" defaultValue="60000"/>
     <attribute name="logDirectoryNameSuffix" type="string" expanded="true" defaultValue="logs"/>
+    <attribute name="debuggingEnabled" type="bool" defaultValue="true"/>
     <attribute name="debuggerPathSegment" type="string" expanded="true" defaultValue="debug"/>
     <attribute name="debuggerPortRange" type="string" expanded="true" defaultValue="5058-6058"/>
     <attribute name="logFileFlushInterval" type="uint" defaultValue="5000"/>

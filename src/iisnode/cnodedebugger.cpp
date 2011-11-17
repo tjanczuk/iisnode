@@ -9,15 +9,20 @@ HRESULT CNodeDebugger::GetDebugCommand(IHttpContext* context, CNodeEventProvider
 	PCWSTR scriptTranslated;
 	DWORD debuggerPathSegmentLength;
 
+	*debugCommand = ND_NONE;
+
+	if (!CModuleConfiguration::GetDebuggingEnabled(context))
+	{
+		return S_OK;
+	}
+
 	scriptTranslated = context->GetScriptTranslated(&scriptTranslatedLength);
 	physicalPath = context->GetPhysicalPath(&physicalPathLength);
 	debuggerPathSegmentLength = CModuleConfiguration::GetDebuggerPathSegmentLength(context);
 
 	ErrorIf(0 == physicalPathLength, ERROR_INVALID_PARAMETER);
 	ErrorIf(0 == scriptTranslatedLength, ERROR_INVALID_PARAMETER);	
-	ErrorIf(0 == debuggerPathSegmentLength, ERROR_INVALID_PARAMETER);
-
-	*debugCommand = ND_NONE;
+	ErrorIf(0 == debuggerPathSegmentLength, ERROR_INVALID_PARAMETER);	
 
 	if ((physicalPathLength - scriptTranslatedLength) <= debuggerPathSegmentLength)
 	{

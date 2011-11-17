@@ -6,7 +6,7 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 CModuleConfiguration::CModuleConfiguration()
 	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
-	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0)
+	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL)
 {
 }
 
@@ -28,6 +28,12 @@ CModuleConfiguration::~CModuleConfiguration()
 	{
 		delete [] this->debuggerPathSegment;
 		this->debuggerPathSegment = NULL;
+	}
+
+	if (NULL != this->node_env)
+	{
+		delete this->node_env;
+		this->node_env = NULL;
 	}
 }
 
@@ -154,11 +160,31 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 		entry = NULL;
 	}
 
+	// set NODE_ENV variable based on the iisnode/@node_env configuration setting, if not empty
+
+	LPWSTR node_env = CModuleConfiguration::GetNodeEnv(ctx);
+	if (0 != wcscmp(L"", node_env) && 0 != wcscmp(L"%node_env%", node_env))
+	{
+		ErrorIf((tmpSize - (tmpIndex - tmpStart)) < 10, ERROR_NOT_ENOUGH_MEMORY);
+		sprintf(tmpIndex, "NODE_ENV=");
+		tmpIndex += 9;
+		ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, node_env, wcslen(node_env), NULL, 0, NULL, NULL)), E_FAIL);
+		ErrorIf((propertySize + 1) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, node_env, wcslen(node_env), tmpIndex, propertySize, NULL, NULL), E_FAIL);
+		tmpIndex += propertySize + 1;
+	}
+
+	// add a trailing zero to new variables
+
+	ErrorIf(1 > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+	*tmpIndex = 0;
+	tmpIndex++;
+
 	// concatenate new environment variables with the current environment block
 
 	ErrorIf(NULL == (*env = (LPCH)new char[environmentSize + (tmpIndex - tmpStart)]), ERROR_NOT_ENOUGH_MEMORY);	
-	memcpy(*env, tmpStart, (tmpIndex - tmpStart));
-	memcpy(*env + (tmpIndex - tmpStart), currentEnvironment, environmentSize);
+	memcpy(*env, currentEnvironment, environmentSize);
+	memcpy(*env + environmentSize - 1, tmpStart, (tmpIndex - tmpStart));
 
 	// cleanup
 
@@ -404,6 +430,9 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
 		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
+		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
+		CheckError(GetString(section, L"node_env", &c->node_env));
+		c->isDevelopmentMode = 0 == wcsicmp(L"%node_env%", c->node_env) || 0 == wcsicmp(L"development", c->node_env) || 0 == wcsicmp(L"", c->node_env);
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
 		c->debuggerPathSegmentLength = wcslen(c->debuggerPathSegment);
@@ -539,12 +568,28 @@ DWORD CModuleConfiguration::GetMaxLogFileSizeInKB(IHttpContext* ctx)
 
 BOOL CModuleConfiguration::GetLoggingEnabled(IHttpContext* ctx)
 {
-	GETCONFIG(loggingEnabled)
+	CModuleConfiguration* c;
+	GetConfig(ctx, &c); 
+
+	return c->isDevelopmentMode ? c->loggingEnabled : FALSE;
 }
 
 BOOL CModuleConfiguration::GetAppendToExistingLog(IHttpContext* ctx)
 {
 	GETCONFIG(appendToExistingLog)
+}
+
+BOOL CModuleConfiguration::GetDebuggingEnabled(IHttpContext* ctx)
+{
+	CModuleConfiguration* c;
+	GetConfig(ctx, &c); 
+
+	return c->isDevelopmentMode ? c->debuggingEnabled : FALSE;
+}
+
+LPWSTR CModuleConfiguration::GetNodeEnv(IHttpContext* ctx)
+{
+	GETCONFIG(node_env)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)
