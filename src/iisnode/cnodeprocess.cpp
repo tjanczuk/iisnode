@@ -186,31 +186,25 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	// duplicate stdout and stderr handles to allow flushing without regard for whether the node process exited
 	// closing of the original handles will be taken care of by the newly started process
 
-	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput && NULL != this->startupInfo.hStdOutput)
-	{
-		ErrorIf(0 == DuplicateHandle(
-			GetCurrentProcess(), 
-			this->startupInfo.hStdOutput, 
-			GetCurrentProcess(), 
-			&this->startupInfo.hStdOutput, 
-			0, 
-			TRUE, 
-			DUPLICATE_SAME_ACCESS),
-			GetLastError());
-	}
+	ErrorIf(0 == DuplicateHandle(
+		GetCurrentProcess(), 
+		this->startupInfo.hStdOutput, 
+		GetCurrentProcess(), 
+		&this->startupInfo.hStdOutput, 
+		0, 
+		TRUE, 
+		DUPLICATE_SAME_ACCESS),
+		GetLastError());
 
-	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdError && NULL != this->startupInfo.hStdError)
-	{
-		ErrorIf(0 == DuplicateHandle(
-			GetCurrentProcess(), 
-			this->startupInfo.hStdError, 
-			GetCurrentProcess(), 
-			&this->startupInfo.hStdError, 
-			0, 
-			TRUE, 
-			DUPLICATE_SAME_ACCESS),
-			GetLastError());
-	}
+	ErrorIf(0 == DuplicateHandle(
+		GetCurrentProcess(), 
+		this->startupInfo.hStdError, 
+		GetCurrentProcess(), 
+		&this->startupInfo.hStdError, 
+		0, 
+		TRUE, 
+		DUPLICATE_SAME_ACCESS),
+		GetLastError());
 
 	// join a job object if needed, then resume the process
 
@@ -326,30 +320,33 @@ Error:
 
 void CNodeProcess::FlushStdHandles()
 {
-	const char* truncateMessage = ">>>> iisnode truncated the log file because it exceeded the configured maximum size\n";
-	LARGE_INTEGER fileSize;
-
-	// flush the file
-
-	FlushFileBuffers(this->startupInfo.hStdOutput);
-
-	// truncate the log file back to 0 if the max size is exceeded
-
-	if (!this->truncatePending && GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
+	if (this->loggingEnabled)
 	{
-		if (fileSize.QuadPart > this->maxLogSizeInBytes)
-		{			
-			RtlZeroMemory(&this->overlapped, sizeof this->overlapped); // this also sets the Offset and OffsetHigh to 0		
-			this->overlapped.hEvent = this;
-			this->truncatePending = TRUE; // this will be reset to FALSE in the completion routine of WriteFileEx below
-			if (!WriteFileEx(
-				this->startupInfo.hStdOutput, 
-				(void*)truncateMessage, 
-				strlen(truncateMessage), 
-				&this->overlapped, 
-				CNodeProcess::TruncateLogFileCompleted)) 
-			{
-				this->truncatePending = FALSE;
+		const char* truncateMessage = ">>>> iisnode truncated the log file because it exceeded the configured maximum size\n";
+		LARGE_INTEGER fileSize;
+
+		// flush the file
+
+		FlushFileBuffers(this->startupInfo.hStdOutput);
+
+		// truncate the log file back to 0 if the max size is exceeded
+
+		if (!this->truncatePending && GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
+		{
+			if (fileSize.QuadPart > this->maxLogSizeInBytes)
+			{			
+				RtlZeroMemory(&this->overlapped, sizeof this->overlapped); // this also sets the Offset and OffsetHigh to 0		
+				this->overlapped.hEvent = this;
+				this->truncatePending = TRUE; // this will be reset to FALSE in the completion routine of WriteFileEx below
+				if (!WriteFileEx(
+					this->startupInfo.hStdOutput, 
+					(void*)truncateMessage, 
+					strlen(truncateMessage), 
+					&this->overlapped, 
+					CNodeProcess::TruncateLogFileCompleted)) 
+				{
+					this->truncatePending = FALSE;
+				}
 			}
 		}
 	}
@@ -464,48 +461,49 @@ void CNodeProcess::SignalWhenDrained(HANDLE handle)
 HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 {
 	this->startupInfo.hStdError = this->startupInfo.hStdInput = this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
-	if (!this->loggingEnabled)
-	{
-		this->startupInfo.dwFlags = 0;
-		return S_OK;
-	}
-	else
-	{
-		this->startupInfo.dwFlags = STARTF_USESTDHANDLES;
-	}
+	this->startupInfo.dwFlags = STARTF_USESTDHANDLES;
 
 	HRESULT hr;
-	PCWSTR scriptName;
-	LPWSTR logComponentName = CModuleConfiguration::GetLogDirectoryNameSuffix(context);
 	WCHAR* logName = NULL;
 	SECURITY_ATTRIBUTES security;
 	DWORD creationDisposition;
 
-	CheckNull(logComponentName);	
-
-	// allocate enough memory to store log file name of the form <scriptName>.<logComponentName>\<ordinalProcessNumber>.txt
-
-	scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
-	ErrorIf(NULL == (logName = new WCHAR[wcslen(scriptName) + 1 + wcslen(logComponentName) + 10 + 4 + 1]), ERROR_NOT_ENOUGH_MEMORY); 
-
-	// ensure a directory for storing the log file exists; the directory name is of the form <scriptName>.<logComponentName>
-
-	swprintf(logName, L"%s.%s", scriptName, logComponentName);
-	if (!CreateDirectoryW(logName, NULL))
+	if (this->loggingEnabled)
 	{
-		hr = GetLastError();
-		if (ERROR_ALREADY_EXISTS != hr)
+		PCWSTR scriptName;
+		LPWSTR logComponentName = CModuleConfiguration::GetLogDirectoryNameSuffix(context);
+		CheckNull(logComponentName);	
+
+		// allocate enough memory to store log file name of the form <scriptName>.<logComponentName>\<ordinalProcessNumber>.txt
+
+		scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
+		ErrorIf(NULL == (logName = new WCHAR[wcslen(scriptName) + 1 + wcslen(logComponentName) + 10 + 4 + 1]), ERROR_NOT_ENOUGH_MEMORY); 
+
+		// ensure a directory for storing the log file exists; the directory name is of the form <scriptName>.<logComponentName>
+
+		swprintf(logName, L"%s.%s", scriptName, logComponentName);
+		if (!CreateDirectoryW(logName, NULL))
 		{
-			this->GetProcessManager()->GetEventProvider()->Log(
-				L"iisnode failed to create directory to store log files for the node.exe process", WINEVENT_LEVEL_ERROR);
+			hr = GetLastError();
+			if (ERROR_ALREADY_EXISTS != hr)
+			{
+				this->GetProcessManager()->GetEventProvider()->Log(
+					L"iisnode failed to create directory to store log files for the node.exe process", WINEVENT_LEVEL_ERROR);
 
-			CheckError(hr);
+				CheckError(hr);
+			}
 		}
+
+		// create log file name
+
+		swprintf(logName, L"%s.%s\\%d.txt", scriptName, logComponentName, this->ordinal);		
+
+		creationDisposition = CModuleConfiguration::GetAppendToExistingLog(context) ? OPEN_ALWAYS : CREATE_ALWAYS;
 	}
-
-	// create log file name
-
-	swprintf(logName, L"%s.%s\\%d.txt", scriptName, logComponentName, this->ordinal);
+	else
+	{
+		creationDisposition = OPEN_EXISTING;
+	}
 
 	// stdout == stderr
 
@@ -513,9 +511,8 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	security.bInheritHandle = TRUE;
 	security.nLength = sizeof SECURITY_ATTRIBUTES;
 	
-	creationDisposition = CModuleConfiguration::GetAppendToExistingLog(context) ? OPEN_ALWAYS : CREATE_ALWAYS;
 	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
-		logName,
+		this->loggingEnabled ? logName : L"NUL",
 		GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		&security,
@@ -534,8 +531,11 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 		DUPLICATE_SAME_ACCESS),
 		GetLastError());
 
-	delete[] logName;
-	logName = NULL;
+	if (NULL != logName)
+	{
+		delete [] logName;
+		logName = NULL;
+	}
 
 	return S_OK;
 Error:
