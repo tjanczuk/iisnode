@@ -30,7 +30,6 @@ private:
 	DWORD debugPortStart;
 	DWORD debugPortEnd;
 	LPWSTR node_env;
-	BOOL isDevelopmentMode;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;

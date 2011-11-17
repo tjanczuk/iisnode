@@ -87,6 +87,9 @@
     <Filter Include="Tests\functional\www\110_log_size_quota">
       <UniqueIdentifier>{babb03c5-c688-4393-beaa-65f34782c77c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\111_node_env">
+      <UniqueIdentifier>{b806867c-572b-4438-a6d4-7d24825fc492}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -400,6 +403,15 @@
       <Filter>Tests\functional\www\110_log_size_quota</Filter>
     </None>
     <None Include="..\..\test\functional\tests\110_log_size_quota.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\111_node_env\hello.js">
+      <Filter>Tests\functional\www\111_node_env</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\111_node_env\web.config">
+      <Filter>Tests\functional\www\111_node_env</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\111_node_env.js">
       <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>

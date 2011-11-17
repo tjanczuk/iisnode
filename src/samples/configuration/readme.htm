@@ -46,11 +46,9 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       the iisnode section configures the behavior of the node.js IIS module 
       setting values below are defaults
     
-    * node_env - determines the environment (production, development, staging, ...) in which iisnode 
-      and child node processes run; if nonempty, is propagated to the child node processes as their NODE_ENV
-      environment variable; if set to 'development' or not set at all, enables the debuggingEnabled and
-      loggingEnabled settings to control whether debugging and logging is activated; all other values 
-      disable debugging and logging; the default is the value of the IIS worker process'es NODE_ENV
+    * node_env - determines the environment (production, development, staging, ...) in which 
+      child node processes run; if nonempty, is propagated to the child node processes as their NODE_ENV
+      environment variable; the default is the value of the IIS worker process'es NODE_ENV
       environment variable
 
     * nodeProcessCommandLine - command line starting the node executable; in shared
@@ -88,8 +86,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       process is terminated; during this time, all new requests are already dispatched to a new node process based on the fresh version 
       of the application
     
-    * loggingEnabled - controls whether stdout and stderr streams from node processes are captured and made available over HTTP; this
-      setting is subordinate to node_env setting
+    * loggingEnabled - controls whether stdout and stderr streams from node processes are captured and made available over HTTP
     
     * logDirectoryNameSuffix - suffix of the directory name that will store files with stdout and stderr captures; directly name is created
       by appending this suffix to the file name of the node.js application; individual log files are stored in that directory, one per node 
@@ -98,7 +95,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       SECURITY NOTE: if log files contain sensitive information, this setting should be modified to contain enough entropy to be considered
       cryptographically secure; in most situations, a GUID is sufficient
       
-    * debuggingEnabled - controls whether the built-in debugger is available; this setting is subordinate to node_env setting
+    * debuggingEnabled - controls whether the built-in debugger is available
       
     * debuggerPortRange - range of TCP ports that can be used for communication between the node-inspector debugger and the debugee; iisnode
       will round robin through this port range for subsequent debugging sessions and pick the next available (free) port to use from the range

@@ -432,7 +432,6 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
 		CheckError(GetString(section, L"node_env", &c->node_env));
-		c->isDevelopmentMode = 0 == wcsicmp(L"%node_env%", c->node_env) || 0 == wcsicmp(L"development", c->node_env) || 0 == wcsicmp(L"", c->node_env);
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
 		c->debuggerPathSegmentLength = wcslen(c->debuggerPathSegment);
@@ -568,10 +567,7 @@ DWORD CModuleConfiguration::GetMaxLogFileSizeInKB(IHttpContext* ctx)
 
 BOOL CModuleConfiguration::GetLoggingEnabled(IHttpContext* ctx)
 {
-	CModuleConfiguration* c;
-	GetConfig(ctx, &c); 
-
-	return c->isDevelopmentMode ? c->loggingEnabled : FALSE;
+	GETCONFIG(loggingEnabled);
 }
 
 BOOL CModuleConfiguration::GetAppendToExistingLog(IHttpContext* ctx)
@@ -581,10 +577,7 @@ BOOL CModuleConfiguration::GetAppendToExistingLog(IHttpContext* ctx)
 
 BOOL CModuleConfiguration::GetDebuggingEnabled(IHttpContext* ctx)
 {
-	CModuleConfiguration* c;
-	GetConfig(ctx, &c); 
-
-	return c->isDevelopmentMode ? c->debuggingEnabled : FALSE;
+	GETCONFIG(debuggingEnabled)
 }
 
 LPWSTR CModuleConfiguration::GetNodeEnv(IHttpContext* ctx)
