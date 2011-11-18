@@ -47,5 +47,6 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="maxLogFileSizeInKB" type="uint" defaultValue="128"/>
     <attribute name="loggingEnabled" type="bool" defaultValue="true"/>
     <attribute name="appendToExistingLog" type="bool" defaultValue="false"/>
+    <attribute name="devErrorsEnabled" type="bool" defaultValue="true"/>
   </sectionSchema>
 </configSchema>

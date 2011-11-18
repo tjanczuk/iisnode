@@ -170,7 +170,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 		flags |= CREATE_BREAKAWAY_FROM_JOB;
 	}
 	
-	ErrorIf(FALSE == CreateProcess(
+	if(!CreateProcess(
 			NULL,
 			fullCommandLine,
 			NULL,
@@ -180,8 +180,16 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 			newEnvironment,
 			currentDirectoryA,
 			&this->startupInfo,
-			&processInformation
-		), GetLastError());
+			&processInformation)) 
+	{
+		if (ERROR_FILE_NOT_FOUND == (hr = GetLastError()))
+		{
+			hr = IISNODE_ERROR_UNABLE_TO_START_NODE_EXE;
+		}
+
+		CheckError(hr);
+	}
+		
 
 	// duplicate stdout and stderr handles to allow flushing without regard for whether the node process exited
 	// closing of the original handles will be taken care of by the newly started process
@@ -490,6 +498,7 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 				this->GetProcessManager()->GetEventProvider()->Log(
 					L"iisnode failed to create directory to store log files for the node.exe process", WINEVENT_LEVEL_ERROR);
 
+				hr = IISNODE_ERROR_UNABLE_TO_CREATE_LOG_FILE;
 				CheckError(hr);
 			}
 		}
@@ -511,15 +520,18 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	security.bInheritHandle = TRUE;
 	security.nLength = sizeof SECURITY_ATTRIBUTES;
 	
-	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
+	if (INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
 		this->loggingEnabled ? logName : L"NUL",
 		GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		&security,
 		creationDisposition,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
-		NULL)), 
-		GetLastError());
+		NULL)))
+	{
+		hr = this->loggingEnabled ? IISNODE_ERROR_UNABLE_TO_CREATE_LOG_FILE : GetLastError();
+		CheckError(hr);
+	}
 
 	ErrorIf(0 == DuplicateHandle(
 		GetCurrentProcess(),

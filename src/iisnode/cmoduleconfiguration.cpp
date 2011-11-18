@@ -429,6 +429,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetDWORD(section, L"maxLogFileSizeInKB", &c->maxLogFileSizeInKB));
 		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
 		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
+		CheckError(GetBOOL(section, L"devErrorsEnabled", &c->devErrorsEnabled));
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
 		CheckError(GetString(section, L"node_env", &c->node_env));
@@ -583,6 +584,11 @@ BOOL CModuleConfiguration::GetDebuggingEnabled(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetNodeEnv(IHttpContext* ctx)
 {
 	GETCONFIG(node_env)
+}
+
+BOOL CModuleConfiguration::GetDevErrorsEnabled(IHttpContext* ctx)
+{
+	GETCONFIG(devErrorsEnabled)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)

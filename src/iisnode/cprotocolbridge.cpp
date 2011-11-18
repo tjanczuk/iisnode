@@ -10,10 +10,158 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 	return async->SetTimer(context->GetAsyncContext(), &delay);
 }
 
+BOOL CProtocolBridge::SendIisnodeError(IHttpContext* httpCtx, HRESULT hr)
+{
+	if (!CModuleConfiguration::GetDevErrorsEnabled(httpCtx))
+	{
+		return FALSE;
+	}
+
+	switch (hr) {
+
+	default: 
+		return FALSE;
+
+	case IISNODE_ERROR_UNRECOGNIZED_DEBUG_COMMAND:
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"Unrecognized debugging command. Supported commands are ?debug (default), ?brk, and ?kill.");
+		break;
+
+	case IISNODE_ERROR_UNABLE_TO_FIND_DEBUGGING_PORT:
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The debugger was unable to acquire a TCP port to establish communication with the debugee. "
+			"This may be due to lack of free TCP ports in the range specified in the <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
+			"system.webServer/iisnode/@debuggerPortRange</a> configuration "
+			"section, or due to lack of permissions to create TCP listeners by the identity of the IIS worker process.");
+		break;
+
+	case IISNODE_ERROR_UNABLE_TO_CONNECT_TO_DEBUGEE:
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The debugger was unable to connect to the the debugee. "
+			"This may be due to the debugee process terminating during startup (e.g. due to an unhandled exception) or "
+			"failing to establish a TCP listener on the debugging port. ");
+		break;
+
+	case IISNODE_ERROR_INSPECTOR_NOT_FOUND:
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The version of iisnode installed on the server does not support remote debugging. "
+			"To use remote debugging, please update your iisnode installation on the server to one available from "
+			"<a href=""http://github.com/tjanczuk/iisnode/downloads"">http://github.com/tjanczuk/iisnode/downloads</a>. "
+			"We apologize for inconvenience.");
+		break;
+
+	case IISNODE_ERROR_UNABLE_TO_CREATE_LOG_FILE:
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The iisnode module is unable to create a log file to capture stdout and stderr output from node.exe. "
+			"Please check that the identity of the IIS application pool running the node.js application has read and write access "
+			"permissions to the directory on the server where the node.js application is located. Alternatively you can disable logging "
+			"by setting <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
+			"system.webServer/iisnode/@loggingEnabled</a> element of web.config to 'false'.");
+		break;
+
+	case IISNODE_ERROR_UNABLE_TO_CREATE_DEBUGGER_FILES:
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			"The iisnode module is unable to deploy supporting files necessary to initialize the debugger. "
+			"Please check that the identity of the IIS application pool running the node.js application has read and write access "
+			"permissions to the directory on the server where the node.js application is located.");
+		break;
+
+	case IISNODE_ERROR_UNABLE_TO_START_NODE_EXE:
+		LPCTSTR commandLine = CModuleConfiguration::GetNodeProcessCommandLine(httpCtx);
+		char* errorMessage;
+		if (NULL == (errorMessage = (char*)httpCtx->AllocateRequestMemory(strlen(commandLine) + 512)))
+		{
+			errorMessage = 
+				"The iisnode module is unable to start the node.exe process. Make sure the node.exe executable is available "
+				"at the location specified in the <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
+				"system.webServer/iisnode/@nodeProcessCommandLine</a> element of web.config. "
+				"By default node.exe is expected to be installed in %ProgramFiles%\\nodejs folder on x86 systems and "
+				"%ProgramFiles(x86)%\\nodejs folder on x64 systems.";
+		}
+		else
+		{
+			sprintf(errorMessage, 
+				"The iisnode module is unable to start the node.exe process. Make sure the node.exe executable is available "
+				"at the location specified in the <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
+				"system.webServer/iisnode/@nodeProcessCommandLine</a> element of web.config. "
+				"The command line iisnode attempted to run was:<br><br>%s", commandLine);
+		}
+
+		CProtocolBridge::SendSyncResponse(
+			httpCtx, 
+			200, 
+			"OK", 
+			hr, 
+			TRUE, 
+			errorMessage);
+		break;
+
+	};
+
+	return TRUE;
+}
+
+BOOL CProtocolBridge::SendIisnodeError(CNodeHttpStoredContext* ctx, HRESULT hr)
+{
+	if (CProtocolBridge::SendIisnodeError(ctx->GetHttpContext(), hr))
+	{
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode request processing failed for reasons recognized by iisnode", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
+		if (INVALID_HANDLE_VALUE != ctx->GetPipe())
+		{
+			CloseHandle(ctx->GetPipe());
+			ctx->SetPipe(INVALID_HANDLE_VALUE);
+		}
+
+		CProtocolBridge::FinalizeResponseCore(
+			ctx, 
+			RQ_NOTIFICATION_FINISH_REQUEST, 
+			hr, 
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider(),
+			L"iisnode posts completion from SendIisnodeError", 
+			WINEVENT_LEVEL_VERBOSE);
+
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache)
 {
 	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode request processing failed", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
+		L"iisnode request processing failed for reasons unrecognized by iisnode", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
 	if (INVALID_HANDLE_VALUE != context->GetPipe())
 	{

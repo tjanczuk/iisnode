@@ -39,6 +39,8 @@ private:
 public:
 
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
+	static BOOL SendIisnodeError(IHttpContext* httpCtx, HRESULT hr);
+	static BOOL SendIisnodeError(CNodeHttpStoredContext* ctx, HRESULT hr);
 	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
 	static HRESULT SendSyncResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache, PCSTR htmlBody);
 	static void SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);

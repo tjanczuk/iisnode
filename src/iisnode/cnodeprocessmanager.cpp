@@ -163,7 +163,10 @@ Error:
 		this->GetEventProvider()->Log(
 			L"iisnode failed to initiate processing of a request dequeued from the pending request queue", WINEVENT_LEVEL_ERROR);
 
-		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
+		if (!CProtocolBridge::SendIisnodeError(request, hr))
+		{
+			CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
+		}
 	}
 
 	this->DecRef(); // incremented in CNodeProcessManager::PostDispatchOneRequest

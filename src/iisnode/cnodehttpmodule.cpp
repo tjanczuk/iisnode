@@ -58,54 +58,7 @@ Error:
 		}
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 501, _T("Not Implemented"), hr);
 	}
-	else if (IISNODE_ERROR_UNRECOGNIZED_DEBUG_COMMAND == hr)
-	{
-		CProtocolBridge::SendSyncResponse(
-			pHttpContext, 
-			200, 
-			"OK", 
-			hr, 
-			TRUE, 
-			"Unrecognized debugging command. Supported commands are ?debug (default), ?brk, and ?kill.");
-	}
-	else if (IISNODE_ERROR_UNABLE_TO_FIND_DEBUGGING_PORT == hr)
-	{
-		CProtocolBridge::SendSyncResponse(
-			pHttpContext, 
-			200, 
-			"OK", 
-			hr, 
-			TRUE, 
-			"The debugger was unable to acquire a TCP port to establish communication with the debugee. "
-			"This may be due to lack of free TCP ports in the range specified in the system.webServer/iisnode/@debuggerPortRange configuration "
-			"section, or due to lack of permissions to create TCP listeners by the identity of the IIS worker process.");
-	}
-	else if (IISNODE_ERROR_UNABLE_TO_CONNECT_TO_DEBUGEE == hr)
-	{
-		CProtocolBridge::SendSyncResponse(
-			pHttpContext, 
-			200, 
-			"OK", 
-			hr, 
-			TRUE, 
-			"The debugger was unable to connect to the the debugee. "
-			"This may be due to the debugee process terminating during startup (e.g. due to an unhandled exception) or "
-			"failing to establish a TCP listener on the debugging port. ");
-	}
-	else if (IISNODE_ERROR_INSPECTOR_NOT_FOUND == hr)
-	{
-		CProtocolBridge::SendSyncResponse(
-			pHttpContext, 
-			200, 
-			"OK", 
-			hr, 
-			TRUE, 
-			"The version of iisnode installed on the server does not support remote debugging. "
-			"To use remote debugging, please update your iisnode installation on the server to one available from "
-			"<a href=""http://github.com/tjanczuk/iisnode/downloads"">http://github.com/tjanczuk/iisnode/downloads</a>. "
-			"We apologize for inconvenience.");
-	}
-	else
+	else if (!CProtocolBridge::SendIisnodeError(pHttpContext, hr))
 	{
 		CProtocolBridge::SendEmptyResponse(pHttpContext, 500, _T("Internal Server Error"), hr);
 	}

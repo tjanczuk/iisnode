@@ -377,7 +377,7 @@ Error:
 	this->GetEventProvider()->Log(
 		L"iisnode failed to unpack debugger files", WINEVENT_LEVEL_ERROR);
 
-	return hr;
+	return IISNODE_ERROR_UNABLE_TO_CREATE_DEBUGGER_FILES;
 }
 
 BOOL CALLBACK CNodeApplicationManager::EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam)

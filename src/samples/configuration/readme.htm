@@ -110,6 +110,10 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       number starts; appending may be useful to diagnose unorderly node process terminations or recycling
       
     * logFileFlushInterval - interval in milliseconds for flushing logs to the log files
+
+    * devErrorsEnabled - controls how much information is sent back in the HTTP response to the browser when an error occurrs in iisnode; 
+      when true, error conditions in iisnode result in HTTP 200 response with the body containing error details; when false,
+      iisnode will return generic HTTP 5xx responses
       
     --&gt;
     
@@ -132,6 +136,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       debuggerPathSegment="debug"
       maxLogFileSizeInKB="128"
       appendToExistingLog="false"
+      devErrorsEnabled="true"
      /&gt;
 
     &lt;!--     

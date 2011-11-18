@@ -90,6 +90,15 @@
     <Filter Include="Tests\functional\www\111_node_env">
       <UniqueIdentifier>{b806867c-572b-4438-a6d4-7d24825fc492}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\112_dev_errors">
+      <UniqueIdentifier>{2d285139-9862-4a82-be6a-768c87f19c20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\112_dev_errors\on">
+      <UniqueIdentifier>{5df8227d-9e97-4693-a70e-82e98c6bd301}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\112_dev_errors\off">
+      <UniqueIdentifier>{4242898e-a656-4ae5-bc35-eb202a42a304}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -413,6 +422,21 @@
     </None>
     <None Include="..\..\test\functional\tests\111_node_env.js">
       <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\112_dev_errors.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\112_dev_errors\off\hello.js">
+      <Filter>Tests\functional\www\112_dev_errors\off</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\112_dev_errors\off\web.config">
+      <Filter>Tests\functional\www\112_dev_errors\off</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\112_dev_errors\on\hello.js">
+      <Filter>Tests\functional\www\112_dev_errors\on</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\112_dev_errors\on\web.config">
+      <Filter>Tests\functional\www\112_dev_errors\on</Filter>
     </None>
   </ItemGroup>
 </Project>
