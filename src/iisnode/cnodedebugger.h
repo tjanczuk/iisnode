@@ -17,7 +17,7 @@ class CNodeDebugger
 public:
 
 	static HRESULT GetDebugCommand(IHttpContext* context, CNodeEventProvider* log, NodeDebugCommand* debugCommand);
-	static HRESULT DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOOL* requireChildContext);
+	static HRESULT DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOOL* requireChildContext, BOOL* mainDebuggerPage);
 
 };
 

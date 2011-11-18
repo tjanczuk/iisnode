@@ -82,13 +82,14 @@ Error:
 	return hr;
 }
 
-HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOOL* requireChildContext)
+HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOOL* requireChildContext, BOOL* mainDebuggerPage)
 {
 	HRESULT hr = S_OK;
 	PCWSTR actualPath;
 
 	CheckNull(ctx);
 	CheckNull(requireChildContext);
+	CheckNull(mainDebuggerPage);
 
 	IHttpContext* context = ctx->GetHttpContext();
 	IHttpRequest* request = context->GetRequest();
@@ -136,6 +137,10 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 	}
 	ErrorIf(-1 == indexFound, ERROR_INVALID_PARAMETER);
 
+	// determine if the request is for the main debugger page
+
+	*mainDebuggerPage = rawRequest->CookedUrl.AbsPathLength == sizeof WCHAR * (indexFound + urlFragmentLength + 1);
+
 	// construct the re-written URL
 
 	if (10 < ((rawRequest->CookedUrl.AbsPathLength >> 1) - indexFound - urlFragmentLength) 
@@ -154,8 +159,21 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 		newPath[indexFound + wcslen(appName) + 1] = L'.'; 
 		// inject the '/node_modules/node-inspector/front-end' component
 		wcscpy(newPath + indexFound + urlFragmentLength, L"/node_modules/node-inspector/front-end/");
-		// append the rest of the relative path (including query string if present)
-		wcscpy(newPath + indexFound + urlFragmentLength + 39, rawRequest->CookedUrl.pAbsPath + indexFound + urlFragmentLength + 1);
+		if (*mainDebuggerPage)
+		{
+			// requests for the main debugger page must explicitly specity the HTML file name without
+			// relying on IIS'es default document handler since we must be able to set 
+			// Cache-Control: no-cache header on that response and the default document handler 
+			// prevents it
+
+			wcscpy(newPath + indexFound + urlFragmentLength + 39, L"index.html");
+		}
+		else
+		{
+			// append the rest of the relative path (including query string if present)
+			wcscpy(newPath + indexFound + urlFragmentLength + 39, rawRequest->CookedUrl.pAbsPath + indexFound + urlFragmentLength + 1);
+		}
+
 		*requireChildContext = TRUE;
 	}
 

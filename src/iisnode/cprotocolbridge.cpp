@@ -71,6 +71,7 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
 	BOOL requireChildContext = FALSE;	
+	BOOL mainDebuggerPage = FALSE;
 	IHttpContext* child = NULL;
 	BOOL completionExpected;
 
@@ -82,7 +83,7 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 		// by a static file handler. Debugging protocol requests will continue executing in the current context and be processed 
 		// by the node-inspector application.
 
-		CheckError(CNodeDebugger::DispatchDebuggingRequest(context, &requireChildContext));
+		CheckError(CNodeDebugger::DispatchDebuggingRequest(context, &requireChildContext, &mainDebuggerPage));
 	}
 	else
 	{
@@ -108,31 +109,21 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 
 	if (requireChildContext)
 	{
-		DWORD executeFlags = 0;
-
-		// Prevent client caching of responses to requests for debugger entry points e.g. app.js/debug or app.js/debug?brk
-		// This is to allow us to run initialization logic on the server if necessary every time user refreshes the page
-		// Static content subordinate to the main debugger page is eligible for client side caching
-		HTTP_REQUEST* raw = context->GetHttpContext()->GetRequest()->GetRawHttpRequest();
-		DWORD physicalPathLength;
-		PCWSTR physicalPath = context->GetHttpContext()->GetPhysicalPath(&physicalPathLength);
-		DWORD compareLength = CModuleConfiguration::GetDebuggerPathSegmentLength(context->GetHttpContext()) + 2;
-		if (raw->CookedUrl.QueryStringLength > 0
-			|| (physicalPathLength > compareLength 
-			    && 0 == wcsnicmp(physicalPath + physicalPathLength - compareLength + 1, CModuleConfiguration::GetDebuggerPathSegment(context->GetHttpContext()), compareLength - 2)
-				&& *(physicalPath + physicalPathLength - compareLength) == L'\\'
-				&& *(physicalPath + physicalPathLength - 1) == L'\\'))
+		CheckError(context->GetHttpContext()->CloneContext(CLONE_FLAG_BASICS | CLONE_FLAG_ENTITY | CLONE_FLAG_HEADERS, &child));
+		if (mainDebuggerPage)
 		{
-			context->GetHttpContext()->GetResponse()->SetHeader("Cache-Control", "no-cache", 8, TRUE);
-			executeFlags = EXECUTE_FLAG_NO_HEADERS;
+			// Prevent client caching of responses to requests for debugger entry points e.g. app.js/debug or app.js/debug?brk
+			// This is to allow us to run initialization logic on the server if necessary every time user refreshes the page
+			// Static content subordinate to the main debugger page is eligible for client side caching
+
+			child->GetResponse()->SetHeader("Cache-Control", "no-cache", 8, TRUE);
 		}
 
-		CheckError(context->GetHttpContext()->CloneContext(CLONE_FLAG_BASICS | CLONE_FLAG_ENTITY | CLONE_FLAG_HEADERS, &child));
 		CheckError(child->GetRequest()->SetUrl(context->GetTargetUrl(), context->GetTargetUrlLength(), FALSE));
 		context->SetChildContext(child);
 		context->SetNextProcessor(CProtocolBridge::ChildContextCompleted);
 		
-		CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, executeFlags, NULL, &completionExpected));
+		CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, 0, NULL, &completionExpected));
 		if (!completionExpected)
 		{
 			CProtocolBridge::ChildContextCompleted(S_OK, 0, context->GetOverlapped());
