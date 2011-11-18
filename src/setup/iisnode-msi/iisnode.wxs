@@ -51,15 +51,23 @@
       <?endif?>
     </Property>
 
+    <Property Id="VCREDIST2010SP1INSTALLED">
+      <?if $(var.isWin64) = "yes"?>
+      <RegistrySearch Id="VCRedist2010SP1Search64" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{1D8E6291-B0D5-35EC-8441-6616F567A0F7}" Name="InstallDate" Type="raw" />
+      <?else?>
+      <RegistrySearch Id="VCRedist2010SP1Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{F0C3E5D1-1ADE-321E-8167-68EF0DE699A5}" Name="InstallDate" Type="raw" />
+      <?endif?>
+    </Property>
+    
     <PropertyRef Id="IISMAJORVERSION" />
 
     <?if $(var.isWin64) = "yes"?>
     <Condition Message="Microsoft Visual C++ 2010 Redistributable Package (x64) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[INstalled OR VCREDIST2010INSTALLED]]>
+      <![CDATA[INstalled OR VCREDIST2010INSTALLED OR VCREDIST2010SP1INSTALLED]]>
     </Condition>
     <?else?>
     <Condition Message="Microsoft Visual C++ 2010 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[INstalled OR VCREDIST2010INSTALLED]]>
+      <![CDATA[INstalled OR VCREDIST2010INSTALLED OR VCREDIST2010SP1INSTALLED]]>
     </Condition>
     <?endif?>
 
