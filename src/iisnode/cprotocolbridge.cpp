@@ -388,6 +388,7 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
 	DWORD length;
+	IHttpRequest *request;
 
 	// capture ETW provider since after a successful call to WriteFile the context may be asynchronously deleted
 
@@ -400,7 +401,18 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	// to close it after sending the response allows the module to avoid parsing chunked responses
 	// to detect end of response
 
-	CheckError(context->GetHttpContext()->GetRequest()->SetHeader("Connection", "close", 5, TRUE));
+	request = context->GetHttpContext()->GetRequest();
+	CheckError(request->SetHeader("Connection", "close", 5, TRUE));
+
+	// Expect: 100-continue has been processed by IIS - do not propagate it up to node.js since node will
+	// attempt to process it again
+
+	USHORT expectLength;
+	PCSTR expect = request->GetHeader(HttpHeaderExpect, &expectLength);
+	if (NULL != expect && 0 == strnicmp(expect, "100-continue", expectLength))
+	{
+		CheckError(request->DeleteHeader(HttpHeaderExpect));
+	}
 
 	CheckError(CHttpProtocol::SerializeRequestHeaders(context, context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
