@@ -99,6 +99,15 @@
     <Filter Include="Tests\functional\www\112_dev_errors\off">
       <UniqueIdentifier>{4242898e-a656-4ae5-bc35-eb202a42a304}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\performance">
+      <UniqueIdentifier>{7409b3df-834a-45c3-a74b-79719f9e60cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\performance\www">
+      <UniqueIdentifier>{0fe4a6c4-1e40-4914-ab19-ee48a4084e5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\performance\www\default">
+      <UniqueIdentifier>{6b173a34-4fbb-49ac-9e03-33cde5a6e50f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -437,6 +446,27 @@
     </None>
     <None Include="..\..\test\functional\www\112_dev_errors\on\web.config">
       <Filter>Tests\functional\www\112_dev_errors\on</Filter>
+    </None>
+    <None Include="..\..\test\performance\server.bat">
+      <Filter>Tests\performance</Filter>
+    </None>
+    <None Include="..\..\test\performance\client.bat">
+      <Filter>Tests\performance</Filter>
+    </None>
+    <None Include="..\..\test\performance\readme.txt">
+      <Filter>Tests\performance</Filter>
+    </None>
+    <None Include="..\..\test\performance\www\default\server.js">
+      <Filter>Tests\performance\www\default</Filter>
+    </None>
+    <None Include="..\..\test\performance\www\default\wcat.ubr">
+      <Filter>Tests\performance\www\default</Filter>
+    </None>
+    <None Include="..\..\test\performance\www\default\web.config">
+      <Filter>Tests\performance\www\default</Filter>
+    </None>
+    <None Include="..\..\test\performance\localRun.bat">
+      <Filter>Tests\performance</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -270,6 +270,13 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
     <None Include="..\..\test\functional\www\112_dev_errors\off\web.config" />
     <None Include="..\..\test\functional\www\112_dev_errors\on\hello.js" />
     <None Include="..\..\test\functional\www\112_dev_errors\on\web.config" />
+    <None Include="..\..\test\performance\client.bat" />
+    <None Include="..\..\test\performance\localRun.bat" />
+    <None Include="..\..\test\performance\readme.txt" />
+    <None Include="..\..\test\performance\server.bat" />
+    <None Include="..\..\test\performance\www\default\server.js" />
+    <None Include="..\..\test\performance\www\default\wcat.ubr" />
+    <None Include="..\..\test\performance\www\default\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
     <None Include="..\config\iisnode_schema_x64.xml" />
     <None Include="..\samples\configuration\hello.js" />
