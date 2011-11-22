@@ -69,7 +69,7 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 	VARIANT vKeyPropertyName;
 	VARIANT vValuePropertyName;
 	DWORD count;
-	BSTR propertyValue;
+	BSTR propertyValue = NULL;
 	int propertySize;
 
 	CheckNull(env);
@@ -133,22 +133,40 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 		
 		CheckError(properties->get_Item(vKeyPropertyName, &prop));
 		CheckError(prop->get_StringValue(&propertyValue));
-		ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), NULL, 0, NULL, NULL)), E_FAIL);
-		ErrorIf((propertySize + 2) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), tmpIndex, propertySize, NULL, NULL), E_FAIL);
-		tmpIndex[propertySize] = '=';
-		tmpIndex += propertySize + 1;
-		SysFreeString(propertyValue);
-		propertyValue = NULL;
-		prop->Release();
-		prop = NULL;
+		if (L'\0' != *propertyValue) 
+		{
+			// the name of the setting is non-empty
 
-		CheckError(properties->get_Item(vValuePropertyName, &prop));
-		CheckError(prop->get_StringValue(&propertyValue));
-		ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), NULL, 0, NULL, NULL)), E_FAIL);
-		ErrorIf((propertySize + 1) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), tmpIndex, propertySize, NULL, NULL), E_FAIL);
-		tmpIndex += propertySize + 1;
+			ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), NULL, 0, NULL, NULL)), E_FAIL);
+			ErrorIf((propertySize + 2) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+			ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), tmpIndex, propertySize, NULL, NULL), E_FAIL);
+			tmpIndex[propertySize] = '=';
+			tmpIndex += propertySize + 1;
+			SysFreeString(propertyValue);
+			propertyValue = NULL;
+			prop->Release();
+			prop = NULL;
+
+			CheckError(properties->get_Item(vValuePropertyName, &prop));
+			CheckError(prop->get_StringValue(&propertyValue));
+			if (L'\0' != *propertyValue)
+			{
+				// the value of the property is non-empty
+
+				ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), NULL, 0, NULL, NULL)), E_FAIL);
+				ErrorIf((propertySize + 1) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+				ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, propertyValue, wcslen(propertyValue), tmpIndex, propertySize, NULL, NULL), E_FAIL);
+				tmpIndex += propertySize + 1;
+			}
+			else
+			{
+				// zero-terminate the environment variable of the form "foo=" (i.e. without a value)
+
+				*tmpIndex = L'\0';
+				tmpIndex++;
+			}
+		}
+
 		SysFreeString(propertyValue);
 		propertyValue = NULL;
 		prop->Release();
