@@ -39,26 +39,26 @@
       <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" Guid="B59AD501-3EBD-43AA-A6ED-12E55660B0CE">
         <File Id="fil7FAEA07CDAF0588E758688EFA85F0A6A" KeyPath="yes" Source="$(var.sourcedir)\iisnode.dll" />
       </Component>
+      <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" Guid="D67F8169-9A64-4ABB-8BDE-D331C90B0198">
+        <File Id="fil0F1847FEE89C137D02C1A6B34753D194" KeyPath="yes" Source="$(var.sourcedir)\LICENSE.txt" />
+      </Component>
+      <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B8656120A" Guid="7289761F-64EA-4015-A56D-918198EA7AE5">
+        <File Id="fil3B86A7DAD58B7C191C98A67D26D2C429" KeyPath="yes" Source="$(var.sourcedir)\etw.bat" />
+      </Component>
       <?if $(var.Configuration) = Debug ?>
         <Component Win64="yes" Id="cmpE429AFB5AD377FF35803A538B9BE37A7" Guid="640DF20F-AECC-4D43-9D47-2E447EC0ECD9">
           <File Id="fil10F3E910C80F806A860F37AA30660F83" KeyPath="yes" Source="$(var.sourcedir)\iisnode.pdb" />
         </Component>
       <?endif?>
+      <?if $(var.ProjectName) = iisnode-msi-full ?>
       <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68245A8CA28BBB" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BBBB">
         <File Id="fil7FAEA07CDAF0588E758688EFA95F0BBB" KeyPath="yes" Source="$(var.sourcedir)\iisnode-inspector.dll" />
-        <Condition>NOT CORE_ONLY</Condition>
-      </Component>
-      <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" Guid="D67F8169-9A64-4ABB-8BDE-D331C90B0198">
-        <File Id="fil0F1847FEE89C137D02C1A6B34753D194" KeyPath="yes" Source="$(var.sourcedir)\LICENSE.txt" />
       </Component>
       <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B86561208" Guid="7289761F-64EA-4015-A56D-918198EA7AE3">
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C427" KeyPath="yes" Source="$(var.sourcedir)\README.md" />
       </Component>
       <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B86561209" Guid="7289761F-64EA-4015-A56D-918198EA7AE4">
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C428" KeyPath="yes" Source="$(var.sourcedir)\setupsamples.bat" />
-      </Component>
-      <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B8656120A" Guid="7289761F-64EA-4015-A56D-918198EA7AE5">
-        <File Id="fil3B86A7DAD58B7C191C98A67D26D2C429" KeyPath="yes" Source="$(var.sourcedir)\etw.bat" />
       </Component>
       <Directory Id="dirC3B05243102F810BD3959CD3BA949E87" Name="www">
         <Component Win64="yes" Id="cmp000EF07CDC332A898735A6BFF674ECBD" Guid="5B2C5D14-6189-4A7C-AC3D-7C74C8463A8A">
@@ -326,16 +326,19 @@
           </Component>
         </Directory>
       </Directory>
+      <?endif?>
     </DirectoryRef>
   </Fragment>
   <Fragment>
     <ComponentGroup Id="allfiles">
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" />
+      <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" />
+      <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120A" />
       <?if $(var.Configuration) = Debug ?>      
         <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A7" />
       <?endif?>
+      <?if $(var.ProjectName) = iisnode-msi-full ?>
       <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" />
-      <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B86561208" />
       <ComponentRef Id="cmp000EF07CDC332A898735A6BFF674ECBD" />
       <ComponentRef Id="cmp97BBEA440C75C9AA1726A3083CD6B0AA" />
@@ -414,8 +417,8 @@
       <ComponentRef Id="cmp40869352F2AE98A449D38679FD313089" />
       <ComponentRef Id="cmp9F3A0FADEE166143F3633103BBA2782D" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B86561209" />
-      <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120A" />
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28BBB" />
+      <?endif?>
     </ComponentGroup>
   </Fragment>
 </Include>

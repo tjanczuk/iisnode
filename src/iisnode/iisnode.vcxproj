@@ -261,7 +261,9 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
     <None Include="..\..\test\functional\www\107_filesystem\hello.js" />
     <None Include="..\..\test\functional\www\107_filesystem\web.config" />
     <None Include="..\..\test\functional\www\108_appsettings\hello.js" />
-    <None Include="..\..\test\functional\www\108_appsettings\web.config" />
+    <None Include="..\..\test\functional\www\108_appsettings\web.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="..\..\test\functional\www\110_log_size_quota\hello.js" />
     <None Include="..\..\test\functional\www\110_log_size_quota\web.config" />
     <None Include="..\..\test\functional\www\111_node_env\hello.js" />
