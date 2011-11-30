@@ -58,11 +58,11 @@ set RETRY=0
 %appcmd% start site %site% >> %log%
 if %ERRORLEVEL% equ 0 goto started
 set /a RETRY+=1
-if %RETRY% equ 3 (
+if %RETRY% equ 5 (
 	echo FAILED. Cannot start site %site% after %RETRY% retries.
 	exit /b -1
 )
-timeout /T 3 /NOBREAK
+timeout /T 10 /NOBREAK
 echo Retrying to start the site %site%...
 goto retry
 
