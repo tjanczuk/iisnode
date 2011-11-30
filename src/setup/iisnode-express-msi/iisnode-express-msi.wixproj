@@ -10,6 +10,7 @@
     <OutputType>Package</OutputType>
     <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' AND '$(MSBuildExtensionsPath32)' != '' ">$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
     <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(MSBuildExtensionsPath)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
+    <DefineSolutionProperties>false</DefineSolutionProperties>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <OutputPath>..\..\..\build\$(Configuration)\x86\</OutputPath>
@@ -39,7 +40,7 @@
       <Name>WixUIExtension</Name>
     </WixExtension>
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition=" '$(DontRebuildIisnode)' != '1' ">
     <ProjectReference Include="..\..\iisnode\iisnode.vcxproj">
       <Name>iisnode</Name>
       <Project>{d1f7201f-064b-48ab-868c-fed22464841c}</Project>

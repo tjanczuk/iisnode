@@ -2,12 +2,12 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
   <?if $(var.Platform) = x86 ?>
-  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\x86\" ?>
+  <?define sourcedir="$(var.ProjectDir)..\..\..\build\$(var.Configuration)\x86\" ?>
   <?define isWin64="no" ?>
   <?define productName="iisnode for iis 7.x (x86)" ?>
   <?elseif $(var.Platform) = x64 ?>
-  <?define sourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\amd64\" ?>
-  <?define wowsourcedir="$(var.SolutionDir)..\..\build\$(var.Configuration)\x86\" ?>
+  <?define sourcedir="$(var.ProjectDir)..\..\..\build\$(var.Configuration)\amd64\" ?>
+  <?define wowsourcedir="$(var.ProjectDir)..\..\..\build\$(var.Configuration)\x86\" ?>
   <?define isWin64="yes" ?>
   <?define productName="iisnode for iis 7.x (x64)" ?>
   <?endif?>
