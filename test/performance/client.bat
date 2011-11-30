@@ -12,13 +12,15 @@ if not exist %wcat% (
 	exit /b -1
 )
 
+copy /y "%programfiles%\WCAT\report.xsl" "%~dp0"
+
 cscript %wcat% -terminate -update -clients localhost
 if %ERRORLEVEL% neq 0 (
     echo FAILED. Error initializing WCAT client.
 	exit /b -1
 )
 
-cscript %wcat% -terminate -run -clients localhost -t %scenario% -s %server% -p 31416 -v 8 -singleip -x
+cscript %wcat% -terminate -run -clients localhost -t %scenario% -s %server% -p 31416 -v 2000 -singleip -x
 if %ERRORLEVEL% neq 0 (
     echo FAILED. Error running WCAT client.
 	exit /b -1
