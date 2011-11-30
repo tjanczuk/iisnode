@@ -99,7 +99,11 @@
     </Feature>
     <?endif?>
 
+    <?if $(var.ProjectName) = iisnode-msi-full ?>
     <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\License.rtf" />
+    <?else?>
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\License_core.rtf" />
+    <?endif?>
     <UIRef Id="WixUI_Minimal" />
 
     <InstallExecuteSequence>
