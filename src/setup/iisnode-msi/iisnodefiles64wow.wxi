@@ -46,7 +46,7 @@
       <?endif?>
       <?if $(var.ProjectName) = iisnode-msi-full ?>
       <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68245A8CA28CCC" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BCCC">
-        <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCC" KeyPath="yes" Source="$(var.sourcedir)\iisnode-inspector.dll" />
+        <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCC" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode-inspector.dll" />
       </Component>
       <?endif?>
       <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" Guid="*">
