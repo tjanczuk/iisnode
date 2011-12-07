@@ -35,6 +35,8 @@
 
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
 
+    <Property Id="ALLUSERS" Value="1" />
+
     <Property Id="NODEEXE">
       <DirectorySearch Id="NodeDir" Path="[ProgramFilesFolder]nodejs">
         <FileSearch Name="node.exe" />
