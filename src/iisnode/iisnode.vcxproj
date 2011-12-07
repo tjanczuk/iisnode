@@ -91,16 +91,16 @@
       <AdditionalDependencies>rpcrt4.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>del /q $(SolutionDir)\..\..\build\$(Configuration)\iisnode.*
-del /q $(SolutionDir)\..\..\build\$(Configuration)\license.txt
-del /q $(SolutionDir)\..\..\build\$(Configuration)\readme.md
-copy /y $(SolutionDir)\..\..\license.txt $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\..\readme.md $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
-copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
+      <Command>del /q $(ProjectDir)\..\..\build\$(Configuration)\iisnode.*
+del /q $(ProjectDir)\..\..\build\$(Configuration)\license.txt
+del /q $(ProjectDir)\..\..\build\$(Configuration)\readme.md
+xcopy /R /S /Y /I $(ProjectDir)\..\samples\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
+copy /y $(ProjectDir)\..\..\license.txt $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\..\readme.md $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.dll $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.pdb $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\scripts\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -125,16 +125,16 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
       <AdditionalDependencies>rpcrt4.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>del /q $(SolutionDir)\..\..\build\$(Configuration)\iisnode.*
-del /q $(SolutionDir)\..\..\build\$(Configuration)\license.txt
-del /q $(SolutionDir)\..\..\build\$(Configuration)\readme.md
-copy /y $(SolutionDir)\..\..\license.txt $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\..\readme.md $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
-copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
+      <Command>del /q $(ProjectDir)\..\..\build\$(Configuration)\iisnode.*
+del /q $(ProjectDir)\..\..\build\$(Configuration)\license.txt
+del /q $(ProjectDir)\..\..\build\$(Configuration)\readme.md
+xcopy /R /S /Y /I $(ProjectDir)\..\samples\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
+copy /y $(ProjectDir)\..\..\license.txt $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\..\readme.md $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.dll $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.pdb $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\scripts\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -153,16 +153,16 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>del /q $(SolutionDir)\..\..\build\$(Configuration)\iisnode.*
-del /q $(SolutionDir)\..\..\build\$(Configuration)\license.txt
-del /q $(SolutionDir)\..\..\build\$(Configuration)\readme.md
-copy /y $(SolutionDir)\..\..\license.txt $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\..\readme.md $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
-copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
+      <Command>del /q $(ProjectDir)\..\..\build\$(Configuration)\iisnode.*
+del /q $(ProjectDir)\..\..\build\$(Configuration)\license.txt
+del /q $(ProjectDir)\..\..\build\$(Configuration)\readme.md
+xcopy /R /S /Y /I $(ProjectDir)\..\samples\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
+copy /y $(ProjectDir)\..\..\license.txt $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\..\readme.md $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.dll $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.pdb $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\scripts\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
@@ -181,16 +181,16 @@ copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>del /q $(SolutionDir)\..\..\build\$(Configuration)\iisnode.*
-del /q $(SolutionDir)\..\..\build\$(Configuration)\license.txt
-del /q $(SolutionDir)\..\..\build\$(Configuration)\readme.md
-copy /y $(SolutionDir)\..\..\license.txt $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\..\readme.md $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.dll $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(OutDir)\iisnode.pdb $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-xcopy /R /S /Y $(SolutionDir)\..\samples\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
-copy /y $(SolutionDir)\..\scripts\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)
-copy /y $(SolutionDir)\..\config\* $(SolutionDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
+      <Command>del /q $(ProjectDir)\..\..\build\$(Configuration)\iisnode.*
+del /q $(ProjectDir)\..\..\build\$(Configuration)\license.txt
+del /q $(ProjectDir)\..\..\build\$(Configuration)\readme.md
+xcopy /R /S /Y /I $(ProjectDir)\..\samples\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)\www
+copy /y $(ProjectDir)\..\..\license.txt $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\..\readme.md $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.dll $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(OutDir)\iisnode.pdb $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\scripts\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)
+copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(PlatformShortName)</Command>
     </PostBuildEvent>
     <BuildLog>
       <Path>$(IntDir)\$(MSBuildProjectName).log</Path>
