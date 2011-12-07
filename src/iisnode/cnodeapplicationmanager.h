@@ -48,6 +48,7 @@ private:
 	HRESULT RecycleApplicationCore(CNodeApplication* app);	
 	HRESULT FindNextDebugPort(IHttpContext* context, DWORD* port);
 	HRESULT EnsureDebugeeReady(IHttpContext* context, DWORD debugPort);
+	HRESULT InitializeCore(IHttpContext* context);
 
 public:
 
