@@ -31,6 +31,7 @@ private:
 	DWORD debugPortEnd;
 	LPWSTR node_env;
 	BOOL devErrorsEnabled;
+	BOOL flushResponse;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
@@ -69,6 +70,7 @@ public:
 	static HRESULT GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end);
 	static LPWSTR GetNodeEnv(IHttpContext* ctx);
 	static BOOL GetDevErrorsEnabled(IHttpContext* ctx);
+	static BOOL GetFlushResponse(IHttpContext* ctx);
 
 	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
 

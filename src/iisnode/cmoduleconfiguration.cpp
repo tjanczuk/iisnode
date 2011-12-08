@@ -448,6 +448,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
 		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
 		CheckError(GetBOOL(section, L"devErrorsEnabled", &c->devErrorsEnabled));
+		CheckError(GetBOOL(section, L"flushResponse", &c->flushResponse));
 		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
 		CheckError(GetString(section, L"node_env", &c->node_env));
@@ -619,6 +620,11 @@ LPWSTR CModuleConfiguration::GetNodeEnv(IHttpContext* ctx)
 BOOL CModuleConfiguration::GetDevErrorsEnabled(IHttpContext* ctx)
 {
 	GETCONFIG(devErrorsEnabled)
+}
+
+BOOL CModuleConfiguration::GetFlushResponse(IHttpContext* ctx)
+{
+	GETCONFIG(flushResponse)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)

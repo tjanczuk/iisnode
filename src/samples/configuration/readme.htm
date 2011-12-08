@@ -115,6 +115,9 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     * devErrorsEnabled - controls how much information is sent back in the HTTP response to the browser when an error occurrs in iisnode; 
       when true, error conditions in iisnode result in HTTP 200 response with the body containing error details; when false,
       iisnode will return generic HTTP 5xx responses
+
+    * flushResponse - controls whether each HTTP response body chunk is immediately flushed by iisnode; flushing each body chunk incurs 
+      CPU cost but may improve latency in streaming scenarios
       
     --&gt;
     
@@ -138,6 +141,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       maxLogFileSizeInKB="128"
       appendToExistingLog="false"
       devErrorsEnabled="true"
+      flushResponse="false"
      /&gt;
 
     &lt;!--     

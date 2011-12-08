@@ -955,10 +955,9 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 
 	if (ctx->GetResponseContentLength() == -1 || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
 	{
-		if (ctx->GetResponseContentLength() == -1)
+		if (ctx->GetResponseContentLength() == -1 && CModuleConfiguration::GetFlushResponse(ctx->GetHttpContext()))
 		{
-			// Flush chunked responses. 
-			// TODO, tjanczuk, is flushing chunked responses requried
+			// Flushing of chunked responses is enabled
 
 			ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
 			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
@@ -992,8 +991,6 @@ void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD 
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
 	CheckError(error);	
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode finished flushing http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ContinueReadResponse(ctx);
 
