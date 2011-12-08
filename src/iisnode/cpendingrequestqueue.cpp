@@ -48,11 +48,15 @@ Error:
 
 CNodeHttpStoredContext* CPendingRequestQueue::Peek()
 {
+	CNodeHttpStoredContext* result;
+
 	ENTER_CS(this->syncRoot)
 
-	return this->requests.size() > 0 ? this->requests.front() : NULL;
+	result = this->requests.size() > 0 ? this->requests.front() : NULL;
 
 	LEAVE_CS(this->syncRoot)
+
+	return result;
 }
 
 void CPendingRequestQueue::Pop()
