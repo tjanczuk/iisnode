@@ -3,13 +3,11 @@
 
 class CNodeHttpStoredContext;
 
-typedef std::list<CNodeHttpStoredContext*> CNodeHttpStoredContextList;
-
 class CActiveRequestPool
 {
 private: 
 	
-	CNodeHttpStoredContextList requests;
+	DWORD requestCount;
 	CRITICAL_SECTION syncRoot;
 	HANDLE drainHandle;
 
@@ -19,7 +17,7 @@ public:
 	~CActiveRequestPool();
 
 	HRESULT Add(CNodeHttpStoredContext* context);
-	HRESULT Remove(CNodeHttpStoredContext* context);
+	HRESULT Remove();
 	void SignalWhenDrained(HANDLE drainHandle);
 };
 

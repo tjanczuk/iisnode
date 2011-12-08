@@ -1,7 +1,7 @@
 #include "precomp.h"
 
 CActiveRequestPool::CActiveRequestPool()
-	: drainHandle(NULL)
+	: drainHandle(NULL), requestCount(0)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -18,9 +18,9 @@ HRESULT CActiveRequestPool::Add(CNodeHttpStoredContext* context)
 	CheckNull(context);
 
 	ENTER_CS(this->syncRoot)
-
-	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
-	this->requests.push_back(context);
+	
+	ErrorIf(this->requestCount >= CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
+	this->requestCount++;
 
 	LEAVE_CS(this->syncRoot)
 
@@ -29,18 +29,18 @@ Error:
 	return hr;
 }
 
-HRESULT CActiveRequestPool::Remove(CNodeHttpStoredContext* context)
+HRESULT CActiveRequestPool::Remove()
 {
 	HRESULT hr;
 	BOOL signal = FALSE;
 
-	CheckNull(context);
-
 	ENTER_CS(this->syncRoot)
 
-	this->requests.remove(context);
+	ErrorIf(this->requestCount == 0, ERROR_INVALID_OPERATION);
 
-	if (NULL != this->drainHandle && this->requests.empty())
+	this->requestCount--;
+
+	if (NULL != this->drainHandle && 0 == this->requestCount)
 	{
 		signal = TRUE;
 	}
@@ -61,7 +61,7 @@ void CActiveRequestPool::SignalWhenDrained(HANDLE drainHandle)
 {
 	ENTER_CS(this->syncRoot)
 
-	if (this->requests.empty())
+	if (0 == this->requestCount)
 	{
 		SetEvent(drainHandle);
 	}

@@ -446,7 +446,7 @@ void CNodeProcess::OnRequestCompleted(CNodeHttpStoredContext* context)
 	CNodeProcessManager* processManager = this->GetProcessManager();
 	BOOL isClosing = this->isClosing; // this is just an optimization to save on context switch
 	
-	this->activeRequestPool.Remove(context); // this call may results in "this" being disposed on a different thread
+	this->activeRequestPool.Remove(); // this call may results in "this" being disposed on a different thread
 	
 	if (!isClosing)
 	{
