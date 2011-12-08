@@ -70,7 +70,8 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       
     * namedPipeConnectionRetryDelay - delay in milliseconds between connection retries
     
-    * asyncCompletionThreadCount - size of the IO thread pool maintained by the IIS module to process asynchronous IO
+    * asyncCompletionThreadCount - size of the IO thread pool maintained by the IIS module to process asynchronous IO; setting it
+      to 0 (default) results in creating two threads per each processor on the machine
     
     * initialRequestBufferSize - initial size in bytes of a memory buffer allocated for a new HTTP request
     
@@ -124,7 +125,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       maxPendingRequestsPerApplication="1024"
       maxNamedPipeConnectionRetry="3"
       namedPipeConnectionRetryDelay="2000"      
-      asyncCompletionThreadCount="4"
+      asyncCompletionThreadCount="0"
       initialRequestBufferSize="4096"
       maxRequestBufferSize="65536"
       uncFileChangesPollingInterval="5000"
