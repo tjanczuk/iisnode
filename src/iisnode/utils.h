@@ -11,4 +11,12 @@
 
 #define LEAVE_CS(cs) } __finally { LeaveCriticalSection(&cs); }
 
+#define ENTER_SRW_SHARED(srw) AcquireSRWLockShared(&srw); __try {
+
+#define LEAVE_SRW_SHARED(srw) } __finally { ReleaseSRWLockShared(&srw); }
+
+#define ENTER_SRW_EXCLUSIVE(srw) AcquireSRWLockExclusive(&srw); __try {
+
+#define LEAVE_SRW_EXCLUSIVE(srw) } __finally { ReleaseSRWLockExclusive(&srw); }
+
 #endif

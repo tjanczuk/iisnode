@@ -27,7 +27,7 @@ private:
 	IHttpServer* server;
 	HTTP_MODULE_ID moduleId;
 	NodeApplicationEntry* applications;
-	CRITICAL_SECTION syncRoot;
+	SRWLOCK srwlock;
 	CAsyncManager* asyncManager;
 	HANDLE jobObject;
 	BOOL breakAwayFromJobObject;
@@ -39,13 +39,15 @@ private:
 
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
 	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);	
-	HRESULT GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, CNodeApplication** application);
+	HRESULT GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, BOOL allowCreate, CNodeApplication** application);
 	HRESULT GetOrCreateNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, IHttpContext* context, CNodeApplication** application);
 	HRESULT GetOrCreateDebuggedNodeApplicationCore(PCWSTR physicalPath, DWORD physicalPathLength, NodeDebugCommand debugCommand, IHttpContext* context, CNodeApplication** application);
 	CNodeApplication* TryGetExistingNodeApplication(PCWSTR physicalPath, DWORD physicalPathLength, BOOL debuggerRequest);
 	HRESULT EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize);
 	static BOOL CALLBACK EnsureDebuggerFile(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR lParam);
 	HRESULT RecycleApplicationCore(CNodeApplication* app);	
+	HRESULT RecycleApplicationAssumeLock(CNodeApplication* app);
+	HRESULT RecycleApplication(CNodeApplication* app, BOOL requiresLock);
 	HRESULT FindNextDebugPort(IHttpContext* context, DWORD* port);
 	HRESULT EnsureDebugeeReady(IHttpContext* context, DWORD debugPort);
 	HRESULT InitializeCore(IHttpContext* context);

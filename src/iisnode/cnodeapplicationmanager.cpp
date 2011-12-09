@@ -5,7 +5,7 @@ CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODUL
     breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL),
     currentDebugPort(0), inspector(NULL)
 {
-    InitializeCriticalSection(&this->syncRoot);
+    InitializeSRWLock(&this->srwlock);
 }
 
 HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
@@ -14,14 +14,14 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 
     if (!this->initialized)
     {
-        ENTER_CS(this->syncRoot)
+        ENTER_SRW_EXCLUSIVE(this->srwlock)
 
         if (!this->initialized)
         {
             hr = this->InitializeCore(context);
         }
 
-        LEAVE_CS(this->syncRoot)
+        LEAVE_SRW_EXCLUSIVE(this->srwlock)
     }
 
     return hr;
@@ -146,8 +146,6 @@ CNodeApplicationManager::~CNodeApplicationManager()
         delete this->eventProvider;
         this->eventProvider = NULL;
     }
-
-    DeleteCriticalSection(&this->syncRoot);
 }
 
 IHttpServer* CNodeApplicationManager::GetHttpServer()
@@ -176,29 +174,55 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 
     CheckError(CNodeDebugger::GetDebugCommand(context, this->GetEventProvider(), &debugCommand));
 
-    if (ND_KILL == debugCommand)
-    {
-        ENTER_CS(this->syncRoot)
+	switch (debugCommand) 
+	{
+	default:
+
+        ENTER_SRW_SHARED(this->srwlock)
+
+        CheckError(this->GetOrCreateNodeApplication(context, debugCommand, FALSE, &application));
+		if (application)
+		{
+			// this is the sweetspot code path: application already exists, shared read lock is sufficient
+
+			CheckError(application->Enqueue(context, pProvider, ctx));
+		}
+
+        LEAVE_SRW_SHARED(this->srwlock)
+
+		if (!application)
+		{
+			// this is the initialization code path for activating request:
+			// application must be created which requires an exclusive lock
+
+			ENTER_SRW_EXCLUSIVE(this->srwlock)
+
+			CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
+			CheckError(application->Enqueue(context, pProvider, ctx));
+
+			LEAVE_SRW_EXCLUSIVE(this->srwlock)
+		}
+
+		break;
+
+	case ND_KILL:
+
+        ENTER_SRW_EXCLUSIVE(this->srwlock)
 
         CheckError(this->EnsureDebuggedApplicationKilled(context, ctx));
 
-        LEAVE_CS(this->syncRoot)
-    }
-    else if (ND_REDIRECT == debugCommand)
-    {
+        LEAVE_SRW_EXCLUSIVE(this->srwlock)
+
+		break;
+
+	case ND_REDIRECT:
+
         // redirection from e.g. app.js/debug to app.js/debug/
 
         CheckError(this->DebugRedirect(context, ctx));
-    }
-    else
-    {
-        ENTER_CS(this->syncRoot)
 
-        CheckError(this->GetOrCreateNodeApplication(context, debugCommand, &application));
-        CheckError(application->Enqueue(context, pProvider, ctx));
-
-        LEAVE_CS(this->syncRoot)
-    }
+		break;
+	};
 
     return S_OK;
 Error:
@@ -229,10 +253,10 @@ HRESULT CNodeApplicationManager::EnsureDebuggedApplicationKilled(IHttpContext* c
 
     CNodeApplication* app = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, TRUE);
     if (app) killCount++;
-    CheckError(this->RecycleApplication(app));
+    CheckError(this->RecycleApplication(app, FALSE));
     app = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, FALSE);
     if (app) killCount++;
-    CheckError(this->RecycleApplication(app));
+    CheckError(this->RecycleApplication(app, FALSE));
 
     if (ctx)
     {
@@ -257,41 +281,56 @@ Error:
 
 HRESULT CNodeApplicationManager::RecycleApplication(CNodeApplication* app)
 {
-    if (app)
-    {
-        ENTER_CS(this->syncRoot)
+	return this->RecycleApplication(app, TRUE);
+}
 
-        this->RecycleApplicationCore(app->GetPeerApplication());
-        this->RecycleApplicationCore(app);
+HRESULT CNodeApplicationManager::RecycleApplication(CNodeApplication* app, BOOL requiresLock)
+{
+	HRESULT hr;
 
-        LEAVE_CS(this->syncRoot)
-    }
+	if (requiresLock)
+	{
+		ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-    return S_OK;
+		hr = this->RecycleApplicationAssumeLock(app);
+
+		LEAVE_SRW_EXCLUSIVE(this->srwlock)
+	}
+	else
+	{
+		hr = this->RecycleApplicationAssumeLock(app);
+	}
+
+	return hr;
+}
+
+// this method is always called under exclusive this->srwlock
+HRESULT CNodeApplicationManager::RecycleApplicationAssumeLock(CNodeApplication* app)
+{
+	// ensure the application still exists to avoid race condition with other recycling code paths
+
+	NodeApplicationEntry* current = this->applications;
+	while (current)
+	{
+		if (current->nodeApplication == app)
+		{
+			this->RecycleApplicationCore(app->GetPeerApplication());
+			this->RecycleApplicationCore(app);
+			break;
+		}
+
+		current = current->next;
+	}
+
+	return S_OK;
 }
 
 void CNodeApplicationManager::OnScriptModified(CNodeApplicationManager* manager, CNodeApplication* application)
 {
-    ENTER_CS(manager->syncRoot)
-    
-    // ensure the application still exists to avoid race condition with other recycling code paths
-
-    NodeApplicationEntry* current = manager->applications;
-    while (current)
-    {
-        if (current->nodeApplication == application)
-        {
-            manager->RecycleApplication(application);
-            break;
-        }
-
-        current = current->next;
-    }
-    
-    LEAVE_CS(manager->syncRoot)
+    manager->RecycleApplication(application);
 }
 
-// this must be called under lock
+// this method is always called under exclusive this->srwlock
 HRESULT CNodeApplicationManager::RecycleApplicationCore(CNodeApplication* app)
 {
     HRESULT hr;
@@ -577,7 +616,7 @@ Error:
     return hr;
 }
 
-HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, CNodeApplication** application)
+HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, BOOL allowCreate, CNodeApplication** application)
 {
     HRESULT hr;
     DWORD physicalPathLength;
@@ -590,8 +629,10 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 
     *application = this->TryGetExistingNodeApplication(physicalPath, physicalPathLength, ND_NONE != debugCommand);
 
-    if (NULL == *application)
+    if (NULL == *application && allowCreate)
     {
+		// this code path executes under exclusive this->srwlock
+
         ErrorIf(INVALID_FILE_ATTRIBUTES == GetFileAttributesW(physicalPath), GetLastError());        
 
         if (ND_NONE != debugCommand)
