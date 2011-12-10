@@ -341,8 +341,8 @@
       <?if $(var.Configuration) = Debug ?>      
         <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A7" />
       <?endif?>
-      <?if $(var.ProjectName) = iisnode-msi-full ?>
       <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" />
+      <?if $(var.ProjectName) = iisnode-msi-full ?>
       <ComponentRef Id="cmp1B33C88432AC7530411D254B86561208" />
       <ComponentRef Id="cmp000EF07CDC332A898735A6BFF674ECBD" />
       <ComponentRef Id="cmp97BBEA440C75C9AA1726A3083CD6B0AA" />
