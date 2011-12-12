@@ -125,12 +125,10 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 		if (!this->isClosing)
 		{
 			CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
-			request = queue->Peek();		
+			request = queue->Pop();		
 
 			if (NULL != request)
 			{
-				queue->Pop();
-
 				this->GetEventProvider()->Log(
 					L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
 

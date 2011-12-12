@@ -1,72 +1,81 @@
 #include "precomp.h"
 
 CPendingRequestQueue::CPendingRequestQueue()
-{
-	InitializeCriticalSection(&this->syncRoot);
+	: count(0), list(NULL)
+{	
 }
 
-CPendingRequestQueue::~CPendingRequestQueue()
-{
-	CNodeHttpStoredContext* context;
-
-	while (NULL != (context = this->Peek()))
-	{
-		this->Pop();
-
-		CProtocolBridge::SendEmptyResponse(context, 503, "Service Unavailable", S_OK);
-	}
-
-	DeleteCriticalSection(&this->syncRoot);
-}
-
-BOOL CPendingRequestQueue::IsEmpty()
-{
-	return this->requests.empty();
-}
-
-HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
+HRESULT CPendingRequestQueue::Initialize()
 {
 	HRESULT hr;
 
-	CheckNull(context);
+	ErrorIf(NULL == (this->list = (PSLIST_HEADER)_aligned_malloc(sizeof(SLIST_HEADER), MEMORY_ALLOCATION_ALIGNMENT)), ERROR_NOT_ENOUGH_MEMORY);
 
-	ENTER_CS(this->syncRoot)
-
-	ErrorIf(this->requests.size() >= CModuleConfiguration::GetMaxPendingRequestsPerApplication(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
-	this->requests.push(context);
-
-	// increase the pending async opertation count; corresponding decrease happens either from CProtocolBridge::SendEmptyResponse or 
-	// CProtocolBridge::FinalizeResponse, possibly after severl context switches
-	context->IncreasePendingAsyncOperationCount();
-
-	LEAVE_CS(this->syncRoot)
+	InitializeSListHead(this->list);
 
 	return S_OK;
 Error:
 	return hr;
 }
 
-CNodeHttpStoredContext* CPendingRequestQueue::Peek()
+CPendingRequestQueue::~CPendingRequestQueue()
 {
-	CNodeHttpStoredContext* result;
+	PSLIST_ENTRY entry;
 
-	ENTER_CS(this->syncRoot)
+	if (this->list)
+	{
+		while (NULL != (entry = InterlockedPopEntrySList(this->list)))
+		{
+			CProtocolBridge::SendEmptyResponse(((PREQUEST_ENTRY)entry)->context, 503, "Service Unavailable", S_OK);
+			_aligned_free(entry);
+		}
 
-	result = this->requests.size() > 0 ? this->requests.front() : NULL;
-
-	LEAVE_CS(this->syncRoot)
-
-	return result;
+		_aligned_free(this->list);
+		this->list = NULL;
+	}
 }
 
-void CPendingRequestQueue::Pop()
+BOOL CPendingRequestQueue::IsEmpty()
 {
-	ENTER_CS(this->syncRoot)
+	return 0 == this->count;
+}
 
-	if (this->requests.size() > 0)
+HRESULT CPendingRequestQueue::Push(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+	PREQUEST_ENTRY entry = NULL;
+
+	InterlockedIncrement(&this->count);
+	CheckNull(context);
+	ErrorIf(this->count >= CModuleConfiguration::GetMaxPendingRequestsPerApplication(context->GetHttpContext()), ERROR_NOT_ENOUGH_QUOTA);
+	ErrorIf(NULL == (entry = (PREQUEST_ENTRY)_aligned_malloc(sizeof(REQUEST_ENTRY), MEMORY_ALLOCATION_ALIGNMENT)), ERROR_NOT_ENOUGH_MEMORY);	
+
+	// increase the pending async opertation count; corresponding decrease happens either from CProtocolBridge::SendEmptyResponse or 
+	// CProtocolBridge::FinalizeResponse, possibly after severl context switches
+	context->IncreasePendingAsyncOperationCount();
+
+	entry->context = context;
+	InterlockedPushEntrySList(this->list, &(entry->listEntry));	
+
+	return S_OK;
+Error:
+
+	InterlockedDecrement(&this->count);
+
+	return hr;
+}
+
+CNodeHttpStoredContext* CPendingRequestQueue::Pop()
+{
+	CNodeHttpStoredContext* result = NULL;
+	PREQUEST_ENTRY entry = (PREQUEST_ENTRY)InterlockedPopEntrySList(this->list);
+
+	if (entry)
 	{
-		this->requests.pop();
+		InterlockedDecrement(&this->count);
+		result = entry->context;
+		_aligned_free(entry);
 	}
 
-	LEAVE_CS(this->syncRoot)
+	return result;
 }

@@ -48,6 +48,7 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context)
 	CheckError(this->processManager->Initialize(context));
 
 	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);
+	CheckError(this->pendingRequests->Initialize());
 
 	CheckError(this->GetApplicationManager()->GetFileWatcher()->WatchFile(
 		scriptName, 

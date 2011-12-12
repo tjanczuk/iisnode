@@ -3,24 +3,27 @@
 
 class CNodeHttpStoredContext;
 
-typedef std::queue<CNodeHttpStoredContext*> CNodeHttpStoredContextQueue;
-
 class CPendingRequestQueue
 {
 private:
 
-	CNodeHttpStoredContextQueue requests;
-	CRITICAL_SECTION syncRoot;
+	typedef struct _REQUEST_ENTRY {
+		SLIST_ENTRY listEntry;
+		CNodeHttpStoredContext* context;
+	} REQUEST_ENTRY, *PREQUEST_ENTRY;
+
+	PSLIST_HEADER list;
+	unsigned long count;
 
 public:
 
 	CPendingRequestQueue();
 	~CPendingRequestQueue();
 
+	HRESULT Initialize();
 	BOOL IsEmpty();
 	HRESULT Push(CNodeHttpStoredContext* context);
-	CNodeHttpStoredContext* Peek();
-	void Pop();
+	CNodeHttpStoredContext* Pop();
 
 };
 
