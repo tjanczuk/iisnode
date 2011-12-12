@@ -17,7 +17,7 @@ CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpCon
 	this->eventProvider = this->GetApplication()->GetApplicationManager()->GetEventProvider();
 
 	this->gracefulShutdownTimeout = CModuleConfiguration::GetGracefulShutdownTimeout(context);
-	InitializeCriticalSection(&this->syncRoot);
+	InitializeSRWLock(&this->srwlock);
 }
 
 CNodeProcessManager::~CNodeProcessManager()
@@ -32,8 +32,6 @@ CNodeProcessManager::~CNodeProcessManager()
 		delete[] this->processes;
 		this->processes = NULL;
 	}
-
-	DeleteCriticalSection(&this->syncRoot);
 }
 
 CNodeApplication* CNodeProcessManager::GetApplication()
@@ -122,7 +120,7 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 
 	if (!this->isClosing) 
 	{
-		ENTER_CS(this->syncRoot)
+		ENTER_SRW_SHARED(this->srwlock)
 
 		if (!this->isClosing)
 		{
@@ -136,16 +134,30 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 				this->GetEventProvider()->Log(
 					L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
 
-				if (!this->TryRouteRequestToExistingProcess(request))
+				if (this->TryRouteRequestToExistingProcess(request))
 				{
-					CNodeProcess* newProcess = NULL;
-					CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
-					CheckError(newProcess->AcceptRequest(request));
+					request = NULL;
 				}
 			}
 		}
 
-		LEAVE_CS(this->syncRoot)
+		LEAVE_SRW_SHARED(this->srwlock)
+
+		if (request && !this->isClosing)
+		{
+			// existing processes were unable to accept this request; create a new process to handle it
+
+			ENTER_SRW_EXCLUSIVE(this->srwlock)
+
+			if (!this->isClosing && !this->TryRouteRequestToExistingProcess(request))
+			{
+				CNodeProcess* newProcess = NULL;
+				CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
+				CheckError(newProcess->AcceptRequest(request));
+			}
+
+			LEAVE_SRW_EXCLUSIVE(this->srwlock)
+		}
 	}
 	else
 	{
@@ -207,7 +219,7 @@ HRESULT CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 
 	// remove the process from the process pool
 
-	ENTER_CS(this->syncRoot)
+	ENTER_SRW_EXCLUSIVE(this->srwlock)
 
 	if (!this->isClosing)
 	{
@@ -245,7 +257,7 @@ HRESULT CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 		}
 	}
 
-	LEAVE_CS(this->syncRoot)
+	LEAVE_SRW_EXCLUSIVE(this->srwlock)
 
 	// graceful recycle
 
@@ -285,7 +297,7 @@ HRESULT CNodeProcessManager::Recycle()
 	ProcessRecycleArgs* args = NULL;
 	BOOL deleteApplication = FALSE;
 
-	ENTER_CS(this->syncRoot)
+	ENTER_SRW_EXCLUSIVE(this->srwlock)
 
 	this->isClosing = TRUE;	
 
@@ -308,7 +320,7 @@ HRESULT CNodeProcessManager::Recycle()
 		deleteApplication = TRUE;
 	}
 
-	LEAVE_CS(this->syncRoot)
+	LEAVE_SRW_EXCLUSIVE(this->srwlock)
 
 	if (deleteApplication)
 	{

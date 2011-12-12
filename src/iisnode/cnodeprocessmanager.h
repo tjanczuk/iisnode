@@ -24,7 +24,7 @@ private:
 	DWORD processCount;
 	DWORD maxProcessCount;
 	DWORD currentProcess;
-	CRITICAL_SECTION syncRoot;
+	SRWLOCK srwlock;
 	DWORD gracefulShutdownTimeout;
 	BOOL isClosing;
 	long refCount;
