@@ -6,8 +6,19 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
 	targetUrl(NULL), targetUrlLength(0), childContext(NULL)
 {
+	IHttpTraceContext* tctx;
+	LPCGUID pguid;
+
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
-	CoCreateGuid(&this->activityId);
+	if (NULL != (tctx = context->GetTraceContext()) && NULL != (pguid = tctx->GetTraceActivityId()))
+	{
+		memcpy(&this->activityId, pguid, sizeof GUID);
+	}
+	else
+	{
+		CoCreateGuid(&this->activityId);
+	}
+	
 	this->asyncContext.data = this;
 }
 

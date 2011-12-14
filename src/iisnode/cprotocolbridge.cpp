@@ -264,7 +264,7 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 			// This is to allow us to run initialization logic on the server if necessary every time user refreshes the page
 			// Static content subordinate to the main debugger page is eligible for client side caching
 
-			child->GetResponse()->SetHeader("Cache-Control", "no-cache", 8, TRUE);
+			child->GetResponse()->SetHeader(HttpHeaderCacheControl, "no-cache", 8, TRUE);
 		}
 
 		CheckError(child->GetRequest()->SetUrl(context->GetTargetUrl(), context->GetTargetUrlLength(), FALSE));
@@ -418,7 +418,7 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	// to detect end of response
 
 	request = context->GetHttpContext()->GetRequest();
-	CheckError(request->SetHeader("Connection", "close", 5, TRUE));
+	CheckError(request->SetHeader(HttpHeaderConnection, "close", 5, TRUE));
 
 	// Expect: 100-continue has been processed by IIS - do not propagate it up to node.js since node will
 	// attempt to process it again
@@ -508,11 +508,14 @@ Error:
 void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;	
-	DWORD bytesReceived;
+	DWORD bytesReceived = 0;
 	BOOL completionPending = FALSE;
 
-	context->SetNextProcessor(CProtocolBridge::ReadRequestBodyCompleted);
-	CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetBuffer(), context->GetBufferSize(), TRUE, &bytesReceived, &completionPending));
+	if (0 < context->GetHttpContext()->GetRequest()->GetRemainingEntityBytes())
+	{
+		context->SetNextProcessor(CProtocolBridge::ReadRequestBodyCompleted);
+		CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetBuffer(), context->GetBufferSize(), TRUE, &bytesReceived, &completionPending));
+	}
 
 	if (!completionPending)
 	{

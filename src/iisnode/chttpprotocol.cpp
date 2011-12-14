@@ -111,8 +111,19 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 	CheckError(CHttpProtocol::Append(context, " ", 1, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, ctx->GetTargetUrl(), ctx->GetTargetUrlLength(), result, &bufferLength, &offset));
 	request->GetHttpVersion(&major, &minor);
-	sprintf(tmp, " HTTP/%d.%d\r\n", major, minor);
-	CheckError(CHttpProtocol::Append(context, tmp, 0, result, &bufferLength, &offset));
+	if (1 == major && 1 == minor)
+	{
+		CheckError(CHttpProtocol::Append(context, " HTTP/1.1\r\n", 11, result, &bufferLength, &offset));
+	}
+	else if (1 == major && 0 == minor)
+	{
+		CheckError(CHttpProtocol::Append(context, " HTTP/1.0\r\n", 11, result, &bufferLength, &offset));
+	}
+	else
+	{
+		sprintf(tmp, " HTTP/%d.%d\r\n", major, minor);
+		CheckError(CHttpProtocol::Append(context, tmp, 0, result, &bufferLength, &offset));
+	}
 
 	// Known headers
 
@@ -173,15 +184,31 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	USHORT major, minor;
 	DWORD count, newOffset;
 	char tmp[256];
+	char* tmp1;
 	USHORT statusCode, subStatusCode = 0;
 
 	// HTTP-Version SP
 
 	context->GetHttpContext()->GetRequest()->GetHttpVersion(&major, &minor);
-	sprintf(tmp, "HTTP/%d.%d ", major, minor);
-	count = strlen(tmp);
+	if (1 == major && 1 == minor)
+	{
+		tmp1 = "HTTP/1.1 ";
+		count = 9;
+	}
+	else if (1 == major && 0 == minor)
+	{
+		tmp1 = "HTTP/1.0 ";
+		count = 9;
+	}
+	else
+	{
+		sprintf(tmp, "HTTP/%d.%d ", major, minor);
+		count = strlen(tmp);
+		tmp1 = tmp;
+	}
+
 	ErrorIf(count >= dataSize, ERROR_MORE_DATA);
-	ErrorIf(0 != memcmp(tmp, data, count), ERROR_BAD_FORMAT);
+	ErrorIf(0 != memcmp(tmp1, data, count), ERROR_BAD_FORMAT);
 	offset += count;
 
 	// Status-Code[.Sub-Status-Code] SP

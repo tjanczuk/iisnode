@@ -137,9 +137,10 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 
 		ctx->IncreasePendingAsyncOperationCount();
 
-		WCHAR message[256];
-		wsprintfW(message, L"iisnode enters CNodeHttpModule::OnAsyncCompletion callback with request notification status of %d", ctx->GetRequestNotificationStatus());
-		this->applicationManager->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+		this->applicationManager->GetEventProvider()->Log(
+			L"iisnode enters CNodeHttpModule::OnAsyncCompletion callback", 
+			WINEVENT_LEVEL_VERBOSE, 
+			ctx->GetActivityId());
 
 		ASYNC_CONTEXT* async = ctx->GetAsyncContext();
 		if (NULL != async->completionProcessor)
@@ -147,15 +148,20 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 			async->completionProcessor(pCompletionInfo->GetCompletionStatus(), pCompletionInfo->GetCompletionBytes(), ctx->GetOverlapped());
 		}
 
-		wsprintfW(message, L"iisnode leaves CNodeHttpModule::OnAsyncCompletion callback with request notification status of %d", ctx->GetRequestNotificationStatus());
-		this->applicationManager->GetEventProvider()->Log(message, WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-
 		if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased on entering OnAsyncCompletion
 		{
+			this->applicationManager->GetEventProvider()->Log(
+				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion and completes the request", 
+				WINEVENT_LEVEL_VERBOSE, 
+				ctx->GetActivityId());
 			return ctx->GetRequestNotificationStatus();
 		}
 		else
 		{
+			this->applicationManager->GetEventProvider()->Log(
+				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion and continues the request", 
+				WINEVENT_LEVEL_VERBOSE, 
+				ctx->GetActivityId());
 			return RQ_NOTIFICATION_PENDING;
 		}
 	}
