@@ -7,7 +7,6 @@ class CModuleConfiguration : public IHttpStoredContext
 {
 private:
 
-	DWORD maxPendingRequestsPerApplication;
 	DWORD asyncCompletionThreadCount;
 	DWORD maxProcessCountPerApplication;
 	LPTSTR nodeProcessCommandLine;
@@ -48,7 +47,6 @@ public:
 
 	static HRESULT Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId);
 
-	static DWORD GetMaxPendingRequestsPerApplication(IHttpContext* ctx);
 	static DWORD GetAsyncCompletionThreadCount(IHttpContext* ctx); 
 	static DWORD GetMaxProcessCountPerApplication(IHttpContext* ctx);
 	static LPCTSTR GetNodeProcessCommandLine(IHttpContext* ctx); 

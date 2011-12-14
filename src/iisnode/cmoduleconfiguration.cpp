@@ -433,7 +433,6 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		ErrorIf(NULL == (c = new CModuleConfiguration()), ERROR_NOT_ENOUGH_MEMORY);
 		
 		CheckError(GetConfigSection(context, &section));		
-		CheckError(GetDWORD(section, L"maxPendingRequestsPerApplication", &c->maxPendingRequestsPerApplication));
 		CheckError(GetDWORD(section, L"asyncCompletionThreadCount", &c->asyncCompletionThreadCount));
 		CheckError(GetDWORD(section, L"maxProcessCountPerApplication", &c->maxProcessCountPerApplication));
 		CheckError(GetDWORD(section, L"maxConcurrentRequestsPerProcess", &c->maxConcurrentRequestsPerProcess));
@@ -516,11 +515,6 @@ void CModuleConfiguration::CleanupStoredContext()
 	CModuleConfiguration* c; \
 	GetConfig(ctx, &c); \
 	return c->prop;
-
-DWORD CModuleConfiguration::GetMaxPendingRequestsPerApplication(IHttpContext* ctx)
-{
-	GETCONFIG(maxPendingRequestsPerApplication)
-}
 
 DWORD CModuleConfiguration::GetAsyncCompletionThreadCount(IHttpContext* ctx)
 {
