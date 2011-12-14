@@ -6,5 +6,5 @@ var iisnodeassert = require("iisnodeassert");
 
 iisnodeassert.sequence([
     iisnodeassert.get(10000, "/112_dev_errors/on/hello.js", 200),
-    iisnodeassert.get(10000, "/112_dev_errors/off/hello.js", 503)
+    iisnodeassert.get(10000, "/112_dev_errors/off/hello.js", 500)
 ]);
