@@ -345,6 +345,11 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 		NULL)), 
 		GetLastError());
 
+	ErrorIf(!SetFileCompletionNotificationModes(
+		pipe, 
+		FILE_SKIP_COMPLETION_PORT_ON_SUCCESS | FILE_SKIP_SET_EVENT_ON_HANDLE), 
+		GetLastError());
+
 	ctx->SetPipe(pipe);
 	ctx->GetNodeApplication()->GetApplicationManager()->GetAsyncManager()->AddAsyncCompletionHandle(pipe);
 
@@ -357,28 +362,39 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 
 Error:
 
-	DWORD retry = ctx->GetConnectionRetryCount();
-	if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry(ctx->GetHttpContext()))
+	if (INVALID_HANDLE_VALUE == pipe) 
 	{
-		if (hr == ERROR_PIPE_BUSY)
+		DWORD retry = ctx->GetConnectionRetryCount();
+		if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry(ctx->GetHttpContext()))
 		{
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode was unable to establish named pipe connection to the node.exe process because the named pipe server is too busy", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-			CProtocolBridge::SendEmptyResponse(ctx, 503, _T("Service Unavailable"), hr);
+			if (hr == ERROR_PIPE_BUSY)
+			{
+				ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+					L"iisnode was unable to establish named pipe connection to the node.exe process because the named pipe server is too busy", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+				CProtocolBridge::SendEmptyResponse(ctx, 503, _T("Service Unavailable"), hr);
+			}
+			else
+			{
+				ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+					L"iisnode was unable to establish named pipe connection to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+				CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+			}
 		}
-		else
+		else 
 		{
+			ctx->SetConnectionRetryCount(retry + 1);
 			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode was unable to establish named pipe connection to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+				L"iisnode scheduled a retry of a named pipe connection to the node.exe process ", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
+			CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamedPipeConnectionRetryDelay(ctx->GetHttpContext()));
 		}
 	}
-	else 
+	else
 	{
-		ctx->SetConnectionRetryCount(retry + 1);
+		CloseHandle(pipe);
+		pipe = INVALID_HANDLE_VALUE;
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-			L"iisnode scheduled a retry of a named pipe connection to the node.exe process ", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
-		CProtocolBridge::PostponeProcessing(ctx, CModuleConfiguration::GetNamedPipeConnectionRetryDelay(ctx->GetHttpContext()));
+			L"iisnode was unable to configure the named pipe connection to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 	}
 
 	return;
@@ -426,8 +442,12 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 			WINEVENT_LEVEL_VERBOSE, 
 			&activityId);
 
-		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
+		// despite IO completion ports are used, asynchronous callback will not be invoked because in 
+		// CProtocolBridge:CreateNamedPipeConnection the SetFileCompletionNotificationModes function was called
 		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
+		// and http://msdn.microsoft.com/en-us/library/windows/desktop/aa365538(v=vs.85).aspx
+
+		CProtocolBridge::SendHttpRequestHeadersCompleted(S_OK, 0, context->GetOverlapped());
 	}
 	else 
 	{
@@ -568,8 +588,12 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 			WINEVENT_LEVEL_VERBOSE, 
 			&activityId);
 
-		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
+		// despite IO completion ports are used, asynchronous callback will not be invoked because in 
+		// CProtocolBridge:CreateNamedPipeConnection the SetFileCompletionNotificationModes function was called
 		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
+		// and http://msdn.microsoft.com/en-us/library/windows/desktop/aa365538(v=vs.85).aspx
+
+		CProtocolBridge::SendRequestBodyCompleted(S_OK, 0, context->GetOverlapped());
 	}
 	else 
 	{
@@ -693,6 +717,7 @@ Error:
 void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;
+	DWORD bytesRead = 0;
 
 	// capture ETW provider since after a successful call to ReadFile the context may be asynchronously deleted
 
@@ -706,7 +731,7 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 			context->GetPipe(), 
 			(char*)context->GetBuffer() + context->GetDataSize(), 
 			context->GetBufferSize() - context->GetDataSize(),
-			NULL,
+			&bytesRead,
 			context->InitializeOverlapped()))
 	{
 		// read completed synchronously 
@@ -715,8 +740,12 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 			WINEVENT_LEVEL_VERBOSE, 
 			&activityId);
 
-		// asynchronous callback will be invoked and processing will continue asynchronously since IO completion ports are used
+		// despite IO completion ports are used, asynchronous callback will not be invoked because in 
+		// CProtocolBridge:CreateNamedPipeConnection the SetFileCompletionNotificationModes function was called
 		// - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
+		// and http://msdn.microsoft.com/en-us/library/windows/desktop/aa365538(v=vs.85).aspx
+
+		context->GetAsyncContext()->completionProcessor(S_OK, bytesRead, context->GetOverlapped());
 	}
 	else if (ERROR_IO_PENDING == (hr = GetLastError()))
 	{
