@@ -185,7 +185,7 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 		{
 			// this is the sweetspot code path: application already exists, shared read lock is sufficient
 
-			CheckError(application->Enqueue(context, pProvider, ctx));
+			CheckError(application->Dispatch(context, pProvider, ctx));
 		}
 
         LEAVE_SRW_SHARED(this->srwlock)
@@ -198,7 +198,7 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 			ENTER_SRW_EXCLUSIVE(this->srwlock)
 
 			CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
-			CheckError(application->Enqueue(context, pProvider, ctx));
+			CheckError(application->Dispatch(context, pProvider, ctx));
 
 			LEAVE_SRW_EXCLUSIVE(this->srwlock)
 		}

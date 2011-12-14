@@ -33,8 +33,6 @@ private:
 	HRESULT AddOneProcessCore(CNodeProcess** process, IHttpContext* context);
 	HRESULT AddOneProcess(CNodeProcess** process, IHttpContext* context);
 	BOOL TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context);
-	void TryDispatchOneRequestImpl();
-	static void TryDispatchOneRequest(void* data);
 	static unsigned int WINAPI GracefulShutdown(void* arg);
 
 public:
@@ -46,7 +44,7 @@ public:
 	HRESULT Initialize(IHttpContext* context);	
 	HRESULT RecycleProcess(CNodeProcess* process);
 	HRESULT Recycle();
-	HRESULT PostDispatchOneRequest();
+	HRESULT Dispatch(CNodeHttpStoredContext* request);
 	CNodeEventProvider* GetEventProvider();
 	long AddRef();
 	long DecRef();

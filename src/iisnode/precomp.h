@@ -35,7 +35,6 @@
 #include "cnodeapplicationmanager.h"
 #include "cnodeprocess.h"
 #include "cnodeprocessmanager.h"
-#include "cpendingrequestqueue.h"
 #include "cprotocolbridge.h"
 #include "cnodehttpstoredcontext.h"
 #include "cfilewatcher.h"

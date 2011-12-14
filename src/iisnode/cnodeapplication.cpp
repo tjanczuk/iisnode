@@ -1,7 +1,7 @@
 #include "precomp.h"
 
 CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort)
-	: applicationManager(applicationManager), scriptName(NULL), pendingRequests(NULL), processManager(NULL),
+	: applicationManager(applicationManager), scriptName(NULL), processManager(NULL),
 	isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand), debugPort(debugPort)
 {
 }
@@ -19,12 +19,6 @@ void CNodeApplication::Cleanup()
 	{
 		delete [] this->scriptName;
 		this->scriptName = NULL;
-	}
-
-	if (NULL != this->pendingRequests)
-	{
-		delete this->pendingRequests;
-		this->pendingRequests = NULL;
 	}
 
 	if (NULL != this->processManager)
@@ -46,9 +40,6 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context)
 
 	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this, context)), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->processManager->Initialize(context));
-
-	ErrorIf(NULL == (this->pendingRequests = new CPendingRequestQueue()), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(this->pendingRequests->Initialize());
 
 	CheckError(this->GetApplicationManager()->GetFileWatcher()->WatchFile(
 		scriptName, 
@@ -78,12 +69,7 @@ CNodeApplicationManager* CNodeApplication::GetApplicationManager()
 	return this->applicationManager;
 }
 
-CPendingRequestQueue* CNodeApplication::GetPendingRequestQueue()
-{
-	return this->pendingRequests;
-}
-
-HRESULT CNodeApplication::Enqueue(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx)
+HRESULT CNodeApplication::Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx)
 {
 	HRESULT hr;
 
@@ -95,19 +81,17 @@ HRESULT CNodeApplication::Enqueue(IHttpContext* context, IHttpEventProvider* pPr
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 	moduleContextContainer->SetModuleContext(*ctx, this->GetApplicationManager()->GetModuleId());
 
-	if (S_OK == (hr = this->pendingRequests->Push(*ctx)))
-	{		
-		this->processManager->PostDispatchOneRequest();		
-	}
-	else
-	{
-		return hr;
-	}
+	// increase the pending async opertation count; corresponding decrease happens in
+	// CProtocolBridge::FinalizeResponseCore, possibly after several context switches
+	(*ctx)->IncreasePendingAsyncOperationCount(); 
+
+	CheckError(this->processManager->Dispatch(*ctx));
 
 	return S_OK;
-Error:
 
-	// nodeContext need not be freed here as it will be deallocated through IHttpStoredContext when the request is finished
+Error:	
+
+	// on error, nodeContext need not be freed here as it will be deallocated through IHttpStoredContext when the request is finished
 
 	return hr;
 }

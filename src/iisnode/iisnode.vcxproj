@@ -213,7 +213,6 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <ClCompile Include="cnodehttpstoredcontext.cpp" />
     <ClCompile Include="cnodeprocess.cpp" />
     <ClCompile Include="cnodeprocessmanager.cpp" />
-    <ClCompile Include="cpendingrequestqueue.cpp" />
     <ClCompile Include="cprotocolbridge.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="cnodehttpmodule.cpp" />
@@ -335,7 +334,6 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <ClInclude Include="cnodeprocess.h" />
     <ClInclude Include="cnodeprocessmanager.h" />
     <ClInclude Include="cnodeeventprovider.h" />
-    <ClInclude Include="cpendingrequestqueue.h" />
     <ClInclude Include="cprotocolbridge.h" />
     <ClInclude Include="errors.h" />
     <ClInclude Include="precomp.h" />

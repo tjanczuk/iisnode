@@ -1034,9 +1034,9 @@ HRESULT CProtocolBridge::FinalizeResponseCore(CNodeHttpStoredContext* context, R
 		context->GetNodeProcess()->OnRequestCompleted(context);
 	}
 
-	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in the ctor of CPendingRequestQueue::Push
+	if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in the ctor of CNodeApplication::Dispatch
 	{
-		log->Log(etw, level, context->GetActivityId());		
+		log->Log(etw, level, context->GetActivityId());	
 		context->GetHttpContext()->PostCompletion(0);
 	}
 

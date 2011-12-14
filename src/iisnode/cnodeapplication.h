@@ -1,7 +1,6 @@
 #ifndef __CNODEAPPLICATION_H__
 #define __CNODEAPPLICATION_H__
 
-class CPendingRequestQueue;
 class CNodeProcessManager;
 class CFileWatcher;
 class CNodeHttpStoredContext;
@@ -12,7 +11,6 @@ class CNodeApplication
 private:
 
 	PWSTR scriptName;
-	CPendingRequestQueue* pendingRequests;
 	CNodeApplicationManager* applicationManager;
 	CNodeProcessManager* processManager;
 	CNodeApplication* peerApplication;
@@ -30,8 +28,7 @@ public:
 	HRESULT Initialize(PCWSTR scriptName, IHttpContext* context);
 	PCWSTR GetScriptName();
 	CNodeApplicationManager* GetApplicationManager();
-	CPendingRequestQueue* GetPendingRequestQueue();
-	HRESULT Enqueue(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
+	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
 	CNodeApplication* GetPeerApplication();
 	void SetPeerApplication(CNodeApplication* peerApplication);
 	BOOL IsDebugger();

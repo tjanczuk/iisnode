@@ -137,9 +137,6 @@
     <ClCompile Include="cnodeprocessmanager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cpendingrequestqueue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="cprotocolbridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -179,9 +176,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cnodeapplication.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="cpendingrequestqueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cnodeprocessmanager.h">

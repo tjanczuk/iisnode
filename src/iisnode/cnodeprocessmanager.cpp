@@ -108,35 +108,21 @@ Error:
 	return hr;	
 }
 
-void CNodeProcessManager::TryDispatchOneRequest(void* data)
-{
-	((CNodeProcessManager*)data)->TryDispatchOneRequestImpl();
-}
-
-void CNodeProcessManager::TryDispatchOneRequestImpl()
+HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 {
 	HRESULT hr;
-	CNodeHttpStoredContext* request = NULL;		
+
+	CheckNull(request);
+
+	this->AddRef(); // decremented at the bottom of this method
 
 	if (!this->isClosing) 
 	{
 		ENTER_SRW_SHARED(this->srwlock)
 
-		if (!this->isClosing)
+		if (!this->isClosing && this->TryRouteRequestToExistingProcess(request))
 		{
-			CPendingRequestQueue* queue = this->GetApplication()->GetPendingRequestQueue();
-			request = queue->Pop();		
-
-			if (NULL != request)
-			{
-				this->GetEventProvider()->Log(
-					L"iisnode dequeued a request for processing from the pending request queue", WINEVENT_LEVEL_VERBOSE);
-
-				if (this->TryRouteRequestToExistingProcess(request))
-				{
-					request = NULL;
-				}
-			}
+			request = NULL;
 		}
 
 		LEAVE_SRW_SHARED(this->srwlock)
@@ -157,31 +143,23 @@ void CNodeProcessManager::TryDispatchOneRequestImpl()
 			LEAVE_SRW_EXCLUSIVE(this->srwlock)
 		}
 	}
-	else
-	{
-		this->GetEventProvider()->Log(
-			L"iisnode attempted to dequeue a request for processing from the pending request queue but the queue is empty", WINEVENT_LEVEL_VERBOSE);
-	}
 
-	this->DecRef(); // incremented in CNodeProcessManager::PostDispatchOneRequest
+	this->DecRef(); // incremented at the beginning of this method
 
-	return;
+	return S_OK;
 Error:
 
-	if (request != NULL)
-	{
-		this->GetEventProvider()->Log(
-			L"iisnode failed to initiate processing of a request dequeued from the pending request queue", WINEVENT_LEVEL_ERROR);
+	this->GetEventProvider()->Log(
+		L"iisnode failed to initiate processing of a request", WINEVENT_LEVEL_ERROR);
 
-		if (!CProtocolBridge::SendIisnodeError(request, hr))
-		{
-			CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
-		}
+	if (!CProtocolBridge::SendIisnodeError(request, hr))
+	{
+		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), hr);
 	}
 
-	this->DecRef(); // incremented in CNodeProcessManager::PostDispatchOneRequest
+	this->DecRef(); // incremented at the beginning of this method
 
-	return;
+	return hr;
 }
 
 BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context)
@@ -400,17 +378,6 @@ Error:
 	}
 
 	return hr;
-}
-
-HRESULT CNodeProcessManager::PostDispatchOneRequest()
-{
-	if (!this->isClosing)
-	{
-		this->AddRef(); // decreased in CNodeProcessManager::TryDispatchOneRequestImpl
-		this->GetApplication()->GetApplicationManager()->GetAsyncManager()->PostContinuation(CNodeProcessManager::TryDispatchOneRequest, this);
-	}
-
-	return S_OK;
 }
 
 long CNodeProcessManager::AddRef()
