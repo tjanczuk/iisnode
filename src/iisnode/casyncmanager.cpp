@@ -142,45 +142,58 @@ unsigned int WINAPI CAsyncManager::TimerWorker(void* arg)
 
 unsigned int WINAPI CAsyncManager::Worker(void* arg)
 {
+	const int maxOverlappedEntries = 32;
 	HANDLE completionPort = ((CAsyncManager*)arg)->completionPort;
 	ASYNC_CONTEXT* ctx;
 	DWORD error;
-	OVERLAPPED_ENTRY entry;
+	OVERLAPPED_ENTRY entries[maxOverlappedEntries];
+	ULONG entriesRemoved;
 
 	while (true) 
 	{
 		error = ERROR_SUCCESS;
-		RtlZeroMemory(&entry, sizeof entry);
-		if (!GetQueuedCompletionStatus(completionPort, &entry.dwNumberOfBytesTransferred, &entry.lpCompletionKey, &entry.lpOverlapped, INFINITE))
+		RtlZeroMemory(&entries, maxOverlappedEntries * sizeof OVERLAPPED_ENTRY);
+
+		if (GetQueuedCompletionStatusEx(completionPort, entries, maxOverlappedEntries, &entriesRemoved, INFINITE, TRUE))
 		{
-			error = GetLastError();
-		}
-		
-		if (0L == entry.lpCompletionKey 
-			&& NULL != (ctx = (ASYNC_CONTEXT*)entry.lpOverlapped) 
-			&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
-		{
-			ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-			ctx->completionProcessor(
-				(0 == entry.dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
-				entry.dwNumberOfBytesTransferred, 
-				(LPOVERLAPPED)ctx);
-		}
-		else if (-1L == entry.lpCompletionKey) // shutdown initiated from Terminate
-		{
-			break;
-		}
-		else if (NULL != entry.lpOverlapped)
-		{
-			if (-2L == entry.lpCompletionKey) // completion of an alertable wait state timer initialized from OnTimer
-			{
-				ctx = (ASYNC_CONTEXT*)entry.lpOverlapped;
-				ctx->completionProcessor(S_OK, 0, (LPOVERLAPPED)ctx);
+			OVERLAPPED_ENTRY* entry = entries;
+			for (int i = 0; i < entriesRemoved; i++)
+			{				
+				if (0L == entry->lpCompletionKey 
+					&& NULL != (ctx = (ASYNC_CONTEXT*)entry->lpOverlapped) 
+					&& NULL != ctx->completionProcessor) // regular IO completion - invoke custom processor
+				{
+					error = (entry->lpOverlapped->Internal == STATUS_SUCCESS) ? ERROR_SUCCESS 
+						: pRtlNtStatusToDosError(entry->lpOverlapped->Internal);
+					ctx = (ASYNC_CONTEXT*)entry->lpOverlapped;
+					ctx->completionProcessor(
+						(0 == entry->dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
+						entry->dwNumberOfBytesTransferred, 
+						(LPOVERLAPPED)ctx);
+				}
+				else if (-1L == entry->lpCompletionKey) // shutdown initiated from Terminate
+				{
+					return 0;
+				}
+				else if (NULL != entry->lpOverlapped)
+				{
+					if (-2L == entry->lpCompletionKey) // completion of an alertable wait state timer initialized from OnTimer
+					{
+						ctx = (ASYNC_CONTEXT*)entry->lpOverlapped;
+						ctx->completionProcessor(S_OK, 0, (LPOVERLAPPED)ctx);
+					}
+					else if (-3L == entry->lpCompletionKey) // continuation initiated form PostContinuation
+					{
+						((ContinuationCallback)entry->lpOverlapped)((void*)entry->dwNumberOfBytesTransferred);
+					}
+				}
+
+				entry++;
 			}
-			else if (-3L == entry.lpCompletionKey) // continuation initiated form PostContinuation
-			{
-				((ContinuationCallback)entry.lpOverlapped)((void*)entry.dwNumberOfBytesTransferred);
-			}
+		}
+		else if (ERROR_ABANDONED_WAIT_0 == GetLastError())
+		{
+			return ERROR_ABANDONED_WAIT_0;
 		}
 	}
 

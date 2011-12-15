@@ -467,12 +467,12 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 
         if (0 == c->asyncCompletionThreadCount)
         {
-            // default number of async completion threads is 2x the number of processors
+            // default number of async completion threads is the number of processors
 
             SYSTEM_INFO info;
 
             GetSystemInfo(&info);
-            c->asyncCompletionThreadCount = 0 == info.dwNumberOfProcessors ? 4 : info.dwNumberOfProcessors * 2;
+            c->asyncCompletionThreadCount = 0 == info.dwNumberOfProcessors ? 4 : info.dwNumberOfProcessors;
         }
 		
 		// CR: check for ERROR_ALREADY_ASSIGNED to detect a race in creation of this section 
