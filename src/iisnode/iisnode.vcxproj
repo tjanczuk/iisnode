@@ -238,6 +238,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\tests\110_log_size_quota.js" />
     <None Include="..\..\test\functional\tests\111_node_env.js" />
     <None Include="..\..\test\functional\tests\112_dev_errors.js" />
+    <None Include="..\..\test\functional\tests\113_encoding.js" />
     <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
@@ -273,6 +274,8 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\www\112_dev_errors\off\web.config" />
     <None Include="..\..\test\functional\www\112_dev_errors\on\hello.js" />
     <None Include="..\..\test\functional\www\112_dev_errors\on\web.config" />
+    <None Include="..\..\test\functional\www\113_encoding\hello.js" />
+    <None Include="..\..\test\functional\www\113_encoding\web.config" />
     <None Include="..\..\test\performance\client.bat" />
     <None Include="..\..\test\performance\localRun.bat" />
     <None Include="..\..\test\performance\readme.txt" />

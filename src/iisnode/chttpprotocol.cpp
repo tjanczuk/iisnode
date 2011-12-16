@@ -270,6 +270,113 @@ Error:
 	return hr;
 }
 
+HRESULT CHttpProtocol::ParseChunkHeader(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+
+	char* data = (char*)context->GetBuffer() + context->GetParsingOffset();
+	char* current;
+	char* chunkHeaderStart;
+	DWORD dataSize = context->GetDataSize() - context->GetParsingOffset();
+	ULONG chunkLength = 0;
+	ULONG totalChunkLength = 0;
+
+	// attempt to parse as many response body chunks as there are buffered in memory
+
+	current = data;
+	do
+	{
+		// parse chunk length
+		
+		chunkHeaderStart = current;
+		chunkLength = 0;
+		while (true)
+		{
+			ErrorIf((current - data) >= dataSize, ERROR_MORE_DATA);
+			if (*current >= 'A' && *current <= 'F')
+			{
+				chunkLength <<= 4;
+				chunkLength += *current - 'A' + 10;
+			}
+			else if (*current >= 'a' && *current <= 'f')
+			{
+				chunkLength <<= 4;
+				chunkLength += *current - 'a' + 10;
+			}
+			else if (*current >= '0' && *current <= '9')
+			{
+				chunkLength <<= 4;
+				chunkLength += *current - '0';
+			}
+			else 
+			{
+				ErrorIf(current == chunkHeaderStart, ERROR_BAD_FORMAT); // no hex digits found
+				break;
+			}
+
+			current++;
+		}
+
+		// skip optional extensions
+
+		while (true)
+		{
+			ErrorIf((current - data) >= dataSize, ERROR_MORE_DATA);
+			if (*current == 0x0D)
+			{
+				break;
+			}
+
+			current++;
+		}
+
+		// LF
+
+		current++;
+		ErrorIf((current - data) >= dataSize, ERROR_MORE_DATA);
+		ErrorIf(*current != 0x0A, ERROR_BAD_FORMAT);
+		current++;
+
+		// remember total length of all parsed chunks before attempting to parse subsequent chunk header
+
+		// set total chunk length to include current chunk content length, previously parsed chunks (with headers), 
+		// plus the CRLF following the current chunk content
+		totalChunkLength = chunkLength + (ULONG)(current - data) + 2; 
+		current += chunkLength + 2; // chunk content length + CRLF
+
+	} while (chunkLength != 0); // exit when last chunk has been detected	
+
+	// if we are here, current buffer contains the header of the last chunk of the response
+
+	context->SetChunkLength(totalChunkLength);
+	context->SetIsLastChunk(TRUE);
+	context->SetChunkTransmitted(0);
+
+	return S_OK;
+
+Error:
+
+	if (ERROR_MORE_DATA != hr)
+	{
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to parse response body chunk header", WINEVENT_LEVEL_ERROR, context->GetActivityId());
+
+		return hr;
+	}
+	else if (0 < totalChunkLength)
+	{
+		// at least one response chunk has been successfuly parsed, but more chunks remain
+
+		context->SetChunkLength(totalChunkLength);
+		context->SetIsLastChunk(FALSE);
+		context->SetChunkTransmitted(0);
+
+		return S_OK;
+	}
+
+	return hr;
+}
+
 HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;

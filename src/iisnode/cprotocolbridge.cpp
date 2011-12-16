@@ -758,18 +758,6 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 			WINEVENT_LEVEL_VERBOSE, 
 			&activityId);
 	}
-	else if (context->GetResponseContentLength() == -1)
-	{
-		// connection termination with chunked transfer encoding indicates end of response
-		// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
-
-		etw->Log(L"iisnode iniatiated reading http response chunk and synchronously detected the end of the http response", 
-			WINEVENT_LEVEL_VERBOSE, 
-			&activityId);
-
-		// CR: narrow down this condition to orderly pipe closure
-		CProtocolBridge::FinalizeResponse(context);
-	}
 	else
 	{
 		// error
@@ -844,7 +832,8 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	contentLength = ctx->GetHttpContext()->GetResponse()->GetHeader(HttpHeaderContentLength, &contentLengthLength);
 	if (0 == contentLengthLength)
 	{
-		ctx->SetResponseContentLength(-1);
+		ctx->SetIsChunked(TRUE);
+		ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
 	}
 	else
 	{
@@ -858,14 +847,16 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 		while (i < contentLengthLength && contentLength[i] >= '0' && contentLength[i] <= '9') 
 			length = length * 10 + contentLength[i++] - '0';
 
-		ctx->SetResponseContentLength(length);
+		ctx->SetIsChunked(FALSE);
+		ctx->SetIsLastChunk(TRUE);
+		ctx->SetChunkLength(length);
+		ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	}
 
 	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode finished processing http response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
-	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
-	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
+	ctx->GetAsyncContext()->completionProcessor(S_OK, 0, ctx->GetOverlapped());
 
 	return;
 Error:
@@ -884,6 +875,43 @@ Error:
 	return;
 }
 
+void WINAPI CProtocolBridge::ProcessChunkHeader(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	HRESULT hr;
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode starting to process http response body chunk header", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
+	CheckError(error);
+
+	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
+	CheckError(CHttpProtocol::ParseChunkHeader(ctx));
+
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode finished processing http response body chunk header", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
+	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
+
+	return;
+
+Error:
+
+	if (ERROR_MORE_DATA == hr)
+	{
+		CProtocolBridge::ContinueReadResponse(ctx);
+	}
+	else
+	{
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to process response body chunk header", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
+
+	return;
+}
+
 void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
 	HRESULT hr;
@@ -895,64 +923,73 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode starting to process http response body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
-	if (S_OK != error)
-	{
-		if (ctx->GetResponseContentLength() == -1)
-		{
-			// connection termination with chunked transfer encoding indicates end of response
-			// since we have sent Connection: close HTTP request header to node from SendHttpRequestHeaders
-
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode detected the end of the http response", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-
-			// CR: check the other commend for finalizing response
-			CProtocolBridge::FinalizeResponse(ctx);
-		}
-		else
-		{
-			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-				L"iisnode failed to read http response body", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
-		}
-
-		return;
-	}
+	CheckError(error);
 
 	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
 
 	if (ctx->GetDataSize() > ctx->GetParsingOffset())
 	{
-		// send body data to client
+		// there is response body data in the buffer
 
-		// CR: consider using malloc here (memory can be released after Flush)
-
-		ErrorIf(NULL == (chunk = (HTTP_DATA_CHUNK*) ctx->GetHttpContext()->AllocateRequestMemory(sizeof HTTP_DATA_CHUNK)), ERROR_NOT_ENOUGH_MEMORY);
-		chunk->DataChunkType = HttpDataChunkFromMemory;
-		chunk->FromMemory.BufferLength = ctx->GetDataSize() - ctx->GetParsingOffset();
-		ErrorIf(NULL == (chunk->FromMemory.pBuffer = ctx->GetHttpContext()->AllocateRequestMemory(chunk->FromMemory.BufferLength)), ERROR_NOT_ENOUGH_MEMORY);
-		memcpy(chunk->FromMemory.pBuffer, (char*)ctx->GetBuffer() + ctx->GetParsingOffset(), chunk->FromMemory.BufferLength);
-
-		ctx->SetDataSize(0);
-		ctx->SetParsingOffset(0);
-		ctx->SetNextProcessor(CProtocolBridge::SendResponseBodyCompleted);
-
-		CheckError(ctx->GetHttpContext()->GetResponse()->WriteEntityChunks(
-			chunk,
-			1,
-			TRUE,
-			ctx->GetResponseContentLength() == -1 || ctx->GetResponseContentLength() > (ctx->GetResponseContentTransmitted() + chunk->FromMemory.BufferLength),
-			&bytesSent,
-			&completionExpected));
-
-		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-			L"iisnode started sending http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-		
-		if (!completionExpected)
+		if (ctx->GetChunkLength() > ctx->GetChunkTransmitted())
 		{
-			CProtocolBridge::SendResponseBodyCompleted(S_OK, chunk->FromMemory.BufferLength, ctx->GetOverlapped());
+			// send the smaller of the rest of the current chunk or the data available in the buffer to the client
+
+			DWORD dataInBuffer = ctx->GetDataSize() - ctx->GetParsingOffset();
+			DWORD remainingChunkSize = ctx->GetChunkLength() - ctx->GetChunkTransmitted();
+			DWORD bytesToSend = dataInBuffer < remainingChunkSize ? dataInBuffer : remainingChunkSize;
+
+			// CR: consider using malloc here (memory can be released after Flush)
+
+			ErrorIf(NULL == (chunk = (HTTP_DATA_CHUNK*) ctx->GetHttpContext()->AllocateRequestMemory(sizeof HTTP_DATA_CHUNK)), ERROR_NOT_ENOUGH_MEMORY);
+			chunk->DataChunkType = HttpDataChunkFromMemory;
+			chunk->FromMemory.BufferLength = bytesToSend;
+			ErrorIf(NULL == (chunk->FromMemory.pBuffer = ctx->GetHttpContext()->AllocateRequestMemory(chunk->FromMemory.BufferLength)), ERROR_NOT_ENOUGH_MEMORY);
+			memcpy(chunk->FromMemory.pBuffer, (char*)ctx->GetBuffer() + ctx->GetParsingOffset(), chunk->FromMemory.BufferLength);
+
+			if (bytesToSend == dataInBuffer)
+			{
+				ctx->SetDataSize(0);
+				ctx->SetParsingOffset(0);
+			}
+			else
+			{
+				ctx->SetParsingOffset(ctx->GetParsingOffset() + bytesToSend);
+			}
+
+			ctx->SetNextProcessor(CProtocolBridge::SendResponseBodyCompleted);
+
+			CheckError(ctx->GetHttpContext()->GetResponse()->WriteEntityChunks(
+				chunk,
+				1,
+				TRUE,
+				!ctx->GetIsLastChunk(),
+				&bytesSent,
+				&completionExpected));
+
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode started sending http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+		
+			if (!completionExpected)
+			{
+				CProtocolBridge::SendResponseBodyCompleted(S_OK, chunk->FromMemory.BufferLength, ctx->GetOverlapped());
+			}
+		}
+		else if (ctx->GetIsChunked())
+		{
+			// process next chunk of the chunked encoding
+
+			ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
+			CProtocolBridge::ProcessChunkHeader(S_OK, 0, ctx->GetOverlapped());
+		}
+		else
+		{
+			// response data detected beyond the body length declared with Content-Length
+
+			CheckError(ERROR_BAD_FORMAT);
 		}
 	}
-	else if (-1 == ctx->GetResponseContentLength() || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
+	else if (ctx->GetIsChunked() || ctx->GetChunkLength() > ctx->GetChunkTransmitted())
 	{
 		// read more body data
 
@@ -983,11 +1020,15 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	BOOL completionExpected = FALSE;
 
 	CheckError(error);
-	ctx->SetResponseContentTransmitted(ctx->GetResponseContentTransmitted() + bytesTransfered);
+	ctx->SetChunkTransmitted(ctx->GetChunkTransmitted() + bytesTransfered);
 
-	if (ctx->GetResponseContentLength() == -1 || ctx->GetResponseContentLength() > ctx->GetResponseContentTransmitted())
+	if (ctx->GetIsLastChunk() && ctx->GetChunkLength() == ctx->GetChunkTransmitted())
 	{
-		if (ctx->GetResponseContentLength() == -1 && CModuleConfiguration::GetFlushResponse(ctx->GetHttpContext()))
+		CProtocolBridge::FinalizeResponse(ctx);
+	}
+	else
+	{
+		if (ctx->GetIsChunked() && CModuleConfiguration::GetFlushResponse(ctx->GetHttpContext()))
 		{
 			// Flushing of chunked responses is enabled
 
@@ -1001,10 +1042,6 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 		{
 			CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped());
 		}
-	}
-	else
-	{
-		CProtocolBridge::FinalizeResponse(ctx);
 	}
 
 	return;
@@ -1024,7 +1061,7 @@ void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD 
 
 	CheckError(error);	
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
-	CProtocolBridge::ContinueReadResponse(ctx);
+	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
 
 	return;
 Error:

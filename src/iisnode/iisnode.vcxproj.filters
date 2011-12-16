@@ -108,6 +108,9 @@
     <Filter Include="Tests\performance\www\default">
       <UniqueIdentifier>{6b173a34-4fbb-49ac-9e03-33cde5a6e50f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\113_encoding">
+      <UniqueIdentifier>{5e0f95ef-1256-4223-a412-f5146a7713cc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -461,6 +464,15 @@
     </None>
     <None Include="..\..\test\performance\localRun.bat">
       <Filter>Tests\performance</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\113_encoding\hello.js">
+      <Filter>Tests\functional\www\113_encoding</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\113_encoding\web.config">
+      <Filter>Tests\functional\www\113_encoding</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\113_encoding.js">
+      <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
 </Project>

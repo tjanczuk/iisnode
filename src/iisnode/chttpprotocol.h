@@ -15,6 +15,7 @@ public:
 	static HRESULT SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void** result, DWORD* resultSize, DWORD* resultLength);
 	static HRESULT ParseResponseStatusLine(CNodeHttpStoredContext* context);
 	static HRESULT ParseResponseHeaders(CNodeHttpStoredContext* context);
+	static HRESULT ParseChunkHeader(CNodeHttpStoredContext* context);
 };
 
 #endif

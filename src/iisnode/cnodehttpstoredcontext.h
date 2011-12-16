@@ -19,14 +19,16 @@ private:
 	DWORD bufferSize;
 	DWORD dataSize;
 	DWORD parsingOffset;
-	LONGLONG responseContentTransmitted;
-	LONGLONG responseContentLength;
+	LONGLONG chunkTransmitted;
+	LONGLONG chunkLength;
+	BOOL isChunked;
 	HRESULT result;
 	REQUEST_NOTIFICATION_STATUS requestNotificationStatus;	
 	long pendingAsyncOperationCount;
 	PCSTR targetUrl;
 	DWORD targetUrlLength;
 	IHttpContext* childContext;
+	BOOL isLastChunk;
 
 public:
 
@@ -47,8 +49,11 @@ public:
 	DWORD* GetBufferSizeRef();
 	DWORD GetDataSize();
 	DWORD GetParsingOffset();
-	LONGLONG GetResponseContentTransmitted();
-	LONGLONG GetResponseContentLength();
+	LONGLONG GetChunkTransmitted();
+	LONGLONG GetChunkLength();
+	BOOL GetIsChunked();
+	void SetIsLastChunk(BOOL lastChunk);
+	BOOL GetIsLastChunk();
 	HRESULT GetHresult();
 	REQUEST_NOTIFICATION_STATUS GetRequestNotificationStatus();
 	GUID* GetActivityId();
@@ -66,8 +71,9 @@ public:
 	void SetBufferSize(DWORD bufferSize);
 	void SetDataSize(DWORD dataSize);
 	void SetParsingOffset(DWORD parsingOffet);
-	void SetResponseContentTransmitted(LONGLONG length);
-	void SetResponseContentLength(LONGLONG length);
+	void SetChunkTransmitted(LONGLONG length);
+	void SetChunkLength(LONGLONG length);
+	void SetIsChunked(BOOL chunked);
 	void SetHresult(HRESULT result);
 	void SetRequestNotificationStatus(REQUEST_NOTIFICATION_STATUS status);
 	LPOVERLAPPED InitializeOverlapped();

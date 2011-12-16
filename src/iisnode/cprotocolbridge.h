@@ -30,7 +30,9 @@ private:
 	static void ContinueReadResponse(CNodeHttpStoredContext* context);
 	static void WINAPI ProcessResponseStatusLine(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 	static void WINAPI ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
-	static void WINAPI ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
+
+	static void WINAPI ProcessChunkHeader(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
+	static void WINAPI ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 	static void WINAPI SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 	static void WINAPI ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 

@@ -2,7 +2,7 @@
 
 CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
-	responseContentLength(0), responseContentTransmitted(0), pipe(INVALID_HANDLE_VALUE), result(S_OK), 
+	chunkLength(0), chunkTransmitted(0), isChunked(FALSE), pipe(INVALID_HANDLE_VALUE), result(S_OK), isLastChunk(FALSE),
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
 	targetUrl(NULL), targetUrlLength(0), childContext(NULL)
 {
@@ -153,24 +153,44 @@ void CNodeHttpStoredContext::SetParsingOffset(DWORD parsingOffset)
 	this->parsingOffset = parsingOffset;
 }
 
-LONGLONG CNodeHttpStoredContext::GetResponseContentTransmitted()
+LONGLONG CNodeHttpStoredContext::GetChunkTransmitted()
 {
-	return this->responseContentTransmitted;
+	return this->chunkTransmitted;
 }
 
-LONGLONG CNodeHttpStoredContext::GetResponseContentLength()
+LONGLONG CNodeHttpStoredContext::GetChunkLength()
 {
-	return this->responseContentLength;
+	return this->chunkLength;
 }
 
-void CNodeHttpStoredContext::SetResponseContentTransmitted(LONGLONG length)
+void CNodeHttpStoredContext::SetChunkTransmitted(LONGLONG length)
 {
-	this->responseContentTransmitted = length;
+	this->chunkTransmitted = length;
 }
 
-void CNodeHttpStoredContext::SetResponseContentLength(LONGLONG length)
+void CNodeHttpStoredContext::SetChunkLength(LONGLONG length)
 {
-	this->responseContentLength = length;
+	this->chunkLength = length;
+}
+
+BOOL CNodeHttpStoredContext::GetIsChunked()
+{
+	return this->isChunked;
+}
+
+void CNodeHttpStoredContext::SetIsChunked(BOOL chunked)
+{
+	this->isChunked = chunked;
+}
+
+void CNodeHttpStoredContext::SetIsLastChunk(BOOL lastChunk)
+{
+	this->isLastChunk = lastChunk;
+}
+
+BOOL CNodeHttpStoredContext::GetIsLastChunk()
+{
+	return this->isLastChunk;
 }
 
 HRESULT CNodeHttpStoredContext::GetHresult()
