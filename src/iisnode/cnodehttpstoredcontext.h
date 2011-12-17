@@ -29,6 +29,7 @@ private:
 	DWORD targetUrlLength;
 	IHttpContext* childContext;
 	BOOL isLastChunk;
+	BOOL isConnectionFromPool;
 
 public:
 
@@ -79,6 +80,8 @@ public:
 	LPOVERLAPPED InitializeOverlapped();
 	long IncreasePendingAsyncOperationCount();
 	long DecreasePendingAsyncOperationCount();
+	BOOL GetIsConnectionFromPool();
+	void SetIsConnectionFromPool(BOOL fromPool);
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

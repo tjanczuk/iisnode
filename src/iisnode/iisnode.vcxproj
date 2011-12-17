@@ -202,6 +202,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
   <ItemGroup>
     <ClCompile Include="cactiverequestpool.cpp" />
     <ClCompile Include="casyncmanager.cpp" />
+    <ClCompile Include="cconnectionpool.cpp" />
     <ClCompile Include="cfilewatcher.cpp" />
     <ClCompile Include="chttpprotocol.cpp" />
     <ClCompile Include="cmoduleconfiguration.cpp" />
@@ -325,6 +326,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
   <ItemGroup>
     <ClInclude Include="cactiverequestpool.h" />
     <ClInclude Include="casyncmanager.h" />
+    <ClInclude Include="cconnectionpool.h" />
     <ClInclude Include="cfilewatcher.h" />
     <ClInclude Include="chttpprotocol.h" />
     <ClInclude Include="cmoduleconfiguration.h" />

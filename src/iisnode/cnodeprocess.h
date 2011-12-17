@@ -24,6 +24,7 @@ private:
 	BOOL hasProcessExited;
 	OVERLAPPED overlapped;
 	BOOL truncatePending;
+	CConnectionPool connectionPool;
 
 	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();
@@ -39,6 +40,7 @@ public:
 	HRESULT Initialize(IHttpContext* context);
 	CNodeProcessManager* GetProcessManager();
 	LPCTSTR GetNamedPipeName();
+	CConnectionPool* GetConnectionPool();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
 	void OnRequestCompleted(CNodeHttpStoredContext* context);	
 	void SignalWhenDrained(HANDLE handle);

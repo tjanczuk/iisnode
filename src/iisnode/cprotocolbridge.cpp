@@ -333,25 +333,42 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
 {
 	HRESULT hr;
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
-	HANDLE pipe;
+	HANDLE pipe = INVALID_HANDLE_VALUE;
+	DWORD retry = ctx->GetConnectionRetryCount();
 
-	ErrorIf(INVALID_HANDLE_VALUE == (pipe = CreateFile(
-		ctx->GetNodeProcess()->GetNamedPipeName(),
-		GENERIC_READ | GENERIC_WRITE,
-		0,
-		NULL,
-		OPEN_EXISTING,
-		FILE_FLAG_OVERLAPPED,
-		NULL)), 
-		GetLastError());
+	if (0 == retry)
+	{
+		// only the first connection attempt uses connections from the pool
 
-	ErrorIf(!SetFileCompletionNotificationModes(
-		pipe, 
-		FILE_SKIP_COMPLETION_PORT_ON_SUCCESS | FILE_SKIP_SET_EVENT_ON_HANDLE), 
-		GetLastError());
+		pipe = ctx->GetNodeProcess()->GetConnectionPool()->Take();
+	}
 
-	ctx->SetPipe(pipe);
-	ctx->GetNodeApplication()->GetApplicationManager()->GetAsyncManager()->AddAsyncCompletionHandle(pipe);
+	if (INVALID_HANDLE_VALUE == pipe)
+	{
+		ErrorIf(INVALID_HANDLE_VALUE == (pipe = CreateFile(
+			ctx->GetNodeProcess()->GetNamedPipeName(),
+			GENERIC_READ | GENERIC_WRITE,
+			0,
+			NULL,
+			OPEN_EXISTING,
+			FILE_FLAG_OVERLAPPED,
+			NULL)), 
+			GetLastError());
+
+		ErrorIf(!SetFileCompletionNotificationModes(
+			pipe, 
+			FILE_SKIP_COMPLETION_PORT_ON_SUCCESS | FILE_SKIP_SET_EVENT_ON_HANDLE), 
+			GetLastError());
+
+		ctx->SetIsConnectionFromPool(FALSE);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetAsyncManager()->AddAsyncCompletionHandle(pipe);
+	}
+	else
+	{
+		ctx->SetIsConnectionFromPool(TRUE);
+	}
+
+	ctx->SetPipe(pipe);	
 
 	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode created named pipe connection to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
@@ -364,7 +381,6 @@ Error:
 
 	if (INVALID_HANDLE_VALUE == pipe) 
 	{
-		DWORD retry = ctx->GetConnectionRetryCount();
 		if (retry >= CModuleConfiguration::GetMaxNamedPipeConnectionRetry(ctx->GetHttpContext()))
 		{
 			if (hr == ERROR_PIPE_BUSY)
@@ -412,13 +428,11 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	GUID activityId;
 	memcpy(&activityId, context->GetActivityId(), sizeof GUID);
 
-	// request the named pipe to be closed by the server after the response is sent
-	// since we are not reusing named pipe connections anyway, requesting the server 
-	// to close it after sending the response allows the module to avoid parsing chunked responses
-	// to detect end of response
+	// request the named pipe to be kept alive by the server after the response is sent
+	// to enable named pipe connection pooling
 
 	request = context->GetHttpContext()->GetRequest();
-	CheckError(request->SetHeader(HttpHeaderConnection, "close", 5, TRUE));
+	CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
 
 	// Expect: 100-continue has been processed by IIS - do not propagate it up to node.js since node will
 	// attempt to process it again
@@ -464,11 +478,22 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 		{
 			// error
 
-			etw->Log(L"iisnode failed to initiate sending http request headers to the node.exe process", 
-				WINEVENT_LEVEL_ERROR, 
-				&activityId);
+			if (context->GetIsConnectionFromPool())
+			{
+				// communication over a connection from the connection pool failed
+				// try to create a brand new connection instead
 
-			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
+				context->SetConnectionRetryCount(1);
+				CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->GetOverlapped());
+			}
+			else
+			{
+				etw->Log(L"iisnode failed to initiate sending http request headers to the node.exe process", 
+					WINEVENT_LEVEL_ERROR, 
+					&activityId);
+
+				CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);		
+			}
 		}
 	}
 
@@ -498,9 +523,20 @@ void WINAPI CProtocolBridge::SendHttpRequestHeadersCompleted(DWORD error, DWORD 
 	return;
 Error:
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode failed to send http request headers to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	if (ctx->GetIsConnectionFromPool())
+	{
+		// communication over a connection from the connection pool failed
+		// try to create a brand new connection instead
+
+		ctx->SetConnectionRetryCount(1);
+		CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, ctx->GetOverlapped());
+	}
+	else
+	{
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to send http request headers to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
 
 	return;
 }
@@ -1078,7 +1114,7 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode finished processing http request/response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
-	CloseHandle(context->GetPipe());
+	context->GetNodeProcess()->GetConnectionPool()->Return(context->GetPipe());
 	context->SetPipe(INVALID_HANDLE_VALUE);
 	CProtocolBridge::FinalizeResponseCore(
 		context, 

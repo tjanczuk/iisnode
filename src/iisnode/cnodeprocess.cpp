@@ -70,6 +70,10 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	RtlZeroMemory(&processInformation, sizeof processInformation);
 	RtlZeroMemory(&startupInfo, sizeof startupInfo);
 
+	// initialize connection pool
+
+	CheckError(this->connectionPool.Initialize(context));
+
 	// configure logging
 
 	if (TRUE == (this->loggingEnabled = CModuleConfiguration::GetLoggingEnabled(context)))
@@ -563,4 +567,9 @@ Error:
 	}
 
 	return hr;
+}
+
+CConnectionPool* CNodeProcess::GetConnectionPool()
+{
+	return &this->connectionPool;
 }

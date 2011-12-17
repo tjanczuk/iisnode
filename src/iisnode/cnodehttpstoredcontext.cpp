@@ -4,7 +4,7 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
 	chunkLength(0), chunkTransmitted(0), isChunked(FALSE), pipe(INVALID_HANDLE_VALUE), result(S_OK), isLastChunk(FALSE),
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
-	targetUrl(NULL), targetUrlLength(0), childContext(NULL)
+	targetUrl(NULL), targetUrlLength(0), childContext(NULL), isConnectionFromPool(FALSE)
 {
 	IHttpTraceContext* tctx;
 	LPCGUID pguid;
@@ -252,4 +252,14 @@ void CNodeHttpStoredContext::SetChildContext(IHttpContext* context)
 IHttpContext* CNodeHttpStoredContext::GetChildContext()
 {
 	return this->childContext;
+}
+
+BOOL CNodeHttpStoredContext::GetIsConnectionFromPool()
+{
+	return this->isConnectionFromPool;
+}
+
+void CNodeHttpStoredContext::SetIsConnectionFromPool(BOOL fromPool)
+{
+	this->isConnectionFromPool = fromPool;
 }

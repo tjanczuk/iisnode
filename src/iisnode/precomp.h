@@ -24,6 +24,7 @@
 //  Project header files
 #include "errors.h"
 #include "utils.h"
+#include "cconnectionpool.h"
 #include "cnodeeventprovider.h"
 #include "casyncmanager.h"
 #include "cmoduleconfiguration.h"
