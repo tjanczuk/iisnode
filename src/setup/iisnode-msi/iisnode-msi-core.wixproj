@@ -4,5 +4,17 @@
     <ProjectGuid>{e2c84d6a-20ea-48a8-858e-bdd64d98a94b}</ProjectGuid>
     <OutputName>iisnode-core</OutputName>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <SuppressIces>ICE80;ICE61</SuppressIces>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <SuppressIces>ICE80;ICE61</SuppressIces>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <SuppressIces>ICE80;ICE61</SuppressIces>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <SuppressIces>ICE80;ICE61</SuppressIces>
+  </PropertyGroup>
   <Import Project="iisnode-msi.targets" />
 </Project>
