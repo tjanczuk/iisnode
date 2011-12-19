@@ -481,4 +481,7 @@
       <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="iisnode.rc" />
+  </ItemGroup>
 </Project>
