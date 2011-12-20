@@ -102,12 +102,23 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 	HTTP_REQUEST* raw = request->GetRawHttpRequest();
 	USHORT major, minor;
 	char tmp[256];
+	PCSTR method = request->GetHttpMethod();
 	
 	ErrorIf(NULL == (*result = context->AllocateRequestMemory(bufferLength)), ERROR_NOT_ENOUGH_MEMORY);	
+
+	// Determine whether response entity body is to be expected
+
+	if (method && 0 == strcmpi("HEAD", method))
+	{
+		// HEAD requests do not have response entity body
+		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+
+		ctx->SetExpectResponseBody(FALSE);
+	}
 	
 	// Request-Line
 
-	CheckError(CHttpProtocol::Append(context, request->GetHttpMethod(), 0, result, &bufferLength, &offset));
+	CheckError(CHttpProtocol::Append(context, method, 0, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, " ", 1, result, &bufferLength, &offset));
 	CheckError(CHttpProtocol::Append(context, ctx->GetTargetUrl(), ctx->GetTargetUrlLength(), result, &bufferLength, &offset));
 	request->GetHttpVersion(&major, &minor);
@@ -235,6 +246,16 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 
 	ErrorIf(' ' != data[offset], ERROR_BAD_FORMAT);
 	offset++;
+
+	// Determine whether to expect response entity body
+	// http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+
+	if (statusCode >= 100 && statusCode < 200
+		|| statusCode == 204
+		|| statusCode == 304)
+	{
+		context->SetExpectResponseBody(FALSE);
+	}
 
 	// Reason-Phrase CRLF
 

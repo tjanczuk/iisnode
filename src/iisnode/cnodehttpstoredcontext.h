@@ -30,6 +30,7 @@ private:
 	IHttpContext* childContext;
 	BOOL isLastChunk;
 	BOOL isConnectionFromPool;
+	BOOL expectResponseBody;
 
 public:
 
@@ -82,6 +83,8 @@ public:
 	long DecreasePendingAsyncOperationCount();
 	BOOL GetIsConnectionFromPool();
 	void SetIsConnectionFromPool(BOOL fromPool);
+	void SetExpectResponseBody(BOOL expect);
+	BOOL GetExpectResponseBody();
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

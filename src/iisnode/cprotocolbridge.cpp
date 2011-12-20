@@ -865,34 +865,44 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
 	CheckError(CHttpProtocol::ParseResponseHeaders(ctx));
 
-	contentLength = ctx->GetHttpContext()->GetResponse()->GetHeader(HttpHeaderContentLength, &contentLengthLength);
-	if (0 == contentLengthLength)
+	if (!ctx->GetExpectResponseBody())
 	{
-		ctx->SetIsChunked(TRUE);
-		ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode determined the HTTP response does not have entity body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
+		CProtocolBridge::FinalizeResponse(ctx);
 	}
 	else
 	{
-		LONGLONG length = 0;
-		int i = 0;
+		contentLength = ctx->GetHttpContext()->GetResponse()->GetHeader(HttpHeaderContentLength, &contentLengthLength);
+		if (0 == contentLengthLength)
+		{
+			ctx->SetIsChunked(TRUE);
+			ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
+		}
+		else
+		{
+			LONGLONG length = 0;
+			int i = 0;
 
-		// skip leading white space
-		while (i < contentLengthLength && (contentLength[i] < '0' || contentLength[i] > '9')) 
-			i++;
+			// skip leading white space
+			while (i < contentLengthLength && (contentLength[i] < '0' || contentLength[i] > '9')) 
+				i++;
 
-		while (i < contentLengthLength && contentLength[i] >= '0' && contentLength[i] <= '9') 
-			length = length * 10 + contentLength[i++] - '0';
+			while (i < contentLengthLength && contentLength[i] >= '0' && contentLength[i] <= '9') 
+				length = length * 10 + contentLength[i++] - '0';
 
-		ctx->SetIsChunked(FALSE);
-		ctx->SetIsLastChunk(TRUE);
-		ctx->SetChunkLength(length);
-		ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+			ctx->SetIsChunked(FALSE);
+			ctx->SetIsLastChunk(TRUE);
+			ctx->SetChunkLength(length);
+			ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+		}
+
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode finished processing http response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+
+		ctx->GetAsyncContext()->completionProcessor(S_OK, 0, ctx->GetOverlapped());
 	}
-
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode finished processing http response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-
-	ctx->GetAsyncContext()->completionProcessor(S_OK, 0, ctx->GetOverlapped());
 
 	return;
 Error:
