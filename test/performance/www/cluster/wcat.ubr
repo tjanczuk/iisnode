@@ -1,0 +1,36 @@
+scenario
+{
+  name    = "default";
+ 
+    warmup      = 30;
+    duration    = 30;
+    cooldown    = 30;
+ 
+    default 
+    {
+        setheader
+        {
+            name    = "Connection";
+            value   = "keep-alive";
+        }
+        setheader
+        {
+            name    = "Host";
+            value   = server();
+        }
+	port	    = 31416;
+        version     = HTTP11;
+        statuscode  = 200;
+        close       = ka;
+    }
+     
+    transaction
+    {
+        id = "hello";
+        weight = 1000;
+        request
+        {
+            url = "/server.js";
+        }
+    }
+}
