@@ -51,7 +51,7 @@ Hosting node.js applications in IIS on Windows
 
 **Installing after build**
 
-- For IIS 7.x: `build\debug\%PROCESSOR_ARCHITECTURE%\iisnode.msi`
+- For IIS 7.x: `build\debug\%PROCESSOR_ARCHITECTURE%\iisnode-full.msi`
 - For IIS Express 7.x: `build\debug\x86\iisnode-express.msi`
     
 **Running tests**
