@@ -12,7 +12,7 @@ else {
     var cluster = require('cluster');
 
     if (cluster.isMaster) {
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0; i < 4; i++) {
             cluster.fork();
         }
 

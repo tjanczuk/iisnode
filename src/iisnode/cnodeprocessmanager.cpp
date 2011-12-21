@@ -1,16 +1,16 @@
 #include "precomp.h"
 
 CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpContext* context)
-	: application(application), processes(NULL), processCount(0), currentProcess(0), isClosing(FALSE),
+	: application(application), processes(NULL), currentProcess(0), isClosing(FALSE),
 	refCount(1)
 {
 	if (this->GetApplication()->IsDebugMode())
 	{
-		this->maxProcessCount = 1;
+		this->processCount = 1;
 	}
 	else
 	{
-		this->maxProcessCount = CModuleConfiguration::GetMaxProcessCountPerApplication(context);
+		this->processCount = CModuleConfiguration::GetNodeProcessCountPerApplication(context);
 	}
 
 	// cache event provider since the application can be disposed prior to CNodeProcessManager
@@ -22,11 +22,19 @@ CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpCon
 
 CNodeProcessManager::~CNodeProcessManager()
 {
-	if (NULL != processes)
+	this->Cleanup();
+}
+
+void CNodeProcessManager::Cleanup()
+{
+	if (NULL != this->processes)
 	{
 		for (int i = 0; i < this->processCount; i++)
 		{
-			delete this->processes[i];
+			if (this->processes[i])
+			{
+				delete this->processes[i];
+			}
 		}
 
 		delete[] this->processes;
@@ -43,74 +51,45 @@ HRESULT CNodeProcessManager::Initialize(IHttpContext* context)
 {
 	HRESULT hr;
 
-	ErrorIf(NULL == (this->processes = new CNodeProcess* [this->maxProcessCount]), ERROR_NOT_ENOUGH_MEMORY);
-	RtlZeroMemory(this->processes, this->maxProcessCount * sizeof(CNodeProcess*));
-	if (this->GetApplication()->IsDebuggee())
+	ErrorIf(NULL == (this->processes = new CNodeProcess* [this->processCount]), ERROR_NOT_ENOUGH_MEMORY);
+	RtlZeroMemory(this->processes, this->processCount * sizeof(CNodeProcess*));
+	for (int i = 0; i < this->processCount; i++)
 	{
-		// ensure the debugee process is started without activating message
-		// this is to make sure it is available for the debugger to connect to
-
-		CheckError(this->AddOneProcess(NULL, context));
+		CheckError(this->AddProcess(i, context));
 	}
 
 	return S_OK;
 Error:
 
-	if (NULL != this->processes)
-	{
-		delete [] this->processes;
-		this->processes = NULL;
-	}
+	this->Cleanup();
 
 	return hr;
 }
 
-HRESULT CNodeProcessManager::AddOneProcessCore(CNodeProcess** process, IHttpContext* context)
+HRESULT CNodeProcessManager::AddProcess(int ordinal, IHttpContext* context)
 {
 	HRESULT hr;
 
-	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
-	ErrorIf(NULL == (this->processes[this->processCount] = new CNodeProcess(this, context, this->processCount)), ERROR_NOT_ENOUGH_MEMORY);	
-	CheckError(this->processes[this->processCount]->Initialize(context));
-	if (NULL != process)
-	{
-		*process = this->processes[this->processCount];
-	}
-	this->processCount++;
+	ErrorIf(NULL != this->processes[ordinal], ERROR_INVALID_PARAMETER);
+	ErrorIf(NULL == (this->processes[ordinal] = new CNodeProcess(this, context, ordinal)), ERROR_NOT_ENOUGH_MEMORY);	
+	CheckError(this->processes[ordinal]->Initialize(context));
 
 	return S_OK;
 Error:
 
-	if (NULL != this->processes[this->processCount])
+	if (NULL != this->processes[ordinal])
 	{
-		delete this->processes[this->processCount];
-		this->processes[this->processCount] = NULL;
+		delete this->processes[ordinal];
+		this->processes[ordinal] = NULL;
 	}
 
 	return hr;
-}
-
-HRESULT CNodeProcessManager::AddOneProcess(CNodeProcess** process, IHttpContext* context)
-{
-	HRESULT hr;
-
-	if (NULL != process)
-	{
-		*process = NULL;
-	}
-
-	ErrorIf(this->processCount == this->maxProcessCount, ERROR_NOT_ENOUGH_QUOTA);
-	CheckError(this->AddOneProcessCore(process, context));
-
-	return S_OK;
-Error:
-
-	return hr;	
 }
 
 HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 {
 	HRESULT hr;
+	unsigned int tmpProcess, processToUse;
 
 	CheckNull(request);
 
@@ -120,24 +99,48 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 	{
 		ENTER_SRW_SHARED(this->srwlock)
 
-		if (!this->isClosing && this->TryRouteRequestToExistingProcess(request))
+		if (!this->isClosing)
 		{
-			request = NULL;
+			// employ a round robin routing logic to get a "ticket" to use a process with a specific ordinal number
+			
+			if (1 == this->processCount)
+			{
+				processToUse = 0;
+			}
+			else
+			{
+				do 
+				{
+					tmpProcess = this->currentProcess;
+					processToUse = (tmpProcess + 1) % this->processCount;
+				} while (tmpProcess != InterlockedCompareExchange(&this->currentProcess, processToUse, tmpProcess));
+			}
+
+			// try dispatch to that process
+
+			if (NULL != this->processes[processToUse]) 
+			{
+				CheckError(this->processes[processToUse]->AcceptRequest(request));
+				request = NULL;
+			}
 		}
 
 		LEAVE_SRW_SHARED(this->srwlock)
 
-		if (request && !this->isClosing)
+		if (NULL != request)
 		{
-			// existing processes were unable to accept this request; create a new process to handle it
+			// the process to dispatch to does not exist and must be recreated
 
 			ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-			if (!this->isClosing && !this->TryRouteRequestToExistingProcess(request))
+			if (!this->isClosing)
 			{
-				CNodeProcess* newProcess = NULL;
-				CheckError(this->AddOneProcess(&newProcess, request->GetHttpContext()));
-				CheckError(newProcess->AcceptRequest(request));
+				if (NULL == this->processes[processToUse])
+				{
+					CheckError(this->AddProcess(processToUse, request->GetHttpContext()));
+				}
+
+				CheckError(this->processes[processToUse]->AcceptRequest(request));
 			}
 
 			LEAVE_SRW_EXCLUSIVE(this->srwlock)
@@ -160,29 +163,6 @@ Error:
 	this->DecRef(); // incremented at the beginning of this method
 
 	return hr;
-}
-
-BOOL CNodeProcessManager::TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context)
-{
-	if (this->processCount == 0)
-	{
-		return false;
-	}
-
-	DWORD i = this->currentProcess;
-
-	do {
-
-		if (S_OK == this->processes[i]->AcceptRequest(context))
-		{
-			return true;
-		}
-
-		i = (i + 1) % this->processCount;
-
-	} while (i != this->currentProcess);
-
-	return false;
 }
 
 HRESULT CNodeProcessManager::RecycleProcess(CNodeProcess* process)
@@ -221,13 +201,7 @@ HRESULT CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 				return S_OK;
 			}
 
-			if (i < (this->processCount - 1))
-			{
-				memcpy(this->processes + i, this->processes + i + 1, sizeof (CNodeProcess*) * (this->processCount - i - 1));
-			}
-
-			this->processCount--;
-			this->currentProcess = 0;
+			this->processes[i] = NULL;
 
 			gracefulRecycle = TRUE;
 		}
@@ -277,7 +251,17 @@ HRESULT CNodeProcessManager::Recycle()
 
 	this->isClosing = TRUE;	
 
-	if (0 < this->processCount)
+	BOOL hasActiveProcess = FALSE;
+	for (int i = 0; i < this->processCount; i++)
+	{
+		if (this->processes[i])
+		{
+			hasActiveProcess = TRUE;
+			break;
+		}
+	}
+
+	if (hasActiveProcess)
 	{
 		// perform actual recycling on a diffrent thread to free up the file watcher thread
 
@@ -321,6 +305,7 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 	ProcessRecycleArgs* args = (ProcessRecycleArgs*)arg;
 	HRESULT hr;
 	HANDLE* drainHandles = NULL;
+	DWORD drainHandleCount = 0;
 
 	// drain active requests 
 
@@ -328,16 +313,20 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 	RtlZeroMemory(drainHandles, args->count * sizeof HANDLE);
 	for (int i = 0; i < args->count; i++)
 	{
-		drainHandles[i] = CreateEvent(NULL, TRUE, FALSE, NULL);
-		args->processes[i]->SignalWhenDrained(drainHandles[i]);
+		if (args->processes[i])
+		{
+			drainHandles[drainHandleCount] = CreateEvent(NULL, TRUE, FALSE, NULL);
+			args->processes[i]->SignalWhenDrained(drainHandles[drainHandleCount]);
+			drainHandleCount++;
+		}
 	}
 	
 	if (args->processManager->gracefulShutdownTimeout > 0)
 	{
-		WaitForMultipleObjects(args->count, drainHandles, TRUE, args->processManager->gracefulShutdownTimeout);
+		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, args->processManager->gracefulShutdownTimeout);
 	}
 
-	for (int i = 0; i < args->count; i++)
+	for (int i = 0; i < drainHandleCount; i++)
 	{
 		CloseHandle(drainHandles[i]);
 	}

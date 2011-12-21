@@ -434,7 +434,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		
 		CheckError(GetConfigSection(context, &section));		
 		CheckError(GetDWORD(section, L"asyncCompletionThreadCount", &c->asyncCompletionThreadCount));
-		CheckError(GetDWORD(section, L"maxProcessCountPerApplication", &c->maxProcessCountPerApplication));
+		CheckError(GetDWORD(section, L"nodeProcessCountPerApplication", &c->nodeProcessCountPerApplication));
 		CheckError(GetDWORD(section, L"maxConcurrentRequestsPerProcess", &c->maxConcurrentRequestsPerProcess));
 		CheckError(GetDWORD(section, L"maxNamedPipeConnectionRetry", &c->maxNamedPipeConnectionRetry));
 		CheckError(GetDWORD(section, L"namedPipeConnectionRetryDelay", &c->namedPipeConnectionRetryDelay));
@@ -474,6 +474,16 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
             GetSystemInfo(&info);
             c->asyncCompletionThreadCount = 0 == info.dwNumberOfProcessors ? 4 : info.dwNumberOfProcessors;
         }
+
+		if (0 == c->nodeProcessCountPerApplication)
+		{
+			// default number of node.exe processes to create per node.js application
+
+            SYSTEM_INFO info;
+
+            GetSystemInfo(&info);
+            c->nodeProcessCountPerApplication = 0 == info.dwNumberOfProcessors ? 1 : info.dwNumberOfProcessors;
+		}
 		
 		// CR: check for ERROR_ALREADY_ASSIGNED to detect a race in creation of this section 
 		// CR: refcounting may be needed if synchronous code paths proove too long (race with config changes)
@@ -521,9 +531,9 @@ DWORD CModuleConfiguration::GetAsyncCompletionThreadCount(IHttpContext* ctx)
 	GETCONFIG(asyncCompletionThreadCount)
 }
 
-DWORD CModuleConfiguration::GetMaxProcessCountPerApplication(IHttpContext* ctx)
+DWORD CModuleConfiguration::GetNodeProcessCountPerApplication(IHttpContext* ctx)
 {
-	GETCONFIG(maxProcessCountPerApplication)
+	GETCONFIG(nodeProcessCountPerApplication)
 }
 
 LPCTSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)

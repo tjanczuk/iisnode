@@ -22,18 +22,16 @@ private:
 	CNodeApplication* application;
 	CNodeProcess** processes;
 	DWORD processCount;
-	DWORD maxProcessCount;
-	DWORD currentProcess;
+	unsigned int currentProcess;
 	SRWLOCK srwlock;
 	DWORD gracefulShutdownTimeout;
 	BOOL isClosing;
 	long refCount;
 	CNodeEventProvider* eventProvider;
 
-	HRESULT AddOneProcessCore(CNodeProcess** process, IHttpContext* context);
-	HRESULT AddOneProcess(CNodeProcess** process, IHttpContext* context);
-	BOOL TryRouteRequestToExistingProcess(CNodeHttpStoredContext* context);
+	HRESULT AddProcess(int ordinal, IHttpContext* context);
 	static unsigned int WINAPI GracefulShutdown(void* arg);
+	void Cleanup();
 
 public:
 

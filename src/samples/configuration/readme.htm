@@ -54,12 +54,11 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     * nodeProcessCommandLine - command line starting the node executable; in shared
       hosting environments this setting would typically be locked at the machine scope.
       
-    * maxProcessCountPerApplication - maximum number of node processes that IIS will start
-      per application to accomodate incresing request load
+    * nodeProcessCountPerApplication - number of node.exe processes that IIS will start per application;
+      setting this value to 0 results in creating one node.exe process per each processor on the machine
       
     * maxConcurrentRequestsPerProcess - maximum number of reqeusts one node process can 
-      handle at a time; if a request arrives while all existing node processes have reached their 
-      limit, a new node process is created to handle it (up to the limit of maxProcessCountPerApplication)
+      handle at a time
       
     * maxNamedPipeConnectionRetry - number of times IIS will retry to establish a named pipe connection with a
       node process in order to send a new HTTP request
@@ -87,7 +86,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     
     * logDirectoryNameSuffix - suffix of the directory name that will store files with stdout and stderr captures; directly name is created
       by appending this suffix to the file name of the node.js application; individual log files are stored in that directory, one per node 
-      process (in files of the form x.txt, where x is between 0 and maxProcessCountPerApplication - 1); given a node.js application at
+      process (in files of the form x.txt, where x is between 0 and nodeProcessCountPerApplication - 1); given a node.js application at
       http://localhost/node/hello.js, log files would by default be stored at http://localhost/node/hello.js.logs/0.txt (thrugh 3.txt); 
       SECURITY NOTE: if log files contain sensitive information, this setting should be modified to contain enough entropy to be considered
       cryptographically secure; in most situations, a GUID is sufficient
@@ -119,7 +118,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     
     &lt;iisnode      
       node_env="%node_env%"
-      maxProcessCountPerApplication="4"
+      nodeProcessCountPerApplication="1"
       maxConcurrentRequestsPerProcess="1024"
       maxNamedPipeConnectionRetry="3"
       namedPipeConnectionRetryDelay="2000"      

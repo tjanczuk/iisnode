@@ -8,7 +8,7 @@ class CModuleConfiguration : public IHttpStoredContext
 private:
 
 	DWORD asyncCompletionThreadCount;
-	DWORD maxProcessCountPerApplication;
+	DWORD nodeProcessCountPerApplication;
 	LPTSTR nodeProcessCommandLine;
 	DWORD maxConcurrentRequestsPerProcess;
 	DWORD maxNamedPipeConnectionRetry;
@@ -48,7 +48,7 @@ public:
 	static HRESULT Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId);
 
 	static DWORD GetAsyncCompletionThreadCount(IHttpContext* ctx); 
-	static DWORD GetMaxProcessCountPerApplication(IHttpContext* ctx);
+	static DWORD GetNodeProcessCountPerApplication(IHttpContext* ctx);
 	static LPCTSTR GetNodeProcessCommandLine(IHttpContext* ctx); 
 	static DWORD GetMaxConcurrentRequestsPerProcess(IHttpContext* ctx);
 	static DWORD GetMaxNamedPipeConnectionRetry(IHttpContext* ctx);
