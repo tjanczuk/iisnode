@@ -55,6 +55,18 @@ if %ERRORLEVEL% neq 0 (
 	exit /b -1
 )
 
+%appcmd% set apppool /apppool.name:%apppool% /managedRuntimeVersion:
+if %ERRORLEVEL% neq 0 (
+	echo FAILED. Cannot set managed runtime version to none for application pool %apppool%.
+	exit /b -1
+)
+
+%appcmd% set apppool /apppool.name:%apppool% /queueLength:65535
+if %ERRORLEVEL% neq 0 (
+	echo FAILED. Cannot set queue length for application pool %apppool%.
+	exit /b -1
+)
+
 %appcmd% add site /name:%site% /physicalPath:"%www%" /bindings:http/*:%port%:
 if %ERRORLEVEL% neq 0 (
 	echo FAILED. Cannot create site %site%.
