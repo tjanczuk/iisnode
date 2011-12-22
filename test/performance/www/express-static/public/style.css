@@ -1,0 +1,18 @@
+body
+{
+    font-family: Arial;
+}
+th
+{
+    background: Green;
+    text-align: left;
+}
+td.price
+{
+    text-align: right;
+}
+td.summary
+{
+    font-weight: bold;
+    text-align: right;
+}
