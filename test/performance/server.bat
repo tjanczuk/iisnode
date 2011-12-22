@@ -38,6 +38,8 @@ if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 1168 (
 
 if %mode% neq node goto iisnode 
 
+set node_env=production
+
 echo Starting the node.exe server... Ctrl-C to terminate...
 %node% %~dp0www\%scenario%\server.js
 if %ERRORLEVEL% neq 0 (

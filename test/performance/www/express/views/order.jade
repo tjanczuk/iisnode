@@ -1,0 +1,25 @@
+html
+  head
+    title Sample order #{id}
+    link(rel='stylesheet', href = '/style.css')
+  body
+    table
+       tr         
+         th Item
+         th Price
+         - for (var i in details)
+           tr
+              td.name #{details[i].name}
+              td.price #{details[i].price.toFixed(2)}
+         tr 
+            td.summary Subtotal:
+            td.summary.price #{subtotal.toFixed(2)}
+         tr 
+            td.summary Shipping & handling:
+            td.summary.price #{handling.toFixed(2)}
+         tr 
+            td.summary Tax:
+            td.summary.price #{tax.toFixed(2)}
+         tr 
+            td.summary Total:
+            td.summary.price #{total.toFixed(2)}
