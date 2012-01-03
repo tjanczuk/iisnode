@@ -50,7 +50,7 @@ HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD 
 {
 	HRESULT hr;
 
-	if (contentLength == 0)
+	if (contentLength == 0 && NULL != content)
 	{
 		contentLength = strlen(content);
 	}
@@ -75,8 +75,11 @@ HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD 
 		*bufferLength = newBufferLength;
 	}
 
-	memcpy((char*)*buffer + *offset, content, contentLength);
-	*offset += contentLength;
+	if (contentLength > 0)
+	{
+		memcpy((char*)*buffer + *offset, content, contentLength);
+		*offset += contentLength;
+	}
 
 	return S_OK;
 Error:
