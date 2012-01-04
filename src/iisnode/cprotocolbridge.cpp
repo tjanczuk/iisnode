@@ -794,6 +794,12 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 			WINEVENT_LEVEL_VERBOSE, 
 			&activityId);
 	}
+	else if (ERROR_BROKEN_PIPE == hr && context->GetCloseConnection())
+	{
+		// Termination of a connection indicates the end of the response body if Connection: close response header was present
+
+		CProtocolBridge::FinalizeResponse(context);
+	}
 	else
 	{
 		// error
@@ -874,28 +880,38 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	}
 	else
 	{
-		contentLength = ctx->GetHttpContext()->GetResponse()->GetHeader(HttpHeaderContentLength, &contentLengthLength);
-		if (0 == contentLengthLength)
+		if (ctx->GetCloseConnection())
 		{
-			ctx->SetIsChunked(TRUE);
-			ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
-		}
-		else
-		{
-			LONGLONG length = 0;
-			int i = 0;
-
-			// skip leading white space
-			while (i < contentLengthLength && (contentLength[i] < '0' || contentLength[i] > '9')) 
-				i++;
-
-			while (i < contentLengthLength && contentLength[i] >= '0' && contentLength[i] <= '9') 
-				length = length * 10 + contentLength[i++] - '0';
-
 			ctx->SetIsChunked(FALSE);
+			ctx->SetChunkLength(MAXLONGLONG);
 			ctx->SetIsLastChunk(TRUE);
-			ctx->SetChunkLength(length);
 			ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+		}
+		else 
+		{
+			contentLength = ctx->GetHttpContext()->GetResponse()->GetHeader(HttpHeaderContentLength, &contentLengthLength);
+			if (0 == contentLengthLength)
+			{
+				ctx->SetIsChunked(TRUE);
+				ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
+			}
+			else
+			{
+				LONGLONG length = 0;
+				int i = 0;
+
+				// skip leading white space
+				while (i < contentLengthLength && (contentLength[i] < '0' || contentLength[i] > '9')) 
+					i++;
+
+				while (i < contentLengthLength && contentLength[i] >= '0' && contentLength[i] <= '9') 
+					length = length * 10 + contentLength[i++] - '0';
+
+				ctx->SetIsChunked(FALSE);
+				ctx->SetIsLastChunk(TRUE);
+				ctx->SetChunkLength(length);
+				ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
+			}
 		}
 
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
@@ -1009,7 +1025,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 				chunk,
 				1,
 				TRUE,
-				!ctx->GetIsLastChunk(),
+				!ctx->GetIsLastChunk() || remainingChunkSize > bytesToSend,
 				&bytesSent,
 				&completionExpected));
 
@@ -1051,9 +1067,18 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	return;
 Error:
 
-	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
-		L"iisnode failed to send http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	if (ERROR_BROKEN_PIPE == hr && ctx->GetCloseConnection())
+	{
+		// Termination of a connection indicates the end of the response body if Connection: close response header was present
+
+		CProtocolBridge::FinalizeResponse(ctx);
+	}
+	else
+	{
+		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode failed to send http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
 
 	return;
 }
@@ -1124,7 +1149,15 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
 	context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode finished processing http request/response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
-	context->GetNodeProcess()->GetConnectionPool()->Return(context->GetPipe());
+	if (context->GetCloseConnection())
+	{
+		CloseHandle(context->GetPipe());
+	}
+	else
+	{
+		context->GetNodeProcess()->GetConnectionPool()->Return(context->GetPipe());
+	}
+
 	context->SetPipe(INVALID_HANDLE_VALUE);
 	CProtocolBridge::FinalizeResponseCore(
 		context, 

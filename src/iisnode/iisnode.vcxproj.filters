@@ -111,6 +111,9 @@
     <Filter Include="Tests\functional\www\113_encoding">
       <UniqueIdentifier>{5e0f95ef-1256-4223-a412-f5146a7713cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\115_customheaders">
+      <UniqueIdentifier>{994959e7-12c0-43f7-a10b-24899813a857}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -479,6 +482,15 @@
     </None>
     <None Include="..\..\test\functional\tests\113_encoding.js">
       <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\115_customheaders.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\115_customheaders\hello.js">
+      <Filter>Tests\functional\www\115_customheaders</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\115_customheaders\web.config">
+      <Filter>Tests\functional\www\115_customheaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

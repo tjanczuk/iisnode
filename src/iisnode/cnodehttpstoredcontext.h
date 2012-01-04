@@ -31,6 +31,7 @@ private:
 	BOOL isLastChunk;
 	BOOL isConnectionFromPool;
 	BOOL expectResponseBody;
+	BOOL closeConnection;
 
 public:
 
@@ -85,6 +86,8 @@ public:
 	void SetIsConnectionFromPool(BOOL fromPool);
 	void SetExpectResponseBody(BOOL expect);
 	BOOL GetExpectResponseBody();
+	void SetCloseConnection(BOOL close);
+	BOOL GetCloseConnection();
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

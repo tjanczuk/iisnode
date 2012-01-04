@@ -4,7 +4,8 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
 	chunkLength(0), chunkTransmitted(0), isChunked(FALSE), pipe(INVALID_HANDLE_VALUE), result(S_OK), isLastChunk(FALSE),
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
-	targetUrl(NULL), targetUrlLength(0), childContext(NULL), isConnectionFromPool(FALSE), expectResponseBody(TRUE)
+	targetUrl(NULL), targetUrlLength(0), childContext(NULL), isConnectionFromPool(FALSE), expectResponseBody(TRUE),
+	closeConnection(FALSE)
 {
 	IHttpTraceContext* tctx;
 	LPCGUID pguid;
@@ -272,4 +273,14 @@ void CNodeHttpStoredContext::SetExpectResponseBody(BOOL expect)
 BOOL CNodeHttpStoredContext::GetExpectResponseBody()
 {
 	return this->expectResponseBody;
+}
+
+void CNodeHttpStoredContext::SetCloseConnection(BOOL close)
+{
+	this->closeConnection = close;
+}
+
+BOOL CNodeHttpStoredContext::GetCloseConnection()
+{
+	return this->closeConnection;
 }

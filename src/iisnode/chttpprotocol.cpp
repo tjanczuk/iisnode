@@ -222,7 +222,7 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	}
 
 	ErrorIf(count >= dataSize, ERROR_MORE_DATA);
-	ErrorIf(0 != memcmp(tmp1, data, count), ERROR_BAD_FORMAT);
+	ErrorIf(0 != memcmp(tmp1, data, 5), ERROR_BAD_FORMAT);
 	offset += count;
 
 	// Status-Code[.Sub-Status-Code] SP
@@ -448,6 +448,10 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 				nameEndOffset++;
 
 			CheckError(response->SetHeader(data + offset, data + nameEndOffset, valueEndOffset - nameEndOffset, TRUE));
+		}
+		else if ((valueEndOffset - nameEndOffset) >= 5 && 0 == memcmp((void*)(data + valueEndOffset - 5), "close", 5))
+		{
+			context->SetCloseConnection(TRUE);
 		}
 
 		// adjust offsets
