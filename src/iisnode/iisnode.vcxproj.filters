@@ -114,6 +114,9 @@
     <Filter Include="Tests\functional\www\115_customheaders">
       <UniqueIdentifier>{994959e7-12c0-43f7-a10b-24899813a857}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\116_configerror">
+      <UniqueIdentifier>{500f40cf-c2f5-4264-b061-b4f1e59f50f5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -491,6 +494,15 @@
     </None>
     <None Include="..\..\test\functional\www\115_customheaders\web.config">
       <Filter>Tests\functional\www\115_customheaders</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\116_configerror.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\116_configerror\hello.js">
+      <Filter>Tests\functional\www\116_configerror</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\116_configerror\web.config">
+      <Filter>Tests\functional\www\116_configerror</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -11,17 +11,25 @@ CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODUL
 HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 {
     HRESULT hr = S_OK;
+	CModuleConfiguration *config;
 
     if (!this->initialized)
     {
-        ENTER_SRW_EXCLUSIVE(this->srwlock)
+		if (S_OK != CModuleConfiguration::GetConfig(context, &config))
+		{
+			hr = IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION;
+		}
+		else
+		{
+			ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-        if (!this->initialized)
-        {
-            hr = this->InitializeCore(context);
-        }
+			if (!this->initialized)
+			{
+				hr = this->InitializeCore(context);
+			}
 
-        LEAVE_SRW_EXCLUSIVE(this->srwlock)
+			LEAVE_SRW_EXCLUSIVE(this->srwlock)
+		}
     }
 
     return hr;

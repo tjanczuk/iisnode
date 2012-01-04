@@ -37,8 +37,7 @@ private:
 	static HRESULT GetConfigSection(IHttpContext* context, IAppHostElement** section, OLECHAR* configElement = L"system.webServer/iisnode");
 	static HRESULT GetString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value);
 	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value);
-	static HRESULT GetDWORD(IAppHostElement* section, LPCWSTR propertyName, DWORD* value);
-	static HRESULT GetConfig(IHttpContext* context, CModuleConfiguration** config);
+	static HRESULT GetDWORD(IAppHostElement* section, LPCWSTR propertyName, DWORD* value);	
 
 	CModuleConfiguration();
 	~CModuleConfiguration();
@@ -46,6 +45,8 @@ private:
 public:
 
 	static HRESULT Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId);
+
+	static HRESULT GetConfig(IHttpContext* context, CModuleConfiguration** config);
 
 	static DWORD GetAsyncCompletionThreadCount(IHttpContext* ctx); 
 	static DWORD GetNodeProcessCountPerApplication(IHttpContext* ctx);

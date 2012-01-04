@@ -10,8 +10,64 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
 	return async->SetTimer(context->GetAsyncContext(), &delay);
 }
 
+#define LOCAL127            0x0100007F  // 127.0.0.1
+
+BOOL CProtocolBridge::IsLocalCall(IHttpContext* ctx)
+{
+	PSOCKADDR src = ctx->GetRequest()->GetRemoteAddress();
+	PSOCKADDR dest = ctx->GetRequest()->GetLocalAddress();
+
+	if (AF_INET == src->sa_family && AF_INET == dest->sa_family)
+	{
+        DWORD srcAddress = ntohl(((PSOCKADDR_IN)src)->sin_addr.s_addr);
+		DWORD destAddress = ntohl(((PSOCKADDR_IN)dest)->sin_addr.s_addr);
+
+		return srcAddress == destAddress || LOCAL127 == srcAddress || LOCAL127 == destAddress;
+	}
+	else if (AF_INET6 == src->sa_family && AF_INET6 == dest->sa_family)
+	{
+        IN6_ADDR* srcAddress = &((PSOCKADDR_IN6)src)->sin6_addr;
+		IN6_ADDR* destAddress = &((PSOCKADDR_IN6)dest)->sin6_addr;
+
+		if (0 == memcmp(srcAddress, destAddress, sizeof IN6_ADDR))
+		{
+			return TRUE;
+		}
+
+		if (IN6_IS_ADDR_LOOPBACK(srcAddress) || IN6_IS_ADDR_LOOPBACK(destAddress))
+		{
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 BOOL CProtocolBridge::SendIisnodeError(IHttpContext* httpCtx, HRESULT hr)
 {
+	if (IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION == hr)
+	{
+		if (CProtocolBridge::IsLocalCall(httpCtx))
+		{
+			CProtocolBridge::SendSyncResponse(
+				httpCtx, 
+				200, 
+				"OK", 
+				hr, 
+				TRUE, 
+				"iisnode was unable to read the configuration file. Make sure the web.config file syntax is correct. In particular, verify the "
+				" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
+				"iisnode configuration section</a> matches the expected schema. The schema of the iisnode section that your version of iisnode requiries is stored in the "
+				"%systemroot%\\system32\\inetsrv\\config\\schema\\iisnode_schema.xml file.");
+
+			return TRUE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+
 	if (!CModuleConfiguration::GetDevErrorsEnabled(httpCtx))
 	{
 		return FALSE;
