@@ -6,7 +6,7 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 CModuleConfiguration::CModuleConfiguration()
 	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
-	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL)
+	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL)
 {
 }
 
@@ -34,6 +34,12 @@ CModuleConfiguration::~CModuleConfiguration()
 	{
 		delete this->node_env;
 		this->node_env = NULL;
+	}
+
+	if (NULL != this->watchedFiles)
+	{
+		delete this->watchedFiles;
+		this->watchedFiles = NULL;
 	}
 }
 
@@ -459,6 +465,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		ErrorIf(0 != wcstombs_s(&i, c->nodeProcessCommandLine, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
 		delete [] commandLine;
 		commandLine = NULL;
+		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
 		
 		section->Release();
 		section = NULL;
@@ -629,6 +636,11 @@ BOOL CModuleConfiguration::GetDevErrorsEnabled(IHttpContext* ctx)
 BOOL CModuleConfiguration::GetFlushResponse(IHttpContext* ctx)
 {
 	GETCONFIG(flushResponse)
+}
+
+LPWSTR CModuleConfiguration::GetWatchedFiles(IHttpContext* ctx)
+{
+	GETCONFIG(watchedFiles)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)

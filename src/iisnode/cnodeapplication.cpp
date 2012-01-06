@@ -41,8 +41,9 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context)
 	ErrorIf(NULL == (this->processManager = new	CNodeProcessManager(this, context)), ERROR_NOT_ENOUGH_MEMORY);
 	CheckError(this->processManager->Initialize(context));
 
-	CheckError(this->GetApplicationManager()->GetFileWatcher()->WatchFile(
+	CheckError(this->GetApplicationManager()->GetFileWatcher()->WatchFiles(
 		scriptName, 
+		CModuleConfiguration::GetWatchedFiles(context),
 		CNodeApplicationManager::OnScriptModified, 
 		this->GetApplicationManager(), 
 		this));

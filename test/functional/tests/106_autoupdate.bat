@@ -1,3 +1,5 @@
+rem When the main entry point to the application is modified, application is recycled
+
 setlocal 
 
 copy /y %www%\106_autoupdate\hello_first.js %www%\106_autoupdate\hello.js

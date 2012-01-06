@@ -60,85 +60,222 @@ Error:
 	return hr;
 }
 
-HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, CNodeApplicationManager* manager, CNodeApplication* application)
+HRESULT CFileWatcher::WatchFiles(PCWSTR mainFileName, PCWSTR watchedFiles, FileModifiedCallback callback, CNodeApplicationManager* manager, CNodeApplication* application)
 {
 	HRESULT hr;
-	WatchedFile* file;
-	WatchedDirectory* directory;
-	WatchedDirectory* newDirectory;
 	WCHAR fileOnly[_MAX_FNAME];
 	WCHAR ext[_MAX_EXT];
 	WCHAR* directoryName = NULL;
 	DWORD fileNameLength;
 	DWORD fileNameOnlyLength;
 	DWORD directoryLength;	
-	WIN32_FILE_ATTRIBUTE_DATA attributes;
+	BOOL unc;
+	BOOL wildcard;
+	PWSTR startSubdirectory;
+	PWSTR startFile;
+	PWSTR endFile;
+	WatchedDirectory* directory;
+	WatchedFile* file;
 
-	CheckNull(callback);
-	CheckNull(fileName);
-	fileNameLength = wcslen(fileName);
+	CheckNull(mainFileName);
+	CheckNull(watchedFiles);
 
-	// allocate new WatchedFile, get snapshot of the last write time
+	// create and normalize a copy of directory name, determine if it is UNC share
 
-	ErrorIf(NULL == (file = new WatchedFile), ERROR_NOT_ENOUGH_MEMORY);
-	RtlZeroMemory(file, sizeof WatchedFile);
-	file->callback = callback;
-	file->manager = manager;
-	file->application = application;
-	ErrorIf(!GetFileAttributesExW(fileName, GetFileExInfoStandard, &attributes), GetLastError());
-	memcpy(&file->lastWrite, &attributes.ftLastWriteTime, sizeof attributes.ftLastWriteTime);
-
-	// create and normalize a copy of directory name and file name
-
-	ErrorIf(0 != _wsplitpath_s(fileName, NULL, 0, NULL, 0, fileOnly, _MAX_FNAME, ext, _MAX_EXT), ERROR_INVALID_PARAMETER);	
+	fileNameLength = wcslen(mainFileName);
+	ErrorIf(0 != _wsplitpath_s(mainFileName, NULL, 0, NULL, 0, fileOnly, _MAX_FNAME, ext, _MAX_EXT), ERROR_INVALID_PARAMETER);	
 	fileNameOnlyLength = wcslen(fileOnly) + wcslen(ext);	
 	directoryLength = fileNameLength - fileNameOnlyLength; 
 	ErrorIf(NULL == (directoryName = new WCHAR[directoryLength + 8]), ERROR_NOT_ENOUGH_MEMORY); // pessimistic length after normalization with prefix \\?\UNC\ 
-	ErrorIf(NULL == (file->fileName = new WCHAR[fileNameLength + 1]), ERROR_NOT_ENOUGH_MEMORY);
-	wcscpy(file->fileName, fileName);
 
-	if (fileNameLength > 8 && 0 == memcmp(fileName, L"\\\\?\\UNC\\", 8 * sizeof WCHAR))
+	if (fileNameLength > 8 && 0 == memcmp(mainFileName, L"\\\\?\\UNC\\", 8 * sizeof WCHAR))
 	{
 		// normalized UNC path
-		file->unc = TRUE;
-		memcpy(directoryName, fileName, directoryLength * sizeof WCHAR);
+		unc = TRUE;
+		memcpy(directoryName, mainFileName, directoryLength * sizeof WCHAR);
 		directoryName[directoryLength] = L'\0';
 	}
-	else if (fileNameLength > 4 && 0 == memcmp(fileName, L"\\\\?\\", 4 * sizeof WCHAR))
+	else if (fileNameLength > 4 && 0 == memcmp(mainFileName, L"\\\\?\\", 4 * sizeof WCHAR))
 	{
 		// normalized local file
-		file->unc = FALSE;
-		memcpy(directoryName, fileName, directoryLength * sizeof WCHAR);
+		unc = FALSE;
+		memcpy(directoryName, mainFileName, directoryLength * sizeof WCHAR);
 		directoryName[directoryLength] = L'\0';
 	}
-	else if (fileNameLength > 2 && 0 == memcmp(fileName, L"\\\\", 2 * sizeof(WCHAR)))
+	else if (fileNameLength > 2 && 0 == memcmp(mainFileName, L"\\\\", 2 * sizeof(WCHAR)))
 	{
 		// not normalized UNC path
-		file->unc = TRUE;
+		unc = TRUE;
 		wcscpy(directoryName, L"\\\\?\\UNC\\");
-		memcpy(directoryName + 8, fileName + 2, (directoryLength - 2) * sizeof WCHAR);
+		memcpy(directoryName + 8, mainFileName + 2, (directoryLength - 2) * sizeof WCHAR);
 		directoryName[8 + directoryLength - 2] = L'\0';
 	}
 	else
 	{
 		// not normalized local file
-		file->unc = FALSE;
+		unc = FALSE;
 		wcscpy(directoryName, L"\\\\?\\");
-		memcpy(directoryName + 4, fileName, directoryLength * sizeof WCHAR);
+		memcpy(directoryName + 4, mainFileName, directoryLength * sizeof WCHAR);
 		directoryName[4 + directoryLength] = L'\0';	
 	}
 
+	directoryLength = wcslen(directoryName);
+
 	ENTER_CS(this->syncRoot)
+
+	// parse watchedFiles and create a file listener for each of the files
+
+	startFile = (PWSTR)watchedFiles;
+	do {
+		endFile = startSubdirectory = startFile;
+		wildcard = FALSE;
+		while (*endFile && *endFile != L';')
+		{
+			wildcard |= *endFile == L'*' || *endFile == L'?';
+			if (*endFile == L'\\')
+			{
+				startFile = endFile + 1;
+			}
+
+			endFile++;
+		}
+
+		if (startFile != endFile)
+		{
+			if (S_OK != (hr = this->WatchFile(directoryName, directoryLength, unc, startSubdirectory, startFile, endFile, wildcard)))
+			{
+				// still under lock remove file watch entries that were just created, then do regular cleanup
+
+				this->RemoveWatch(NULL);
+				CheckError(hr);
+			}
+		}
+
+		startFile = endFile + 1;
+
+	} while(*endFile);
+
+	// update temporary entries with application and callback pointers
+
+	directory = this->directories;
+	while (NULL != directory)
+	{
+		file = directory->files;
+		while (NULL != file)
+		{
+			if (NULL == file->application)
+			{
+				file->application = application;
+				file->manager = manager;
+				file->callback = callback;
+			}
+
+			file = file->next;
+		}
+
+		directory = directory->next;
+	}
+
+	LEAVE_CS(this->syncRoot)
+
+	delete [] directoryName;
+
+	return S_OK;
+
+Error:
+
+	if (NULL != directoryName)
+	{
+		delete [] directoryName;
+		directoryName = NULL;
+	}
+
+
+	return hr;
+}
+
+HRESULT CFileWatcher::GetWatchedFileTimestamp(WatchedFile* file, FILETIME* timestamp)
+{
+	HRESULT hr;
+	WIN32_FILE_ATTRIBUTE_DATA attributes;
+	WIN32_FIND_DATAW findData;
+	HANDLE foundFile = INVALID_HANDLE_VALUE;
+
+	if (file->wildcard)
+	{
+		// a timestamp of a wildcard watched file is the XOR of the timestamps of all matching files and their names and sizes;
+		// that way if any of the matching files changes, or matching files are added or removed, the timestamp will change as well
+
+		RtlZeroMemory(timestamp, sizeof FILETIME);
+		foundFile = FindFirstFileW(file->fileName, &findData);
+		if (INVALID_HANDLE_VALUE != foundFile)
+		{
+			do
+			{
+				if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+				{
+					timestamp->dwHighDateTime ^= findData.ftLastWriteTime.dwHighDateTime ^ findData.nFileSizeHigh;
+					timestamp->dwLowDateTime ^= findData.ftLastWriteTime.dwLowDateTime ^ findData.nFileSizeLow;
+					WCHAR* current = findData.cFileName;
+					while (*current)
+					{
+						timestamp->dwLowDateTime ^= *current;
+						current++;
+					}
+				}
+			} while (FindNextFileW(foundFile, &findData));
+
+			ErrorIf(ERROR_NO_MORE_FILES != (hr = GetLastError()), hr);
+			FindClose(foundFile);
+			foundFile = NULL;
+		}
+	}
+	else
+	{
+		ErrorIf(!GetFileAttributesExW(file->fileName, GetFileExInfoStandard, &attributes), GetLastError());
+		memcpy(timestamp, &attributes.ftLastWriteTime, sizeof attributes.ftLastWriteTime);
+	}
+
+	return S_OK;
+Error:
+
+	if (INVALID_HANDLE_VALUE != foundFile)
+	{
+		FindClose(foundFile);
+		foundFile = INVALID_HANDLE_VALUE;
+	}
+
+	return hr;
+}
+
+HRESULT CFileWatcher::WatchFile(PCWSTR directoryName, DWORD directoryNameLength, BOOL unc, PCWSTR startSubdirectoryName, PCWSTR startFileName, PCWSTR endFileName, BOOL wildcard)
+{
+	HRESULT hr;
+	WatchedFile* file;
+	WatchedDirectory* directory;
+	WatchedDirectory* newDirectory;
+
+	// allocate new WatchedFile, get snapshot of the last write time
+
+	ErrorIf(NULL == (file = new WatchedFile), ERROR_NOT_ENOUGH_MEMORY);
+	RtlZeroMemory(file, sizeof WatchedFile);
+	ErrorIf(NULL == (file->fileName = new WCHAR[directoryNameLength + endFileName - startSubdirectoryName + 1]), ERROR_NOT_ENOUGH_MEMORY);
+	wcscpy(file->fileName, directoryName);
+	memcpy((void*)(file->fileName + directoryNameLength), startSubdirectoryName, (endFileName - startSubdirectoryName) * sizeof WCHAR);
+	file->fileName[directoryNameLength + endFileName - startSubdirectoryName] = L'\0';
+	file->unc = unc;
+	file->wildcard = wildcard;
+	this->GetWatchedFileTimestamp(file, &file->lastWrite);
 
 	// find matching directory watcher entry
 
 	directory = this->directories;
 	while (NULL != directory)
 	{
-		if (0 == wcscmp(directory->directoryName, directoryName))
+		if (0 == wcsncmp(directory->directoryName, directoryName, directoryNameLength)
+			&& (startFileName == startSubdirectoryName 
+			    || 0 == wcsncmp(directory->directoryName + directoryNameLength, startSubdirectoryName, startFileName - startSubdirectoryName)))
 		{
-			delete [] directoryName;
-			directoryName = NULL;
 			break;
 		}
 
@@ -151,8 +288,13 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 	{
 		ErrorIf(NULL == (newDirectory = new WatchedDirectory), ERROR_NOT_ENOUGH_MEMORY);	
 		RtlZeroMemory(newDirectory, sizeof WatchedDirectory);
-		newDirectory->directoryName = directoryName;
-		directoryName = NULL;
+		ErrorIf(NULL == (newDirectory->directoryName = new WCHAR[directoryNameLength + startFileName - startSubdirectoryName + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(newDirectory->directoryName, directoryName);
+		if (startFileName > startSubdirectoryName)
+		{
+			wcsncat(newDirectory->directoryName, startSubdirectoryName, startFileName - startSubdirectoryName);
+		}
+
 		newDirectory->files = file;
 
 		ErrorIf(INVALID_HANDLE_VALUE == (newDirectory->watchHandle = CreateFileW(
@@ -202,9 +344,7 @@ HRESULT CFileWatcher::WatchFile(PCWSTR fileName, FileModifiedCallback callback, 
 		file->next = directory->files;
 		directory->files = file;
 		file = NULL;
-	}
-
-	LEAVE_CS(this->syncRoot)
+	}	
 
 	return S_OK;
 Error:
@@ -226,13 +366,12 @@ Error:
 
 	if (NULL != file)
 	{
-		delete [] file->fileName;
-		delete file;
-	}
+		if (NULL != file->fileName)
+		{
+			delete [] file->fileName;
+		}
 
-	if (NULL != directoryName)
-	{
-		delete [] directoryName;
+		delete file;
 	}
 
 	return hr;
@@ -379,16 +518,16 @@ unsigned int CFileWatcher::Worker(void* arg)
 BOOL CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
 {
 	WatchedFile* file = directory->files;
-	WIN32_FILE_ATTRIBUTE_DATA attributes;
+	FILETIME timestamp;
 
 	while (file)
 	{
 		if (unc == file->unc) 
 		{
-			if (GetFileAttributesExW(file->fileName, GetFileExInfoStandard, &attributes)
-				&& 0 != memcmp(&attributes.ftLastWriteTime, &file->lastWrite, sizeof FILETIME))
+			if (S_OK == CFileWatcher::GetWatchedFileTimestamp(file, &timestamp)
+				&& 0 != memcmp(&timestamp, &file->lastWrite, sizeof FILETIME))
 			{
-				memcpy(&file->lastWrite, &attributes.ftLastWriteTime, sizeof FILETIME);
+				memcpy(&file->lastWrite, &timestamp, sizeof FILETIME);
 				file->callback(file->manager, file->application);
 				return TRUE;
 			}

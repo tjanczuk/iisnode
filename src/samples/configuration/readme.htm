@@ -72,6 +72,10 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     
     * maxRequestBufferSize - maximum size in bytes of a memory buffer allocated per request; this is a hard limit of 
       the serialized form of HTTP request or response headers block
+
+    * watchedFiles - semi-colon separated list of files that will be watched for changes; a change to a file causes the application to recycle;
+      each entry consists of an optional directory name plus required file name which are relative to the directory where the main application entry point 
+      is located; wild cards are allowed in the file name portion only; for example: "*.js;node_modules\foo\lib\options.json;app_data\*.config.json"
       
     * uncFileChangesPollingInterval - applications are recycled when the underlying *.js file is modified; if the file resides
       on a UNC share, the only reliable way to detect such modifications is to periodically poll for them; this setting 
@@ -125,6 +129,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       asyncCompletionThreadCount="0"
       initialRequestBufferSize="4096"
       maxRequestBufferSize="65536"
+      watchedFiles="*.js"
       uncFileChangesPollingInterval="5000"
       gracefulShutdownTimeout="60000"
       loggingEnabled="true"

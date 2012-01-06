@@ -16,6 +16,7 @@ private:
 		CNodeApplicationManager* manager;
 		CNodeApplication* application;
 		BOOL unc;
+		BOOL wildcard;
 		FILETIME lastWrite;
 		struct _WatchedFile* next;
 	} WatchedFile;
@@ -37,6 +38,8 @@ private:
 
 	static unsigned int WINAPI Worker(void* arg);
 	BOOL ScanDirectory(WatchedDirectory* directory, BOOL unc);
+	HRESULT WatchFile(PCWSTR directoryName, DWORD directoryNameLength, BOOL unc, PCWSTR startSubdirectoryName, PCWSTR startFileName, PCWSTR endFileName, BOOL wildcard);
+	static HRESULT GetWatchedFileTimestamp(WatchedFile* file, FILETIME* timestamp);
 
 public:
 
@@ -44,7 +47,7 @@ public:
 	~CFileWatcher();
 
 	HRESULT Initialize(IHttpContext* context);
-	HRESULT WatchFile(PCWSTR fileName, FileModifiedCallback callback, CNodeApplicationManager* manager, CNodeApplication* application);
+	HRESULT WatchFiles(PCWSTR mainFileName, PCWSTR watchedFiles, FileModifiedCallback callback, CNodeApplicationManager* manager, CNodeApplication* application);
 	HRESULT RemoveWatch(CNodeApplication* application);
 };
 

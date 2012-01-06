@@ -117,6 +117,9 @@
     <Filter Include="Tests\functional\www\116_configerror">
       <UniqueIdentifier>{500f40cf-c2f5-4264-b061-b4f1e59f50f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\117_autoupdate_dependency">
+      <UniqueIdentifier>{ac86a901-4e59-4b58-82ce-a7674d8c587c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -503,6 +506,27 @@
     </None>
     <None Include="..\..\test\functional\www\116_configerror\web.config">
       <Filter>Tests\functional\www\116_configerror</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\117_autoupdate_dependency.bat">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\parts\117_autoupdate_dependency_first.js">
+      <Filter>Tests\functional\tests\parts</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\parts\117_autoupdate_dependency_second.js">
+      <Filter>Tests\functional\tests\parts</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\117_autoupdate_dependency\hello.js">
+      <Filter>Tests\functional\www\117_autoupdate_dependency</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\117_autoupdate_dependency\hello_first.js">
+      <Filter>Tests\functional\www\117_autoupdate_dependency</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\117_autoupdate_dependency\hello_second.js">
+      <Filter>Tests\functional\www\117_autoupdate_dependency</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\117_autoupdate_dependency\web.config">
+      <Filter>Tests\functional\www\117_autoupdate_dependency</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

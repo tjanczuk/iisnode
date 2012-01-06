@@ -48,5 +48,6 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="appendToExistingLog" type="bool" defaultValue="false"/>
     <attribute name="devErrorsEnabled" type="bool" defaultValue="true"/>
     <attribute name="flushResponse" type="bool" defaultValue="false"/>
+    <attribute name="watchedFiles" type="string" defaultValue="*.js"/>    
   </sectionSchema>
 </configSchema>
