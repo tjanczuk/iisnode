@@ -1,6 +1,10 @@
 Hosting node.js applications in IIS on Windows
 ===
 
+**Why would I want to do it?**
+
+[Benefits](https://github.com/tjanczuk/iisnode/wiki)  
+
 **Prerequisites for using**
 
 - Windows Vista, Windows 7, or Windows Server 2008
@@ -61,5 +65,6 @@ Hosting node.js applications in IIS on Windows
 
 **Resources & documentation**
 
-https://github.com/tjanczuk/iisnode/wiki  
-http://tomasz.janczuk.org
+[Releases](https://github.com/tjanczuk/iisnode/wiki/iisnode-releases)  
+[Wiki](https://github.com/tjanczuk/iisnode/wiki)  
+[Blog](http://tomasz.janczuk.org)  
