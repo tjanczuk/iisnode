@@ -32,6 +32,8 @@ private:
 	BOOL devErrorsEnabled;
 	BOOL flushResponse;
 	LPWSTR watchedFiles;
+	DWORD maxNamedPipeConnectionPoolSize;
+	DWORD maxNamedPipePooledConnectionAge;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
@@ -72,6 +74,8 @@ public:
 	static BOOL GetDevErrorsEnabled(IHttpContext* ctx);
 	static BOOL GetFlushResponse(IHttpContext* ctx);
 	static LPWSTR GetWatchedFiles(IHttpContext* ctx);
+	static DWORD GetMaxNamedPipeConnectionPoolSize(IHttpContext* ctx);
+	static DWORD GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx);
 
 	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
 

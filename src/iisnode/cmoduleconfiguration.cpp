@@ -444,6 +444,8 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetDWORD(section, L"maxConcurrentRequestsPerProcess", &c->maxConcurrentRequestsPerProcess));
 		CheckError(GetDWORD(section, L"maxNamedPipeConnectionRetry", &c->maxNamedPipeConnectionRetry));
 		CheckError(GetDWORD(section, L"namedPipeConnectionRetryDelay", &c->namedPipeConnectionRetryDelay));
+		CheckError(GetDWORD(section, L"maxNamedPipeConnectionPoolSize", &c->maxNamedPipeConnectionPoolSize));
+		CheckError(GetDWORD(section, L"maxNamedPipePooledConnectionAge", &c->maxNamedPipePooledConnectionAge));
 		CheckError(GetDWORD(section, L"initialRequestBufferSize", &c->initialRequestBufferSize));
 		CheckError(GetDWORD(section, L"maxRequestBufferSize", &c->maxRequestBufferSize));
 		CheckError(GetDWORD(section, L"uncFileChangesPollingInterval", &c->uncFileChangesPollingInterval));
@@ -641,6 +643,16 @@ BOOL CModuleConfiguration::GetFlushResponse(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetWatchedFiles(IHttpContext* ctx)
 {
 	GETCONFIG(watchedFiles)
+}
+
+DWORD CModuleConfiguration::GetMaxNamedPipeConnectionPoolSize(IHttpContext* ctx)
+{
+	GETCONFIG(maxNamedPipeConnectionPoolSize)
+}
+
+DWORD CModuleConfiguration::GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx)
+{
+	GETCONFIG(maxNamedPipePooledConnectionAge)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)

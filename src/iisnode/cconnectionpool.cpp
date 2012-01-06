@@ -10,8 +10,8 @@ HRESULT CConnectionPool::Initialize(IHttpContext* ctx)
 	HRESULT hr;
 
 	ErrorIf(NULL == (this->list = (PSLIST_HEADER)_aligned_malloc(sizeof(SLIST_HEADER), MEMORY_ALLOCATION_ALIGNMENT)), ERROR_NOT_ENOUGH_MEMORY);
-	this->maxPoolSize = 512; // TODO, expose configuration for this
-	this->maxAge = 30000; // TODO, expose configuration for this
+	this->maxPoolSize = CModuleConfiguration::GetMaxNamedPipeConnectionPoolSize(ctx);
+	this->maxAge = CModuleConfiguration::GetMaxNamedPipePooledConnectionAge(ctx);
 
 	InitializeSListHead(this->list);
 
