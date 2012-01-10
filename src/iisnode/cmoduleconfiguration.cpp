@@ -6,7 +6,8 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 CModuleConfiguration::CModuleConfiguration()
 	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
-	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL)
+	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
+	enableXFF(FALSE)
 {
 }
 
@@ -468,6 +469,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		delete [] commandLine;
 		commandLine = NULL;
 		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
+		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF));
 		
 		section->Release();
 		section = NULL;
@@ -653,6 +655,11 @@ DWORD CModuleConfiguration::GetMaxNamedPipeConnectionPoolSize(IHttpContext* ctx)
 DWORD CModuleConfiguration::GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx)
 {
 	GETCONFIG(maxNamedPipePooledConnectionAge)
+}
+
+BOOL CModuleConfiguration::GetEnableXFF(IHttpContext* ctx)
+{
+	GETCONFIG(enableXFF)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)

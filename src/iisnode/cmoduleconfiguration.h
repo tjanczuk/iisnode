@@ -34,6 +34,7 @@ private:
 	LPWSTR watchedFiles;
 	DWORD maxNamedPipeConnectionPoolSize;
 	DWORD maxNamedPipePooledConnectionAge;
+	BOOL enableXFF;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
@@ -76,6 +77,7 @@ public:
 	static LPWSTR GetWatchedFiles(IHttpContext* ctx);
 	static DWORD GetMaxNamedPipeConnectionPoolSize(IHttpContext* ctx);
 	static DWORD GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx);
+	static BOOL GetEnableXFF(IHttpContext* ctx);
 
 	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
 

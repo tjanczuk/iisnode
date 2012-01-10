@@ -90,7 +90,10 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 {
 	HRESULT hr;
 	PCSTR originalUrl = NULL;
-	USHORT originalUrlLength;	
+	USHORT originalUrlLength;
+	DWORD remoteHostSize = INET6_ADDRSTRLEN + 1;
+	char remoteHost[INET6_ADDRSTRLEN + 1];
+	BOOL addXFF;
 
 	CheckNull(ctx);
 	CheckNull(result);
@@ -154,11 +157,38 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 
 	// Unknown headers
 
+	if (TRUE == (addXFF = CModuleConfiguration::GetEnableXFF(context)))
+	{
+		PSOCKADDR addr = request->GetRemoteAddress();
+		DWORD addrSize = addr->sa_family == AF_INET ? sizeof SOCKADDR_IN : sizeof SOCKADDR_IN6;
+		ErrorIf(0 != WSAAddressToString(addr, addrSize, NULL, remoteHost, &remoteHostSize), GetLastError());
+	}
+
 	for (int i = 0; i < raw->Headers.UnknownHeaderCount; i++)
 	{
 		CheckError(CHttpProtocol::Append(context, raw->Headers.pUnknownHeaders[i].pName, raw->Headers.pUnknownHeaders[i].NameLength, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, ": ", 2, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, raw->Headers.pUnknownHeaders[i].pRawValue, raw->Headers.pUnknownHeaders[i].RawValueLength, result, &bufferLength, &offset));
+
+		if (addXFF && 15 == raw->Headers.pUnknownHeaders[i].NameLength && 0 == strcmpi("X-Forwarded-For", raw->Headers.pUnknownHeaders[i].pName))
+		{
+			// augment existing X-Forwarded-For header
+
+			CheckError(CHttpProtocol::Append(context, ", ", 2, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
+
+			addXFF = FALSE;
+		}
+
+		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
+	}
+
+	if (addXFF)
+	{
+		// add a new X-Forwarded-For header
+
+		CheckError(CHttpProtocol::Append(context, "X-Forwarded-For: ", 17, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
 	}
 

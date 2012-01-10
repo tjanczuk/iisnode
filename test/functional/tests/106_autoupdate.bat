@@ -11,7 +11,7 @@ if %ERRORLEVEL% neq 0 del /q %www%\106_autoupdate\hello.js & exit /b -1
 copy /y %www%\106_autoupdate\hello_second.js %www%\106_autoupdate\hello.js
 if %ERRORLEVEL% neq 0 del /q %www%\106_autoupdate\hello.js & exit /b -1
 
-timeout /T 5 /NOBREAK
+timeout /T 8 /NOBREAK
 
 call %this%scripts\runNodeTest.bat parts\106_autoupdate_second.js
 if %ERRORLEVEL% neq 0 del /q %www%\106_autoupdate\hello.js & exit /b -1

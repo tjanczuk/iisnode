@@ -123,6 +123,8 @@ console.log('Application started at location ' + process.env.PORT);</pre>
 
     * flushResponse - controls whether each HTTP response body chunk is immediately flushed by iisnode; flushing each body chunk incurs 
       CPU cost but may improve latency in streaming scenarios
+
+    * enableXFF - controls whether iisnode adds or modifies the X-Forwarded-For request HTTP header with the IP address of the remote host
       
     --&gt;
     
@@ -149,6 +151,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       appendToExistingLog="false"
       devErrorsEnabled="true"
       flushResponse="false"
+      enableXFF="false"
      /&gt;
 
     &lt;!--     
