@@ -7,7 +7,7 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 CModuleConfiguration::CModuleConfiguration()
 	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
 	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
-	enableXFF(FALSE)
+	enableXFF(FALSE), promoteServerVars(NULL)
 {
 }
 
@@ -41,6 +41,20 @@ CModuleConfiguration::~CModuleConfiguration()
 	{
 		delete this->watchedFiles;
 		this->watchedFiles = NULL;
+	}
+
+	if (NULL != this->promoteServerVars)
+	{
+		for (int i = 0; i < this->promoteServerVarsCount; i++)
+		{
+			if (this->promoteServerVars[i])
+			{
+				delete [] this->promoteServerVars[i];
+			}
+		}
+
+		delete [] this->promoteServerVars;
+		this->promoteServerVars = NULL;
 	}
 }
 
@@ -430,7 +444,10 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 	IAppHostElement* section = NULL;
 	LPWSTR commandLine = NULL;
 	size_t i;
-
+	size_t varLength;
+	LPWSTR serverVars = NULL;
+	LPWSTR start, end;
+	wchar_t terminator;	
 	CheckNull(config);
 
 	*config = (CModuleConfiguration*)context->GetMetadata()->GetModuleContextContainer()->GetModuleContext(moduleId);
@@ -461,15 +478,80 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
 		CheckError(GetString(section, L"node_env", &c->node_env));
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
+		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
+		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF));
+
+		// debuggerPathSegment
+
 		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
 		c->debuggerPathSegmentLength = wcslen(c->debuggerPathSegment);
+
+		// nodeProcessCommandLine
+
 		CheckError(GetString(section, L"nodeProcessCommandLine", &commandLine));
 		ErrorIf(NULL == (c->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(0 != wcstombs_s(&i, c->nodeProcessCommandLine, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
 		delete [] commandLine;
 		commandLine = NULL;
-		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
-		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF));
+
+		// promoteServerVars
+
+		CheckError(GetString(section, L"promoteServerVars", &serverVars));
+		if (*serverVars == L'\0')
+		{
+			c->promoteServerVarsCount = 0;
+		}
+		else
+		{
+			// determine number of server variables
+
+			c->promoteServerVarsCount = 1;
+			start = serverVars;
+			while (*start) 
+			{
+				if (L',' == *start)
+				{
+					c->promoteServerVarsCount++;
+				}
+
+				start++;
+			}
+
+			// tokenize server variable names (comma delimited list)
+
+			ErrorIf(NULL == (c->promoteServerVars = new char*[c->promoteServerVarsCount]), ERROR_NOT_ENOUGH_MEMORY);
+			RtlZeroMemory(c->promoteServerVars, c->promoteServerVarsCount * sizeof(char*));
+
+			i = 0;
+			end = serverVars;
+			while (*end) 
+			{
+				start = end;
+				while (*end && L',' != *end) 
+				{
+					end++;
+				}
+
+				if (start != end)
+				{	
+					terminator = *end;
+					*end = L'\0';
+					ErrorIf(0 != wcstombs_s(&varLength, NULL, 0, start, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+					ErrorIf(NULL == (c->promoteServerVars[i] = new char[varLength]), ERROR_NOT_ENOUGH_MEMORY);
+					ErrorIf(0 != wcstombs_s(&varLength, c->promoteServerVars[i], varLength, start, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+					i++;
+					*end = terminator;
+				}
+
+				if (*end)
+				{
+					end++;
+				}
+			}
+		}
+
+		delete [] serverVars;
+		serverVars = NULL;
 		
 		section->Release();
 		section = NULL;
@@ -516,6 +598,12 @@ Error:
 	{
 		delete [] commandLine;
 		commandLine = NULL;
+	}
+
+	if (NULL != serverVars)
+	{
+		delete [] serverVars;
+		serverVars = NULL;
 	}
 
 	if (NULL != c)
@@ -670,7 +758,7 @@ HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start,
 	CheckNull(end);
 
 	CModuleConfiguration* c = NULL; 
-	GetConfig(ctx, &c); 
+	CheckError(GetConfig(ctx, &c));
 
 	if (0 == c->debugPortStart)
 	{
@@ -703,5 +791,23 @@ Error:
 		c->debugPortStart = c->debugPortEnd = 0;
 	}
 
+	return hr;
+}
+
+HRESULT CModuleConfiguration::GetPromoteServerVars(IHttpContext* ctx, char*** vars, int* count)
+{
+	HRESULT hr;
+
+	CheckNull(vars);
+	CheckNull(count);
+
+	CModuleConfiguration* c = NULL; 
+	CheckError(GetConfig(ctx, &c));
+
+	*vars = c->promoteServerVars;
+	*count = c->promoteServerVarsCount;
+
+	return S_OK;
+Error:
 	return hr;
 }

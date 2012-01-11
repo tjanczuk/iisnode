@@ -35,6 +35,8 @@ private:
 	DWORD maxNamedPipeConnectionPoolSize;
 	DWORD maxNamedPipePooledConnectionAge;
 	BOOL enableXFF;
+	char** promoteServerVars;
+	int promoteServerVarsCount;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
@@ -78,6 +80,7 @@ public:
 	static DWORD GetMaxNamedPipeConnectionPoolSize(IHttpContext* ctx);
 	static DWORD GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx);
 	static BOOL GetEnableXFF(IHttpContext* ctx);
+	static HRESULT GetPromoteServerVars(IHttpContext* ctx, char*** vars, int* count);
 
 	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
 

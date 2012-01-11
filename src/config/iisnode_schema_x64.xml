@@ -52,5 +52,6 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="flushResponse" type="bool" defaultValue="false"/>
     <attribute name="watchedFiles" type="string" defaultValue="*.js"/>
     <attribute name="enableXFF" type="bool" defaultValue="false"/>
+    <attribute name="promoteServerVars" type="string" defaultValue=""/>
   </sectionSchema>
 </configSchema>

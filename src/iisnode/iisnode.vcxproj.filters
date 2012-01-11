@@ -120,6 +120,12 @@
     <Filter Include="Tests\functional\www\117_autoupdate_dependency">
       <UniqueIdentifier>{ac86a901-4e59-4b58-82ce-a7674d8c587c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\118_xff">
+      <UniqueIdentifier>{dd3b1edf-b406-49ff-988a-4b417fe9ce3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\119_servervars">
+      <UniqueIdentifier>{4595469d-4085-4631-836b-08584244a9e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -527,6 +533,24 @@
     </None>
     <None Include="..\..\test\functional\www\117_autoupdate_dependency\web.config">
       <Filter>Tests\functional\www\117_autoupdate_dependency</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\118_xff.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\118_xff\hello.js">
+      <Filter>Tests\functional\www\118_xff</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\118_xff\web.config">
+      <Filter>Tests\functional\www\118_xff</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\119_servervars.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\119_servervars\hello.js">
+      <Filter>Tests\functional\www\119_servervars</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\119_servervars\web.config">
+      <Filter>Tests\functional\www\119_servervars</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

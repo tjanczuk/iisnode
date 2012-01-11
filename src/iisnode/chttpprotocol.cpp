@@ -94,6 +94,8 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 	DWORD remoteHostSize = INET6_ADDRSTRLEN + 1;
 	char remoteHost[INET6_ADDRSTRLEN + 1];
 	BOOL addXFF;
+	char** serverVars;
+	int serverVarCount;
 
 	CheckNull(ctx);
 	CheckNull(result);
@@ -107,7 +109,8 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 	IHttpRequest* request = context->GetRequest();
 	HTTP_REQUEST* raw = request->GetRawHttpRequest();
 	USHORT major, minor;
-	char tmp[256];
+	const int tmpSize = 256;
+	char tmp[tmpSize];
 	PCSTR method = request->GetHttpMethod();
 	
 	ErrorIf(NULL == (*result = context->AllocateRequestMemory(bufferLength)), ERROR_NOT_ENOUGH_MEMORY);	
@@ -190,6 +193,24 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 		CheckError(CHttpProtocol::Append(context, "X-Forwarded-For: ", 17, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
+	}
+
+	// promote server variables
+
+	CheckError(CModuleConfiguration::GetPromoteServerVars(context, &serverVars, &serverVarCount));
+	while (serverVarCount)
+	{
+		serverVarCount--;
+		PCSTR varValue;
+		DWORD varValueLength;
+		if (S_OK == context->GetServerVariable(serverVars[serverVarCount], &varValue, &varValueLength))
+		{
+			CheckError(CHttpProtocol::Append(context, "X-iisnode-", 10, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, serverVars[serverVarCount], 0, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, ": ", 2, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, varValue, varValueLength, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
+		}
 	}
 
 	// CRLF
