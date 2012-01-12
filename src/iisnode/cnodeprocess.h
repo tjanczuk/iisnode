@@ -25,6 +25,7 @@ private:
 	OVERLAPPED overlapped;
 	BOOL truncatePending;
 	CConnectionPool connectionPool;
+	WCHAR* logName;
 
 	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();
@@ -44,6 +45,7 @@ public:
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
 	void OnRequestCompleted(CNodeHttpStoredContext* context);	
 	void SignalWhenDrained(HANDLE handle);
+	char* TryGetLog(IHttpContext* context, DWORD* size);
 };
 
 #endif

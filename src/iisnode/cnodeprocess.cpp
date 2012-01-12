@@ -2,7 +2,7 @@
 
 CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal)
 	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE), ordinal(ordinal),
-	hasProcessExited(FALSE), truncatePending(FALSE)
+	hasProcessExited(FALSE), truncatePending(FALSE), logName(NULL)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
@@ -45,6 +45,12 @@ CNodeProcess::~CNodeProcess()
 		CloseHandle(this->startupInfo.hStdError);
 		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
 	}	
+
+	if (NULL != this->logName)
+	{
+		delete [] this->logName;
+		this->logName = NULL;
+	}
 }
 
 HRESULT CNodeProcess::Initialize(IHttpContext* context)
@@ -468,7 +474,6 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	this->startupInfo.dwFlags = STARTF_USESTDHANDLES;
 
 	HRESULT hr;
-	WCHAR* logName = NULL;
 	SECURITY_ATTRIBUTES security;
 	DWORD creationDisposition;
 
@@ -539,20 +544,8 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 		DUPLICATE_SAME_ACCESS),
 		GetLastError());
 
-	if (NULL != logName)
-	{
-		delete [] logName;
-		logName = NULL;
-	}
-
 	return S_OK;
 Error:
-
-	if (NULL != logName)
-	{
-		delete [] logName;
-		logName = NULL;
-	}
 
 	if (INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
 	{
@@ -572,4 +565,55 @@ Error:
 CConnectionPool* CNodeProcess::GetConnectionPool()
 {
 	return &this->connectionPool;
+}
+
+char* CNodeProcess::TryGetLog(IHttpContext* context, DWORD* size)
+{
+	HRESULT hr;
+	HANDLE file = INVALID_HANDLE_VALUE;
+	char* log = NULL;
+	*size = 0;
+
+	if (this->logName)
+	{
+		ErrorIf(INVALID_HANDLE_VALUE == (file = CreateFileW(
+			this->logName,
+			GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, 
+			NULL,
+			OPEN_EXISTING,
+			0,
+			NULL)), GetLastError());
+
+		ErrorIf(INVALID_FILE_SIZE == (*size = GetFileSize(file, NULL)), GetLastError());
+
+		if (*size > 65536)
+		{
+			// if log is larger than 64k, return only the last 64k
+
+			*size = 65536;
+			ErrorIf(INVALID_SET_FILE_POINTER == SetFilePointer(file, *size, NULL, FILE_END), GetLastError());
+		}
+
+		ErrorIf(NULL == (log = (char*)context->AllocateRequestMemory(*size)), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(0 == ReadFile(file, log, *size, size, NULL), GetLastError());
+
+		CloseHandle(file);
+		file = INVALID_HANDLE_VALUE;
+	}
+
+	return log;
+Error:
+
+	if (INVALID_HANDLE_VALUE != file)
+	{
+		CloseHandle(file);
+		file = INVALID_HANDLE_VALUE;
+	}
+
+	// log does not need to be freed - IIS will take care of it when IHttpContext is disposed
+
+	*size = 0;
+
+	return NULL;
 }

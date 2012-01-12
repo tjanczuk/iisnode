@@ -126,6 +126,9 @@
     <Filter Include="Tests\functional\www\119_servervars">
       <UniqueIdentifier>{4595469d-4085-4631-836b-08584244a9e7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\120_dev_errors_exception">
+      <UniqueIdentifier>{39ff35f2-9b08-4689-8185-a10773c03ab0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -551,6 +554,15 @@
     </None>
     <None Include="..\..\test\functional\www\119_servervars\web.config">
       <Filter>Tests\functional\www\119_servervars</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\120_dev_errors_exception.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\120_dev_errors_exception\hello.js">
+      <Filter>Tests\functional\www\120_dev_errors_exception</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\120_dev_errors_exception\web.config">
+      <Filter>Tests\functional\www\120_dev_errors_exception</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

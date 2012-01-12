@@ -13,6 +13,7 @@ private:
 	static HRESULT EnsureBuffer(CNodeHttpStoredContext* context);
 	static HRESULT FinalizeResponseCore(CNodeHttpStoredContext * context, REQUEST_NOTIFICATION_STATUS status, HRESULT error, CNodeEventProvider* log, PCWSTR etw, UCHAR level);
 	static BOOL IsLocalCall(IHttpContext* ctx);
+	static BOOL SendDevError(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
 
 	// processing stages
 	static void WINAPI ChildContextCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
