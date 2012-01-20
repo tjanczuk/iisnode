@@ -40,6 +40,7 @@ Hosting node.js applications in IIS on Windows
 [portuguese: node.js no windows: instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)  
 [integrated debugging](http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html)  
 [pub/sub server using faye](http://weblogs.asp.net/cibrax/archive/2011/12/12/transform-your-iis-into-a-real-time-pub-sub-engine-with-faye-node.aspx)  
+[appharbor uses iisnode](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)  
 
 **Prerequisites for building**
 
