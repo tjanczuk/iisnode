@@ -142,7 +142,11 @@ HRESULT CFileWatcher::WatchFiles(PCWSTR mainFileName, PCWSTR watchedFiles, FileM
 
 		if (startFile != endFile)
 		{
-			if (S_OK != (hr = this->WatchFile(directoryName, directoryLength, unc, startSubdirectory, startFile, endFile, wildcard)))
+			hr = this->WatchFile(directoryName, directoryLength, unc, startSubdirectory, startFile, endFile, wildcard);
+
+			// ignore files and directories that do not exist instead of failing
+
+			if (S_OK != hr && ERROR_FILE_NOT_FOUND != hr)
 			{
 				// still under lock remove file watch entries that were just created, then do regular cleanup
 
@@ -251,9 +255,9 @@ Error:
 HRESULT CFileWatcher::WatchFile(PCWSTR directoryName, DWORD directoryNameLength, BOOL unc, PCWSTR startSubdirectoryName, PCWSTR startFileName, PCWSTR endFileName, BOOL wildcard)
 {
 	HRESULT hr;
-	WatchedFile* file;
+	WatchedFile* file = NULL;
 	WatchedDirectory* directory;
-	WatchedDirectory* newDirectory;
+	WatchedDirectory* newDirectory = NULL;
 
 	// allocate new WatchedFile, get snapshot of the last write time
 
