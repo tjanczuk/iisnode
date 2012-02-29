@@ -101,14 +101,14 @@
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
       <ComponentGroupRef Id="allfiles" />
       <ComponentGroupRef Id="Product.Generated" />
-      <Condition Level="1">NOT WOW</Condition>
+      <Condition Level="0">WOW</Condition>
     </Feature>
 
     <?if $(var.isWin64) = "yes" ?>
     <Feature Id="iisnode4iiswow" Title="Hosting node.js applications in IIS 7.x in WOW mode" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS in WOW mode">
       <ComponentGroupRef Id="allfileswow" />
       <ComponentGroupRef Id="Product.Generated" />
-      <Condition Level="1">WOW</Condition>
+      <Condition Level="0">NOT WOW</Condition>
     </Feature>
     <?endif?>
 
