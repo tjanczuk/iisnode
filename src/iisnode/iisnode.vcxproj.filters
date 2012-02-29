@@ -129,6 +129,9 @@
     <Filter Include="Tests\functional\www\120_dev_errors_exception">
       <UniqueIdentifier>{39ff35f2-9b08-4689-8185-a10773c03ab0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\121_watchedFiles">
+      <UniqueIdentifier>{53a23746-6411-4600-8315-bc8a1b2120da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -563,6 +566,15 @@
     </None>
     <None Include="..\..\test\functional\www\120_dev_errors_exception\web.config">
       <Filter>Tests\functional\www\120_dev_errors_exception</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\121_watchedFiles.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\121_watchedFiles\hello.js">
+      <Filter>Tests\functional\www\121_watchedFiles</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\121_watchedFiles\web.config">
+      <Filter>Tests\functional\www\121_watchedFiles</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
