@@ -57,7 +57,7 @@ BOOL CProtocolBridge::SendIisnodeError(IHttpContext* httpCtx, HRESULT hr)
 				TRUE, 
 				"iisnode was unable to read the configuration file. Make sure the web.config file syntax is correct. In particular, verify the "
 				" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
-				"iisnode configuration section</a> matches the expected schema. The schema of the iisnode section that your version of iisnode requiries is stored in the "
+				"iisnode configuration section</a> matches the expected schema. The schema of the iisnode section that your version of iisnode requires is stored in the "
 				"%systemroot%\\system32\\inetsrv\\config\\schema\\iisnode_schema.xml file.");
 
 			return TRUE;
