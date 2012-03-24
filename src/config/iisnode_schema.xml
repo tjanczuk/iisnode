@@ -32,8 +32,8 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="nodeProcessCountPerApplication" type="uint" defaultValue="1"/>
     <attribute name="nodeProcessCommandLine" type="string" expanded="true" defaultValue="&quot;%programfiles%\nodejs\node.exe&quot;"/>
     <attribute name="maxConcurrentRequestsPerProcess" type="uint" allowInfitnite="true" defaultValue="1024"/>
-    <attribute name="maxNamedPipeConnectionRetry" type="uint" defaultValue="3"/>
-    <attribute name="namedPipeConnectionRetryDelay" type="uint" defaultValue="2000"/>
+    <attribute name="maxNamedPipeConnectionRetry" type="uint" defaultValue="24"/>
+    <attribute name="namedPipeConnectionRetryDelay" type="uint" defaultValue="250"/>
     <attribute name="maxNamedPipeConnectionPoolSize" type="uint" defaultValue="512"/>
     <attribute name="maxNamedPipePooledConnectionAge" type="uint" defaultValue="30000"/>    
     <attribute name="initialRequestBufferSize" type="uint" defaultValue="4096"/>
