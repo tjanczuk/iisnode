@@ -30,6 +30,7 @@ Hosting node.js applications in IIS on Windows
 **Howtos**
 
 [the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)  
+[the basics (Pусский перевод - Russian translation)](http://softdroid.net/hosting-nodejs-applications-ru)  
 [using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)  
 [using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)  
 [using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)  
