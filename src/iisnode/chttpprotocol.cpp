@@ -498,7 +498,7 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 			while (*(data + nameEndOffset) == ' ') // data is already zero-terminated, so this loop has sentinel value
 				nameEndOffset++;
 
-			CheckError(response->SetHeader(data + offset, data + nameEndOffset, valueEndOffset - nameEndOffset, TRUE));
+			CheckError(response->SetHeader(data + offset, data + nameEndOffset, valueEndOffset - nameEndOffset, FALSE));
 		}
 		else if ((valueEndOffset - nameEndOffset) >= 5 && 0 == memcmp((void*)(data + valueEndOffset - 5), "close", 5))
 		{

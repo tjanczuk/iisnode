@@ -132,6 +132,9 @@
     <Filter Include="Tests\functional\www\121_watchedFiles">
       <UniqueIdentifier>{53a23746-6411-4600-8315-bc8a1b2120da}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\122_multipleResponseHeaders">
+      <UniqueIdentifier>{53b5e674-69d5-4bae-9629-49cd8b7c7c45}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -575,6 +578,15 @@
     </None>
     <None Include="..\..\test\functional\www\121_watchedFiles\web.config">
       <Filter>Tests\functional\www\121_watchedFiles</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\122_multipleResponseHeaders\hello.js">
+      <Filter>Tests\functional\www\122_multipleResponseHeaders</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\122_multipleResponseHeaders\web.config">
+      <Filter>Tests\functional\www\122_multipleResponseHeaders</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\122_multipleResponseHeaders.js">
+      <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

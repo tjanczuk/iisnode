@@ -255,6 +255,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\tests\119_servervars.js" />
     <None Include="..\..\test\functional\tests\120_dev_errors_exception.js" />
     <None Include="..\..\test\functional\tests\121_watchedFiles.js" />
+    <None Include="..\..\test\functional\tests\122_multipleResponseHeaders.js" />
     <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
@@ -310,6 +311,8 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\www\120_dev_errors_exception\web.config" />
     <None Include="..\..\test\functional\www\121_watchedFiles\hello.js" />
     <None Include="..\..\test\functional\www\121_watchedFiles\web.config" />
+    <None Include="..\..\test\functional\www\122_multipleResponseHeaders\hello.js" />
+    <None Include="..\..\test\functional\www\122_multipleResponseHeaders\web.config" />
     <None Include="..\..\test\performance\client.bat" />
     <None Include="..\..\test\performance\localRun.bat" />
     <None Include="..\..\test\performance\readme.txt" />
