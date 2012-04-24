@@ -688,6 +688,19 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 		CheckError(request->DeleteHeader(HttpHeaderExpect));
 	}
 
+	// determine if the request body had been chunked; IIS decodes chunked encoding, so it
+	// must be re-applied when sending the request entity body
+
+	USHORT encodingLength;
+	PCSTR encoding = request->GetHeader(HttpHeaderTransferEncoding, &encodingLength);
+	if (NULL != encoding && 0 == strnicmp(encoding, "chunked;", encodingLength > 8 ? 8 : encodingLength))
+	{
+		context->SetIsChunked(TRUE);
+		context->SetIsLastChunk(FALSE);
+	}
+
+	// serialize and send request headers
+
 	CheckError(CHttpProtocol::SerializeRequestHeaders(context, context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
 	context->SetNextProcessor(CProtocolBridge::SendHttpRequestHeadersCompleted);
@@ -794,7 +807,15 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 	if (0 < context->GetHttpContext()->GetRequest()->GetRemainingEntityBytes())
 	{
 		context->SetNextProcessor(CProtocolBridge::ReadRequestBodyCompleted);
-		CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetBuffer(), context->GetBufferSize(), TRUE, &bytesReceived, &completionPending));
+		
+		if (context->GetIsChunked())
+		{
+			CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetChunkBuffer(), context->GetChunkBufferSize(), TRUE, &bytesReceived, &completionPending));
+		}
+		else
+		{
+			CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetBuffer(), context->GetBufferSize(), TRUE, &bytesReceived, &completionPending));
+		}
 	}
 
 	if (!completionPending)
@@ -817,7 +838,17 @@ Error:
 	{
 		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
-		CProtocolBridge::StartReadResponse(context);
+
+		if (context->GetIsChunked() && !context->GetIsLastChunk())
+		{
+			// send the terminating zero-length chunk
+
+			CProtocolBridge::ReadRequestBodyCompleted(S_OK, 0, context->GetOverlapped());
+		}
+		else
+		{
+			CProtocolBridge::StartReadResponse(context);
+		}
 	}
 	else
 	{
@@ -843,7 +874,17 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 	{	
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-		CProtocolBridge::StartReadResponse(ctx);
+
+		if (ctx->GetIsChunked() && !ctx->GetIsLastChunk()) 
+		{
+			// send the zero-length last chunk to indicate the end of a chunked entity body
+
+			CProtocolBridge::SendRequestBody(ctx, 0);
+		}
+		else
+		{
+			CProtocolBridge::StartReadResponse(ctx);
+		}
 	}
 	else 
 	{
@@ -861,9 +902,62 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 	GUID activityId;
 	memcpy(&activityId, context->GetActivityId(), sizeof GUID);
 
+	DWORD length;
+	char* buffer;
+
+	if (context->GetIsChunked())
+	{
+		// IIS decodes chunked transfer encoding of request entity body. Chunked encoding must be 
+		// re-applied here around the request body data IIS provided in the buffer before it is sent to node.exe.
+		// This is done by calculating and pre-pending the chunk header to the data in the buffer 
+		// and appending a chunk terminating CRLF to the data in the buffer. 
+
+		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.6
+
+		// Generate the chunk header (from last byte to first)
+
+		buffer = (char*)context->GetChunkBuffer(); // first byte of entity body chunk data
+		*(--buffer) = 0x0A; // LF
+		*(--buffer) = 0x0D; // CR
+
+		if (0 == chunkLength) 
+		{
+			// this is the end of the request entity body - generate last, zero-length chunk
+			*(--buffer) = '0';
+			context->SetIsLastChunk(TRUE);
+		}
+		else 
+		{
+			length = chunkLength;
+			while (length > 0)
+			{
+				DWORD digit = length % 16;
+				*(--buffer) = (digit < 10) ? ('0' + digit) : ('a' + digit - 10);
+				length >>= 4;
+			}
+		}
+
+		// Append CRLF to the entity body chunk
+
+		char* end = (char*)context->GetChunkBuffer() + chunkLength; // first byte after the chunk data
+		*end = 0x0D; // CR
+		*(++end) = 0x0A; // LF
+
+		// Calculate total length of the chunk including framing
+
+		length = end - buffer + 1;
+	}
+	else
+	{
+		length = chunkLength;
+		buffer = (char*)context->GetBuffer();
+	}
+
+	// send the entity body data to the node.exe process
+
 	context->SetNextProcessor(CProtocolBridge::SendRequestBodyCompleted);
 
-	if (WriteFile(context->GetPipe(), context->GetBuffer(), chunkLength, NULL, context->InitializeOverlapped()))
+	if (WriteFile(context->GetPipe(), (void*)buffer, length, NULL, context->InitializeOverlapped()))
 	{
 		// completed synchronously
 
@@ -1137,6 +1231,7 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 			if (0 == contentLengthLength)
 			{
 				ctx->SetIsChunked(TRUE);
+				ctx->SetIsLastChunk(FALSE);
 				ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
 			}
 			else

@@ -114,6 +114,28 @@ DWORD CNodeHttpStoredContext::GetBufferSize()
 	return this->bufferSize;
 }
 
+void* CNodeHttpStoredContext::GetChunkBuffer()
+{
+	// leave room in the allocated memory buffer for a chunk transfer encoding header that 
+	// will be calculated only after the entity body chunk had been read
+
+	return (void*)((char*)this->GetBuffer() + this->GetChunkHeaderMaxSize());
+}
+
+DWORD CNodeHttpStoredContext::GetChunkBufferSize()
+{
+	// leave room in the buffer for the chunk header and the CRLF following a chunk
+
+	return this->GetBufferSize() - this->GetChunkHeaderMaxSize() - 2;
+}
+
+DWORD CNodeHttpStoredContext::GetChunkHeaderMaxSize() 
+{
+	// the maximum size of the chunk header
+
+	return 64;
+}
+
 void** CNodeHttpStoredContext::GetBufferRef()
 {
 	return &this->buffer;

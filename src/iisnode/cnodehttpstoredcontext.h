@@ -48,6 +48,9 @@ public:
 	DWORD GetConnectionRetryCount();
 	void* GetBuffer();
 	DWORD GetBufferSize();
+	void* GetChunkBuffer();
+	DWORD GetChunkBufferSize();
+	DWORD GetChunkHeaderMaxSize();
 	void** GetBufferRef();
 	DWORD* GetBufferSizeRef();
 	DWORD GetDataSize();
