@@ -18,6 +18,7 @@ private:
 		BOOL unc;
 		BOOL wildcard;
 		FILETIME lastWrite;
+		BOOL yamlConfig;
 		struct _WatchedFile* next;
 	} WatchedFile;
 
@@ -35,6 +36,8 @@ private:
 	WatchedDirectory* directories;
 	DWORD uncFileSharePollingInterval;
 	CRITICAL_SECTION syncRoot;
+	LPWSTR configOverridesFileName;
+	DWORD configOverridesFileNameLength;
 
 	static unsigned int WINAPI Worker(void* arg);
 	BOOL ScanDirectory(WatchedDirectory* directory, BOOL unc);

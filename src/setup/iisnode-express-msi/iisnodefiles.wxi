@@ -60,6 +60,7 @@
             <File Id="filC84C6F4F3A4A26E6C60922E9EB27A44A" KeyPath="no" Source="$(var.sourcedir)\www\configuration\hello.js" />
             <File Id="fil71B6426C908BE42E25A29282F767DFF0" KeyPath="no" Source="$(var.sourcedir)\www\configuration\readme.htm" />
             <File Id="fil2F0416F09F068096D5E253A91DCDFB4D" KeyPath="no" Source="$(var.sourcedir)\www\configuration\web.config" />
+            <File Id="fil2F0416F09F068096D5E253A91DCDFB4F" KeyPath="no" Source="$(var.sourcedir)\www\configuration\node.config" />
             <RegistryKey Root="HKCU" Key="Software\Microsoft\iisnode\www\configuration" Action="createAndRemoveOnUninstall">
               <RegistryValue Name="hello.js" Value="[ProductVersion]" Type="string" KeyPath="yes"/>
             </RegistryKey>

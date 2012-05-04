@@ -138,6 +138,12 @@
     <Filter Include="Tests\functional\www\123_upload">
       <UniqueIdentifier>{18d24dd3-6582-41ad-856d-949ed0626792}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\124_node_config_override">
+      <UniqueIdentifier>{ebde3d11-88f9-44b3-ba68-1752293b7729}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\125_node_config_autoupdate">
+      <UniqueIdentifier>{e8b955a6-1062-48cf-8799-e5481a1c759b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -598,6 +604,33 @@
       <Filter>Tests\functional\www\123_upload</Filter>
     </None>
     <None Include="..\..\test\functional\tests\123_upload.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\samples\configuration\node.config">
+      <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\124_node_config_override\hello.js">
+      <Filter>Tests\functional\www\124_node_config_override</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\124_node_config_override\node.config">
+      <Filter>Tests\functional\www\124_node_config_override</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\124_node_config_override\web.config">
+      <Filter>Tests\functional\www\124_node_config_override</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\125_node_config_autoupdate\.gitignore">
+      <Filter>Tests\functional\www\125_node_config_autoupdate</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\125_node_config_autoupdate\hello.js">
+      <Filter>Tests\functional\www\125_node_config_autoupdate</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\125_node_config_autoupdate\web.config">
+      <Filter>Tests\functional\www\125_node_config_autoupdate</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\124_node_config_override.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\125_node_config_autoupdate.js">
       <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>

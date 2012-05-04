@@ -37,13 +37,26 @@ private:
 	BOOL enableXFF;
 	char** promoteServerVars;
 	int promoteServerVarsCount;
+	LPWSTR promoteServerVarsRaw;
+	LPWSTR configOverridesFileName;
+	static BOOL invalid;
+	SRWLOCK srwlock;
+	LPWSTR configOverrides;
 
 	static IHttpServer* server;
 	static HTTP_MODULE_ID moduleId;
 	static HRESULT GetConfigSection(IHttpContext* context, IAppHostElement** section, OLECHAR* configElement = L"system.webServer/iisnode");
 	static HRESULT GetString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value);
 	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value);
+	static HRESULT GetDWORD(char* str, DWORD* value);
+	static HRESULT GetBOOL(char* str, BOOL* value);
+	static HRESULT GetString(char* str, LPWSTR* value);	
 	static HRESULT GetDWORD(IAppHostElement* section, LPCWSTR propertyName, DWORD* value);	
+	static HRESULT ApplyConfigOverrideKeyValue(IHttpContext* context, CModuleConfiguration* config, char* keyStart, char* keyEnd, char* valueStart, char* valueEnd);
+	static HRESULT ApplyYamlConfigOverrides(IHttpContext* context, CModuleConfiguration* config);
+	static HRESULT TokenizePromoteServerVars(CModuleConfiguration* c);
+	static HRESULT ApplyDefaults(CModuleConfiguration* c);
+	static HRESULT EnsureCurrent(IHttpContext* context, CModuleConfiguration* config);
 
 	CModuleConfiguration();
 	~CModuleConfiguration();
@@ -81,8 +94,11 @@ public:
 	static DWORD GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx);
 	static BOOL GetEnableXFF(IHttpContext* ctx);
 	static HRESULT GetPromoteServerVars(IHttpContext* ctx, char*** vars, int* count);
+	static LPWSTR GetConfigOverrides(IHttpContext* ctx);
 
 	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
+
+	static void Invalidate();
 
 	virtual void CleanupStoredContext();
 };

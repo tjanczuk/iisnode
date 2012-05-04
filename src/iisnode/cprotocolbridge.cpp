@@ -45,20 +45,41 @@ BOOL CProtocolBridge::IsLocalCall(IHttpContext* ctx)
 
 BOOL CProtocolBridge::SendIisnodeError(IHttpContext* httpCtx, HRESULT hr)
 {
-	if (IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION == hr)
+	if (IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION == hr || IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_OVERRIDE == hr)
 	{
 		if (CProtocolBridge::IsLocalCall(httpCtx))
 		{
-			CProtocolBridge::SendSyncResponse(
-				httpCtx, 
-				200, 
-				"OK", 
-				hr, 
-				TRUE, 
-				"iisnode was unable to read the configuration file. Make sure the web.config file syntax is correct. In particular, verify the "
-				" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
-				"iisnode configuration section</a> matches the expected schema. The schema of the iisnode section that your version of iisnode requires is stored in the "
-				"%systemroot%\\system32\\inetsrv\\config\\schema\\iisnode_schema.xml file.");
+			switch (hr) {
+
+			default:
+				return FALSE;
+
+			case IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION:
+				CProtocolBridge::SendSyncResponse(
+					httpCtx, 
+					200, 
+					"OK", 
+					hr, 
+					TRUE, 
+					"iisnode was unable to read the configuration file. Make sure the web.config file syntax is correct. In particular, verify the "
+					" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
+					"iisnode configuration section</a> matches the expected schema. The schema of the iisnode section that your version of iisnode requires is stored in the "
+					"%systemroot%\\system32\\inetsrv\\config\\schema\\iisnode_schema.xml file.");
+				break;
+
+			case IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_OVERRIDE:
+				CProtocolBridge::SendSyncResponse(
+					httpCtx, 
+					200, 
+					"OK", 
+					hr, 
+					TRUE, 
+					"iisnode was unable to read the configuration file node.config. Make sure the node.config file syntax is correct. For reference, check "
+					" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/node.config"">"
+					"the sample node.config file</a>. The property names recognized in the node.config file of your version of iisnode are stored in the "
+					"%systemroot%\\system32\\inetsrv\\config\\schema\\iisnode_schema.xml file.");
+				break;
+			};
 
 			return TRUE;
 		}

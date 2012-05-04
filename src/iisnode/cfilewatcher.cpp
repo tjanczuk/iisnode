@@ -1,7 +1,8 @@
 #include "precomp.h"
 
 CFileWatcher::CFileWatcher()
-	: completionPort(NULL), worker(NULL), directories(NULL), uncFileSharePollingInterval(0)
+	: completionPort(NULL), worker(NULL), directories(NULL), uncFileSharePollingInterval(0), 
+	configOverridesFileName(NULL), configOverridesFileNameLength(0)
 {
 	InitializeCriticalSection(&this->syncRoot);
 }
@@ -38,6 +39,12 @@ CFileWatcher::~CFileWatcher()
 		delete currentDirectory;
 	}
 
+	if (NULL != this->configOverridesFileName)
+	{
+		delete [] this->configOverridesFileName;
+		this->configOverridesFileName = NULL;
+	}
+
 	DeleteCriticalSection(&this->syncRoot);
 }
 
@@ -47,6 +54,14 @@ HRESULT CFileWatcher::Initialize(IHttpContext* context)
 
 	ErrorIf(NULL == (this->completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1)), GetLastError());		
 	this->uncFileSharePollingInterval = CModuleConfiguration::GetUNCFileChangesPollingInterval(context);
+
+	LPWSTR overrides = CModuleConfiguration::GetConfigOverrides(context);
+	if (overrides && *overrides != L'\0')
+	{
+		this->configOverridesFileNameLength = wcslen(overrides);
+		ErrorIf(NULL == (this->configOverridesFileName = new WCHAR[this->configOverridesFileNameLength + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(this->configOverridesFileName, overrides);
+	}
 
 	return S_OK;
 Error:
@@ -270,6 +285,13 @@ HRESULT CFileWatcher::WatchFile(PCWSTR directoryName, DWORD directoryNameLength,
 	file->unc = unc;
 	file->wildcard = wildcard;
 	this->GetWatchedFileTimestamp(file, &file->lastWrite);
+
+	// determine if this is the yaml config file
+
+	if (this->configOverridesFileNameLength == (endFileName - startFileName))
+	{
+		file->yamlConfig = 0 == memcmp(this->configOverridesFileName, startFileName, this->configOverridesFileNameLength * sizeof WCHAR);
+	}
 
 	// find matching directory watcher entry
 
@@ -531,6 +553,14 @@ BOOL CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
 			if (S_OK == CFileWatcher::GetWatchedFileTimestamp(file, &timestamp)
 				&& 0 != memcmp(&timestamp, &file->lastWrite, sizeof FILETIME))
 			{
+				if (file->yamlConfig)
+				{
+					// the node.config file has changed
+					// invalidate the configuration such that on next message it will be re-created
+
+					CModuleConfiguration::Invalidate();
+				}
+
 				memcpy(&file->lastWrite, &timestamp, sizeof FILETIME);
 				file->callback(file->manager, file->application);
 				return TRUE;

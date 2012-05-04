@@ -257,6 +257,8 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\tests\121_watchedFiles.js" />
     <None Include="..\..\test\functional\tests\122_multipleResponseHeaders.js" />
     <None Include="..\..\test\functional\tests\123_upload.js" />
+    <None Include="..\..\test\functional\tests\124_node_config_override.js" />
+    <None Include="..\..\test\functional\tests\125_node_config_autoupdate.js" />
     <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
@@ -316,6 +318,12 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\www\122_multipleResponseHeaders\web.config" />
     <None Include="..\..\test\functional\www\123_upload\hello.js" />
     <None Include="..\..\test\functional\www\123_upload\web.config" />
+    <None Include="..\..\test\functional\www\124_node_config_override\hello.js" />
+    <None Include="..\..\test\functional\www\124_node_config_override\node.config" />
+    <None Include="..\..\test\functional\www\124_node_config_override\web.config" />
+    <None Include="..\..\test\functional\www\125_node_config_autoupdate\.gitignore" />
+    <None Include="..\..\test\functional\www\125_node_config_autoupdate\hello.js" />
+    <None Include="..\..\test\functional\www\125_node_config_autoupdate\web.config" />
     <None Include="..\..\test\performance\client.bat" />
     <None Include="..\..\test\performance\localRun.bat" />
     <None Include="..\..\test\performance\readme.txt" />
@@ -326,6 +334,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\config\iisnode_schema.xml" />
     <None Include="..\config\iisnode_schema_x64.xml" />
     <None Include="..\samples\configuration\hello.js" />
+    <None Include="..\samples\configuration\node.config" />
     <None Include="..\samples\configuration\readme.htm">
       <DeploymentContent>true</DeploymentContent>
     </None>

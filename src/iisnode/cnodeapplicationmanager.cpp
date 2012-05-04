@@ -13,23 +13,20 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
     HRESULT hr = S_OK;
 	CModuleConfiguration *config;
 
-    if (!this->initialized)
+	if (S_OK != (hr = CModuleConfiguration::GetConfig(context, &config)))
+	{
+		hr = IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_OVERRIDE == hr ? hr : IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION;
+	}
+	else if (!this->initialized)
     {
-		if (S_OK != CModuleConfiguration::GetConfig(context, &config))
-		{
-			hr = IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION;
-		}
-		else
-		{
-			ENTER_SRW_EXCLUSIVE(this->srwlock)
+		ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-			if (!this->initialized)
-			{
-				hr = this->InitializeCore(context);
-			}
-
-			LEAVE_SRW_EXCLUSIVE(this->srwlock)
+		if (!this->initialized)
+		{
+			hr = this->InitializeCore(context);
 		}
+
+		LEAVE_SRW_EXCLUSIVE(this->srwlock)
     }
 
     return hr;

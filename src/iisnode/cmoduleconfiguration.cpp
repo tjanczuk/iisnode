@@ -4,11 +4,15 @@ IHttpServer* CModuleConfiguration::server = NULL;
 
 HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
+BOOL CModuleConfiguration::invalid = FALSE;
+
 CModuleConfiguration::CModuleConfiguration()
 	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
 	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
-	enableXFF(FALSE), promoteServerVars(NULL)
+	enableXFF(FALSE), promoteServerVars(NULL), promoteServerVarsRaw(NULL), configOverridesFileName(NULL),
+	configOverrides(NULL)
 {
+	InitializeSRWLock(&this->srwlock);
 }
 
 CModuleConfiguration::~CModuleConfiguration()
@@ -56,6 +60,29 @@ CModuleConfiguration::~CModuleConfiguration()
 		delete [] this->promoteServerVars;
 		this->promoteServerVars = NULL;
 	}
+
+	if (NULL != this->promoteServerVarsRaw)
+	{
+		delete [] this->promoteServerVarsRaw;
+		this->promoteServerVarsRaw = NULL;
+	}
+
+	if (NULL != this->configOverridesFileName)
+	{
+		delete [] this->configOverridesFileName;
+		this->configOverridesFileName = NULL;
+	}
+
+	if (NULL != this->configOverrides)
+	{
+		delete [] this->configOverrides;
+		this->configOverrides = NULL;
+	}
+}
+
+void CModuleConfiguration::Invalidate()
+{
+	CModuleConfiguration::invalid = TRUE;
 }
 
 HRESULT CModuleConfiguration::Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId)	
@@ -437,6 +464,509 @@ Error:
     return hr;
 }
 
+HRESULT CModuleConfiguration::GetDWORD(char* str, DWORD* value)
+{
+	HRESULT hr;
+
+	if (str)
+	{
+		long v = atol(str);
+		ErrorIf((v == LONG_MAX || v == LONG_MIN) && errno == ERANGE, E_FAIL);
+		*value = (DWORD)v;
+	}
+
+	return S_OK;
+Error:
+	return hr;
+}
+
+HRESULT CModuleConfiguration::GetBOOL(char* str, BOOL* value)
+{
+	if (!str)
+	{
+		*value = FALSE;
+	}
+	else if (0 == strcmpi(str, "false") || 0 == strcmpi(str, "0") || 0 == strcmpi(str, "no"))
+	{
+		*value = FALSE;
+	}
+	else if (0 == strcmpi(str, "true") || 0 == strcmpi(str, "1") || 0 == strcmpi(str, "yes"))
+	{
+		*value = TRUE;
+	}
+	else
+	{
+		return E_FAIL;
+	}
+
+	return S_OK;
+}
+
+HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value)
+{
+	HRESULT hr;
+	int wcharSize, bytesConverted;
+
+	if (*value)
+	{
+		delete [] *value;
+		*value = NULL;
+	}
+
+	if (!str)
+	{
+		str = "";
+	}
+
+	ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
+	ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, *value, wcharSize), GetLastError());
+
+	return S_OK;
+Error:
+	return hr;
+}
+
+HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context, CModuleConfiguration* config, char* keyStart, char* keyEnd, char* valueStart, char* valueEnd)
+{
+	HRESULT hr;
+
+	keyEnd++;
+	*keyEnd = 0;
+
+	if (valueEnd)
+	{
+		valueEnd++;
+		*valueEnd = 0;
+	}
+
+	if (0 == strcmpi(keyStart, "asyncCompletionThreadCount"))
+	{
+		CheckError(GetDWORD(valueStart, &config->asyncCompletionThreadCount));
+	}
+	else if (0 == strcmpi(keyStart, "nodeProcessCountPerApplication"))
+	{
+		CheckError(GetDWORD(valueStart, &config->nodeProcessCountPerApplication));
+	}
+	else if (0 == strcmpi(keyStart, "maxConcurrentRequestsPerProcess"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxConcurrentRequestsPerProcess));
+	}
+	else if (0 == strcmpi(keyStart, "maxNamedPipeConnectionRetry"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxNamedPipeConnectionRetry));
+	}
+	else if (0 == strcmpi(keyStart, "namedPipeConnectionRetryDelay"))
+	{
+		CheckError(GetDWORD(valueStart, &config->namedPipeConnectionRetryDelay));
+	}
+	else if (0 == strcmpi(keyStart, "maxNamedPipeConnectionPoolSize"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxNamedPipeConnectionPoolSize));
+	}
+	else if (0 == strcmpi(keyStart, "maxNamedPipePooledConnectionAge"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxNamedPipePooledConnectionAge));
+	}
+	else if (0 == strcmpi(keyStart, "initialRequestBufferSize"))
+	{
+		CheckError(GetDWORD(valueStart, &config->initialRequestBufferSize));
+	}
+	else if (0 == strcmpi(keyStart, "maxRequestBufferSize"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxRequestBufferSize));
+	}
+	else if (0 == strcmpi(keyStart, "uncFileChangesPollingInterval"))
+	{
+		CheckError(GetDWORD(valueStart, &config->uncFileChangesPollingInterval));
+	}
+	else if (0 == strcmpi(keyStart, "gracefulShutdownTimeout"))
+	{
+		CheckError(GetDWORD(valueStart, &config->gracefulShutdownTimeout));
+	}
+	else if (0 == strcmpi(keyStart, "logFileFlushInterval"))
+	{
+		CheckError(GetDWORD(valueStart, &config->logFileFlushInterval));
+	}
+	else if (0 == strcmpi(keyStart, "maxLogFileSizeInKB"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxLogFileSizeInKB));
+	}
+	else if (0 == strcmpi(keyStart, "loggingEnabled"))
+	{
+		CheckError(GetBOOL(valueStart, &config->loggingEnabled));
+	}
+	else if (0 == strcmpi(keyStart, "appendToExistingLog"))
+	{
+		CheckError(GetBOOL(valueStart, &config->appendToExistingLog));
+	}
+	else if (0 == strcmpi(keyStart, "devErrorsEnabled"))
+	{
+		CheckError(GetBOOL(valueStart, &config->devErrorsEnabled));
+	}
+	else if (0 == strcmpi(keyStart, "flushResponse"))
+	{
+		CheckError(GetBOOL(valueStart, &config->flushResponse));
+	}
+	else if (0 == strcmpi(keyStart, "debuggingEnabled"))
+	{
+		CheckError(GetBOOL(valueStart, &config->debuggingEnabled));
+	}
+	else if (0 == strcmpi(keyStart, "enableXFF"))
+	{
+		CheckError(GetBOOL(valueStart, &config->enableXFF));
+	}
+	else if (0 == strcmpi(keyStart, "logDirectoryNameSuffix"))
+	{
+		CheckError(GetString(valueStart, &config->logDirectoryNameSuffix));
+	}
+	else if (0 == strcmpi(keyStart, "node_env"))
+	{
+		CheckError(GetString(valueStart, &config->node_env));
+	}
+	else if (0 == strcmpi(keyStart, "debugPortRange"))
+	{
+		CheckError(GetString(valueStart, &config->debugPortRange));
+	}
+	else if (0 == strcmpi(keyStart, "watchedFiles"))
+	{
+		CheckError(GetString(valueStart, &config->watchedFiles));
+	}
+	else if (0 == strcmpi(keyStart, "promoteServerVars"))
+	{
+		CheckError(GetString(valueStart, &config->promoteServerVarsRaw));
+	}
+	else if (0 == strcmpi(keyStart, "debuggerPathSegment"))
+	{
+		CheckError(GetString(valueStart, &config->debuggerPathSegment));
+		config->debuggerPathSegmentLength = wcslen(config->debuggerPathSegment);
+	}
+	else if (0 == strcmpi(keyStart, "nodeProcessCommandLine"))
+	{
+		if (config->nodeProcessCommandLine)
+		{
+			delete [] config->nodeProcessCommandLine;
+			config->nodeProcessCommandLine = NULL;
+		}
+
+		ErrorIf(NULL == (config->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
+		if (valueStart)
+		{
+			strcpy(config->nodeProcessCommandLine, valueStart);
+		}
+		else
+		{
+			strcpy(config->nodeProcessCommandLine, "");
+		}
+	}
+
+
+	return S_OK;
+Error:
+	return hr;
+}
+
+HRESULT CModuleConfiguration::ApplyYamlConfigOverrides(IHttpContext* context, CModuleConfiguration* config) 
+{
+	HRESULT hr;
+	PCWSTR scriptTranslated;
+	DWORD scriptTranslatedLength;
+	HANDLE overridesHandle = INVALID_HANDLE_VALUE;
+	DWORD fileSize;
+	DWORD bytesRead;
+	char* content = NULL;
+	char* lineStart;
+	char* lineEnd;
+	char* colon;
+	char* comment;
+	char *keyStart, *keyEnd;
+	char *valueStart, *valueEnd;
+
+	if (config->configOverrides == L'\0')
+	{
+		// no file name with config overrides specified, return success
+
+		return S_OK;
+	}
+
+	// construct absolute file name by replacing the script name in the script translated path with the config override file name
+
+	if (!config->configOverridesFileName)
+	{
+		scriptTranslated = context->GetScriptTranslated(&scriptTranslatedLength);
+		ErrorIf(NULL == (config->configOverridesFileName = new WCHAR[scriptTranslatedLength + wcslen(config->configOverrides) + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(config->configOverridesFileName, scriptTranslated);
+		while (scriptTranslatedLength > 0 && config->configOverridesFileName[scriptTranslatedLength] != L'\\')
+			scriptTranslatedLength--;
+		wcscpy(config->configOverridesFileName + scriptTranslatedLength + 1, config->configOverrides);
+	}
+
+	// open configuration override file if it exists
+
+	if (INVALID_HANDLE_VALUE == (overridesHandle = CreateFileW(
+		config->configOverridesFileName,
+		GENERIC_READ,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		0,
+		NULL))) {
+			hr = GetLastError();
+
+			// if file does not exist, clean up and return success (i.e. no config overrides specified)
+			ErrorIf(ERROR_FILE_NOT_FOUND == hr, S_OK);
+			
+			// if other error occurred, return the error
+			ErrorIf(TRUE, hr);
+	}
+
+	// read file content
+
+	ErrorIf(INVALID_FILE_SIZE == (fileSize = GetFileSize(overridesHandle, NULL)), GetLastError());
+	ErrorIf(0 == fileSize, S_OK); // empty file, clean up and return success
+	ErrorIf(NULL == (content = new char[fileSize + 1]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(!ReadFile(overridesHandle, content, fileSize, &bytesRead, NULL), GetLastError());
+	ErrorIf(fileSize != bytesRead, E_FAIL);
+	content[bytesRead] = 0;
+	CloseHandle(overridesHandle);
+	overridesHandle = INVALID_HANDLE_VALUE;
+
+	// parse file
+
+	lineStart = lineEnd = content;
+	while (*lineStart) 
+	{
+		// determine the placement of a comment and colon as well as the end of the line
+		colon = comment = NULL;
+		while (*lineEnd && *lineEnd != '\r' && *lineEnd != '\n') 
+		{
+			if (*lineEnd == ':') 
+			{
+				if (!colon)
+					colon = lineEnd;
+			}
+			else if (*lineEnd == '#')
+			{
+				if (!comment)
+					comment = lineEnd;
+			}
+
+			lineEnd++;
+		}
+
+		// comment will be the sentinel of the end of this line
+		if (!comment)
+			comment = lineEnd;
+
+		// skip whitespace at the end of this line and beginning of next
+		while (*lineEnd == ' ' || *lineEnd == '\r' || *lineEnd == '\n')
+			lineEnd++;
+
+		// skip whitespace at the beginning of line
+		while (lineStart < comment && *lineStart == ' ')
+			lineStart++;
+		
+		if (lineStart < comment) 
+		{
+			// there is a non-whitespace character before the end of the line or comment on that line
+			// assume <key>: <value> [#<comment>] syntax of the line
+			keyStart = lineStart;
+			ErrorIf(!colon, E_FAIL); // there is no colon on the line
+			ErrorIf(keyStart == colon, E_FAIL); // colon is the first non-whitespace character on the line
+
+			// find end of key name
+			while (lineStart < colon && *lineStart != ' ')
+				lineStart++;
+			keyEnd = lineStart - 1;
+
+			// skip whitespace between end of key name and colon
+			while (lineStart < colon && *lineStart == ' ')
+				lineStart++;
+			ErrorIf(lineStart != colon, E_FAIL); // non-whitespace character found
+
+			// skip whitespace before value
+			lineStart++;
+			while (lineStart < comment && *lineStart == ' ')
+				lineStart++;
+
+			if (lineStart == comment)
+			{
+				// empty value
+				valueStart = valueEnd = NULL;
+			}
+			else
+			{
+				valueStart = lineStart;
+
+				// find end of value as a last non-whitespace character before comment
+				valueEnd = comment - 1;
+				while (valueEnd > valueStart && *valueEnd == ' ')
+					valueEnd--;
+
+				CheckError(CModuleConfiguration::ApplyConfigOverrideKeyValue(context, config, keyStart, keyEnd, valueStart, valueEnd));
+			}
+
+		}
+
+		// move on to the next line
+		lineStart = lineEnd;
+	}
+
+	hr = S_OK; // fall through to cleanup in the Error section
+Error:
+
+	if (overridesHandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(overridesHandle);
+		overridesHandle = INVALID_HANDLE_VALUE;
+	}
+
+	if (content)
+	{
+		delete [] content;
+		content = NULL;
+	}
+
+	return S_OK == hr ? S_OK : IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_OVERRIDE;
+}
+
+HRESULT CModuleConfiguration::TokenizePromoteServerVars(CModuleConfiguration* c)
+{
+	HRESULT hr;
+	size_t i;
+	size_t varLength;
+	LPWSTR start, end;
+	wchar_t terminator;	
+
+	if (c->promoteServerVarsRaw)
+	{
+		if (NULL != c->promoteServerVars)
+		{
+			for (int i = 0; i < c->promoteServerVarsCount; i++)
+			{
+				if (c->promoteServerVars[i])
+				{
+					delete [] c->promoteServerVars[i];
+				}
+			}
+
+			delete [] c->promoteServerVars;
+			c->promoteServerVars = NULL;
+		}
+
+		if (*c->promoteServerVarsRaw == L'\0')
+		{
+			c->promoteServerVarsCount = 0;
+		}
+		else
+		{
+			// determine number of server variables
+
+			c->promoteServerVarsCount = 1;
+			start = c->promoteServerVarsRaw;
+			while (*start) 
+			{
+				if (L',' == *start)
+				{
+					c->promoteServerVarsCount++;
+				}
+
+				start++;
+			}
+
+			// tokenize server variable names (comma delimited list)
+
+			ErrorIf(NULL == (c->promoteServerVars = new char*[c->promoteServerVarsCount]), ERROR_NOT_ENOUGH_MEMORY);
+			RtlZeroMemory(c->promoteServerVars, c->promoteServerVarsCount * sizeof(char*));
+
+			i = 0;
+			end = c->promoteServerVarsRaw;
+			while (*end) 
+			{
+				start = end;
+				while (*end && L',' != *end) 
+				{
+					end++;
+				}
+
+				if (start != end)
+				{	
+					terminator = *end;
+					*end = L'\0';
+					ErrorIf(0 != wcstombs_s(&varLength, NULL, 0, start, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+					ErrorIf(NULL == (c->promoteServerVars[i] = new char[varLength]), ERROR_NOT_ENOUGH_MEMORY);
+					ErrorIf(0 != wcstombs_s(&varLength, c->promoteServerVars[i], varLength, start, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
+					i++;
+					*end = terminator;
+				}
+
+				if (*end)
+				{
+					end++;
+				}
+			}
+		}
+
+		delete [] c->promoteServerVarsRaw;
+		c->promoteServerVarsRaw = NULL;
+	}
+
+	return S_OK;
+Error:
+	return hr;
+}
+
+HRESULT CModuleConfiguration::ApplyDefaults(CModuleConfiguration* c)
+{
+    if (0 == c->asyncCompletionThreadCount)
+    {
+        // default number of async completion threads is the number of processors
+
+        SYSTEM_INFO info;
+
+        GetSystemInfo(&info);
+        c->asyncCompletionThreadCount = 0 == info.dwNumberOfProcessors ? 4 : info.dwNumberOfProcessors;
+    }
+
+	if (0 == c->nodeProcessCountPerApplication)
+	{
+		// default number of node.exe processes to create per node.js application
+
+        SYSTEM_INFO info;
+
+        GetSystemInfo(&info);
+        c->nodeProcessCountPerApplication = 0 == info.dwNumberOfProcessors ? 1 : info.dwNumberOfProcessors;
+	}
+
+	return S_OK;
+}
+
+HRESULT CModuleConfiguration::EnsureCurrent(IHttpContext* context, CModuleConfiguration* config)
+{
+	HRESULT hr;
+
+	if (config && CModuleConfiguration::invalid)
+	{
+		// yaml config has changed and needs to be re-read; this condition was set by the CFileWatcher
+
+		ENTER_SRW_EXCLUSIVE(config->srwlock)
+
+		if (CModuleConfiguration::invalid)
+		{
+			CheckError(CModuleConfiguration::ApplyYamlConfigOverrides(context, config));
+			CheckError(CModuleConfiguration::TokenizePromoteServerVars(config));
+			CheckError(CModuleConfiguration::ApplyDefaults(config));
+			CModuleConfiguration::invalid = FALSE;
+		}
+
+		LEAVE_SRW_EXCLUSIVE(config->srwlock)
+	}
+
+	return S_OK;
+Error:
+	return hr;
+}
+
 HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfiguration** config)
 {
 	HRESULT hr;
@@ -444,13 +974,11 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 	IAppHostElement* section = NULL;
 	LPWSTR commandLine = NULL;
 	size_t i;
-	size_t varLength;
-	LPWSTR serverVars = NULL;
-	LPWSTR start, end;
-	wchar_t terminator;	
 	CheckNull(config);
 
 	*config = (CModuleConfiguration*)context->GetMetadata()->GetModuleContextContainer()->GetModuleContext(moduleId);
+
+	CheckError(CModuleConfiguration::EnsureCurrent(context, *config));
 
 	if (NULL == *config)
 	{
@@ -480,6 +1008,8 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
 		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF));
+		CheckError(GetString(section, L"promoteServerVars", &c->promoteServerVarsRaw));
+		CheckError(GetString(section, L"configOverrides", &c->configOverrides));
 
 		// debuggerPathSegment
 
@@ -494,89 +1024,22 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		delete [] commandLine;
 		commandLine = NULL;
 
-		// promoteServerVars
+		// apply config setting overrides from the optional YAML configuration file
 
-		CheckError(GetString(section, L"promoteServerVars", &serverVars));
-		if (*serverVars == L'\0')
-		{
-			c->promoteServerVarsCount = 0;
-		}
-		else
-		{
-			// determine number of server variables
+		CheckError(CModuleConfiguration::ApplyYamlConfigOverrides(context, c));
 
-			c->promoteServerVarsCount = 1;
-			start = serverVars;
-			while (*start) 
-			{
-				if (L',' == *start)
-				{
-					c->promoteServerVarsCount++;
-				}
+		// tokenize promoteServerVars
 
-				start++;
-			}
+		CheckError(CModuleConfiguration::TokenizePromoteServerVars(c));
 
-			// tokenize server variable names (comma delimited list)
-
-			ErrorIf(NULL == (c->promoteServerVars = new char*[c->promoteServerVarsCount]), ERROR_NOT_ENOUGH_MEMORY);
-			RtlZeroMemory(c->promoteServerVars, c->promoteServerVarsCount * sizeof(char*));
-
-			i = 0;
-			end = serverVars;
-			while (*end) 
-			{
-				start = end;
-				while (*end && L',' != *end) 
-				{
-					end++;
-				}
-
-				if (start != end)
-				{	
-					terminator = *end;
-					*end = L'\0';
-					ErrorIf(0 != wcstombs_s(&varLength, NULL, 0, start, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
-					ErrorIf(NULL == (c->promoteServerVars[i] = new char[varLength]), ERROR_NOT_ENOUGH_MEMORY);
-					ErrorIf(0 != wcstombs_s(&varLength, c->promoteServerVars[i], varLength, start, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
-					i++;
-					*end = terminator;
-				}
-
-				if (*end)
-				{
-					end++;
-				}
-			}
-		}
-
-		delete [] serverVars;
-		serverVars = NULL;
+		// done with section
 		
 		section->Release();
 		section = NULL;
 
         // apply defaults
 
-        if (0 == c->asyncCompletionThreadCount)
-        {
-            // default number of async completion threads is the number of processors
-
-            SYSTEM_INFO info;
-
-            GetSystemInfo(&info);
-            c->asyncCompletionThreadCount = 0 == info.dwNumberOfProcessors ? 4 : info.dwNumberOfProcessors;
-        }
-
-		if (0 == c->nodeProcessCountPerApplication)
-		{
-			// default number of node.exe processes to create per node.js application
-
-            SYSTEM_INFO info;
-
-            GetSystemInfo(&info);
-            c->nodeProcessCountPerApplication = 0 == info.dwNumberOfProcessors ? 1 : info.dwNumberOfProcessors;
-		}
+		CheckError(CModuleConfiguration::ApplyDefaults(c));
 		
 		// CR: check for ERROR_ALREADY_ASSIGNED to detect a race in creation of this section 
 		// CR: refcounting may be needed if synchronous code paths proove too long (race with config changes)
@@ -598,12 +1061,6 @@ Error:
 	{
 		delete [] commandLine;
 		commandLine = NULL;
-	}
-
-	if (NULL != serverVars)
-	{
-		delete [] serverVars;
-		serverVars = NULL;
 	}
 
 	if (NULL != c)
@@ -748,6 +1205,11 @@ DWORD CModuleConfiguration::GetMaxNamedPipePooledConnectionAge(IHttpContext* ctx
 BOOL CModuleConfiguration::GetEnableXFF(IHttpContext* ctx)
 {
 	GETCONFIG(enableXFF)
+}
+
+LPWSTR CModuleConfiguration::GetConfigOverrides(IHttpContext* ctx)
+{
+	GETCONFIG(configOverrides)
 }
 
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)

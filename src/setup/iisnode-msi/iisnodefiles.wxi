@@ -78,6 +78,9 @@
           <Component Id="cmp43304DBF7D5F428226B66D8BCE98F79C" Guid="D677A41F-77E9-4133-A646-54B6800A824B">
             <File Id="fil2F0416F09F068096D5E253A91DCDFB4D" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\web.config" />
           </Component>
+          <Component Id="cmp43304DBF7D5F428226B66D8BCE98F79D" Guid="D677A41F-77E9-4133-A646-54B6800A824C">
+            <File Id="fil2F0416F09F068096D5E253A91DCDFB4E" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\node.config" />
+          </Component>
         </Directory>
         <Directory Id="dir45A892E29212AE212D756BFAD925773B" Name="defaultdocument">
           <Component Id="cmpB18006FAB8C1983F7075672963FB789C" Guid="8977FE53-FB08-4FA5-86F9-1E3F25B4A6CB">
@@ -348,6 +351,7 @@
       <ComponentRef Id="cmp97BBEA440C75C9AA1726A3083CD6B0AA" />
       <ComponentRef Id="cmp35E8791EC1813578EC05F557AD0DB971" />
       <ComponentRef Id="cmp43304DBF7D5F428226B66D8BCE98F79C" />
+      <ComponentRef Id="cmp43304DBF7D5F428226B66D8BCE98F79D" />
       <ComponentRef Id="cmpB18006FAB8C1983F7075672963FB789C" />
       <ComponentRef Id="cmp4EE8AC791973A668E0BD31E0C7C56779" />
       <ComponentRef Id="cmp797D37F6545ADEB8D9388E1F4E27274F" />
