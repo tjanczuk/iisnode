@@ -61,15 +61,19 @@
       <![CDATA[Installed OR NODEEXE]]>
     </Condition>
 
+    <PropertyRef Id="WIX_DIR_COMMON_DOCUMENTS"/>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
-        <Directory Id="LocalAppDataFolder">
-          <Directory Id="iisnoderootdir" Name="iisnode">
-          </Directory>
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="inetsrvdir" Name="IIS Express">
         </Directory>
-        <Directory Id="ProgramFilesFolder">
-          <Directory Id="inetsrvdir" Name="IIS Express">
-          </Directory>
+        <Directory Id="iisnoderootdir" Name="iisnode-express">
         </Directory>
+      </Directory>
+      <Directory Id="WIX_DIR_COMMON_DOCUMENTS">
+        <Directory Id="iisnodesamples" Name="iisnode-express">
+        </Directory>
+      </Directory>
     </Directory>
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS Express 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS Express 7.x">
