@@ -144,6 +144,9 @@
     <Filter Include="Tests\functional\www\125_node_config_autoupdate">
       <UniqueIdentifier>{e8b955a6-1062-48cf-8799-e5481a1c759b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\126_node_config_syntax">
+      <UniqueIdentifier>{11747cf2-9384-4591-992e-4bc85c6fe7c8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -631,6 +634,18 @@
       <Filter>Tests\functional\tests</Filter>
     </None>
     <None Include="..\..\test\functional\tests\125_node_config_autoupdate.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\126_node_config_syntax\.gitignore">
+      <Filter>Tests\functional\www\126_node_config_syntax</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\126_node_config_syntax\hello.js">
+      <Filter>Tests\functional\www\126_node_config_syntax</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\126_node_config_syntax\web.config">
+      <Filter>Tests\functional\www\126_node_config_syntax</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\126_node_config_syntax.js">
       <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>

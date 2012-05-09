@@ -259,6 +259,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\tests\123_upload.js" />
     <None Include="..\..\test\functional\tests\124_node_config_override.js" />
     <None Include="..\..\test\functional\tests\125_node_config_autoupdate.js" />
+    <None Include="..\..\test\functional\tests\126_node_config_syntax.js" />
     <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
@@ -324,6 +325,9 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\www\125_node_config_autoupdate\.gitignore" />
     <None Include="..\..\test\functional\www\125_node_config_autoupdate\hello.js" />
     <None Include="..\..\test\functional\www\125_node_config_autoupdate\web.config" />
+    <None Include="..\..\test\functional\www\126_node_config_syntax\.gitignore" />
+    <None Include="..\..\test\functional\www\126_node_config_syntax\hello.js" />
+    <None Include="..\..\test\functional\www\126_node_config_syntax\web.config" />
     <None Include="..\..\test\performance\client.bat" />
     <None Include="..\..\test\performance\localRun.bat" />
     <None Include="..\..\test\performance\readme.txt" />
