@@ -74,9 +74,9 @@ BOOL CProtocolBridge::SendIisnodeError(IHttpContext* httpCtx, HRESULT hr)
 					"OK", 
 					hr, 
 					TRUE, 
-					"iisnode was unable to read the configuration file node.config. Make sure the node.config file syntax is correct. For reference, check "
-					" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/node.config"">"
-					"the sample node.config file</a>. The property names recognized in the node.config file of your version of iisnode are stored in the "
+					"iisnode was unable to read the configuration file iisnode.yml. Make sure the iisnode.yml file syntax is correct. For reference, check "
+					" <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/iisnode.yml"">"
+					"the sample iisnode.yml file</a>. The property names recognized in the iisnode.yml file of your version of iisnode are stored in the "
 					"%systemroot%\\system32\\inetsrv\\config\\schema\\iisnode_schema.xml file.");
 				break;
 			};

@@ -555,7 +555,7 @@ BOOL CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
 			{
 				if (file->yamlConfig)
 				{
-					// the node.config file has changed
+					// the iisnode.yml file has changed
 					// invalidate the configuration such that on next message it will be re-created
 
 					CModuleConfiguration::Invalidate();

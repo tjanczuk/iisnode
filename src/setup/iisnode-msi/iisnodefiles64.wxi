@@ -79,7 +79,7 @@
             <File Id="fil2F0416F09F068096D5E253A91DCDFB4D" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\web.config" />
           </Component>
           <Component Win64="yes" Id="cmp43304DBF7D5F428226B66D8BCE98F79D" Guid="D677A41F-77E9-4133-A646-54B6800A824C">
-            <File Id="fil2F0416F09F068096D5E253A91DCDFB4E" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\node.config" />
+            <File Id="fil2F0416F09F068096D5E253A91DCDFB4E" KeyPath="yes" Source="$(var.sourcedir)\www\configuration\iisnode.yml" />
           </Component>
         </Directory>
         <Directory Id="dir45A892E29212AE212D756BFAD925773B" Name="defaultdocument">

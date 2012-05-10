@@ -609,13 +609,7 @@
     <None Include="..\..\test\functional\tests\123_upload.js">
       <Filter>Tests\functional\tests</Filter>
     </None>
-    <None Include="..\samples\configuration\node.config">
-      <Filter>Samples\configuration</Filter>
-    </None>
     <None Include="..\..\test\functional\www\124_node_config_override\hello.js">
-      <Filter>Tests\functional\www\124_node_config_override</Filter>
-    </None>
-    <None Include="..\..\test\functional\www\124_node_config_override\node.config">
       <Filter>Tests\functional\www\124_node_config_override</Filter>
     </None>
     <None Include="..\..\test\functional\www\124_node_config_override\web.config">
@@ -647,6 +641,12 @@
     </None>
     <None Include="..\..\test\functional\tests\126_node_config_syntax.js">
       <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\samples\configuration\iisnode.yml">
+      <Filter>Samples\configuration</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\124_node_config_override\iisnode.yml">
+      <Filter>Tests\functional\www\124_node_config_override</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

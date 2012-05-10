@@ -13,7 +13,7 @@
         configuration</h2>
     <p>
         There are several configuration options that can be controlled from the system.webServer/iisnode
-        section of the web.config configuration file or the node.config file. Review web.config or node.config below for detailed description
+        section of the web.config configuration file or the iisnode.yml file. Review web.config or iisnode.yml below for detailed description
         of them.</p>
     visit the node.js endpoint at <a href="hello.js">hello.js</a><br />
     visit the logs at <a href="hello.js.logs/0.txt">logs</a> (only available after you
@@ -134,7 +134,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     * configOverrides - optional file name containing overrides of configuration settings of the iisnode section of web.config; 
       the format of the file is a small subset of YAML: each setting is represented as a &lt;key&gt;: &lt;value&gt; on a separate line 
       and comments start with # until the end of the line, e.g. 
-            # This is a sample node.config file
+            # This is a sample iisnode.yml file
             nodeProcessCountPerApplication: 2
             maxRequestBufferSize: 8192 # increasing from the default
             # maxConcurrentRequestsPerProcess: 512 - commented out setting
@@ -182,8 +182,8 @@ console.log('Application started at location ' + process.env.PORT);</pre>
   &lt;/system.webServer&gt;
 &lt;/configuration&gt;</pre>
     <p>
-        <b>node.config</b></p>
-    <pre># The optional node.config file provides overrides of the iisnode configuration settings specified in web.config.
+        <b>iisnode.yml</b></p>
+    <pre># The optional iisnode.yml file provides overrides of the iisnode configuration settings specified in web.config.
 
 # node_env - determines the environment (production, development, staging, ...) in which
 # child node processes run; if nonempty, is propagated to the child node processes as their NODE_ENV
@@ -244,7 +244,7 @@ maxRequestBufferSize: 65536
 # each entry consists of an optional directory name plus required file name which are relative to the directory where the main application entry point
 # is located; wild cards are allowed in the file name portion only; for example: "*.js;node_modules\foo\lib\options.json;app_data\*.config.json"
 
-watchedFiles: *.js;node.config
+watchedFiles: *.js;iisnode.yml
 
 # uncFileChangesPollingInterval - applications are recycled when the underlying *.js file is modified; if the file resides
 # on a UNC share, the only reliable way to detect such modifications is to periodically poll for them; this setting

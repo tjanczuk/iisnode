@@ -14,7 +14,7 @@ var cases = {
     emptyLine: 'foo:bar\n\n\nbaz:7' // success
 };
 
-var nodeConfig = path.resolve(__dirname, 'node.config');
+var nodeConfig = path.resolve(__dirname, 'iisnode.yml');
 
 http.createServer(function (req, res) {
     res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -22,7 +22,7 @@ http.createServer(function (req, res) {
 
     if (typeof cases[query] === 'string') {
         fs.writeFileSync(nodeConfig, cases[query]);
-        res.end('node.config updated');
+        res.end('iisnode.yml updated');
     }
     else {
         res.end('Hello, world ' + n++);

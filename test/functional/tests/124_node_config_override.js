@@ -1,5 +1,5 @@
 /*
-Number of processes has been changed from 2 specified in web.config to 4 specified in node.config
+Number of processes has been changed from 2 specified in web.config to 4 specified in iisnode.yml
 */
 
 var iisnodeassert = require("iisnodeassert");
