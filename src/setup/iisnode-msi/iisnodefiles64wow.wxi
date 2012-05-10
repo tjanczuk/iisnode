@@ -59,10 +59,14 @@
       <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B8656120B" Guid="7289761F-64EA-4015-A56D-918198EA7AF5">
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.wowsourcedir)\etw.bat" />
       </Component>
+      <Component Win64="yes" Id="cmp1C33C88432AC7530411D254B8656120B" Guid="7389761F-64EA-4015-A56D-918198EA7AF5">
+        <File Id="fil3B96A7DAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="logger.js" />
+      </Component>
     </DirectoryRef>
   </Fragment>
   <Fragment>
     <ComponentGroup Id="allfileswow">
+      <ComponentRef Id="cmp1C33C88432AC7530411D254B8656120B" />
       <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" />
       <?if $(var.Configuration) = Debug ?>      
         <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A8" />
