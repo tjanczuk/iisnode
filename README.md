@@ -5,6 +5,12 @@ Hosting node.js applications in IIS on Windows
 
 [Benefits](https://github.com/tjanczuk/iisnode/wiki)  
 
+**Who uses iisnode?**
+
+[windows azure - benefits](http://blogs.msdn.com/b/hanuk/archive/2012/05/05/top-benefits-of-running-node-js-on-windows-azure.aspx)  
+[windows azure - get started with node.js](https://www.windowsazure.com/en-us/develop/nodejs/)  
+[appharbor](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)  
+
 **Prerequisites for using**
 
 - Windows Vista, Windows 7, or Windows Server 2008
