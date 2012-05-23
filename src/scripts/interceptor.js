@@ -208,10 +208,4 @@
 
 // run the original application entry point
 
-try {
-    require(process.argv[1]);
-}
-catch (e) {
-    console.error('Application has failed during initialization:\n' + (e.stack || (new Error(e).stack)));
-    throw e;
-}
+require(process.argv[1]);
