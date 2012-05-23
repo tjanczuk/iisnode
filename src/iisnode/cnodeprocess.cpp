@@ -1,8 +1,8 @@
 #include "precomp.h"
 
-CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal)
-	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE), ordinal(ordinal),
-	hasProcessExited(FALSE), truncatePending(FALSE), logName(NULL)
+CNodeProcess::CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context)
+	: processManager(processManager), process(NULL), processWatcher(NULL), isClosing(FALSE),
+	hasProcessExited(FALSE)
 {
 	RtlZeroMemory(this->namedPipe, sizeof this->namedPipe);
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
@@ -33,24 +33,6 @@ CNodeProcess::~CNodeProcess()
 		CloseHandle(this->processWatcher);
 		this->processWatcher = NULL;
 	}
-
-	if (NULL != this->startupInfo.hStdOutput && INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
-	{
-		CloseHandle(this->startupInfo.hStdOutput);		
-		this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
-	}
-
-	if (NULL != this->startupInfo.hStdError && INVALID_HANDLE_VALUE != this->startupInfo.hStdError)
-	{
-		CloseHandle(this->startupInfo.hStdError);
-		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
-	}	
-
-	if (NULL != this->logName)
-	{
-		delete [] this->logName;
-		this->logName = NULL;
-	}
 }
 
 HRESULT CNodeProcess::Initialize(IHttpContext* context)
@@ -60,8 +42,9 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	RPC_CSTR suuid = NULL;
 	LPTSTR fullCommandLine = NULL;
 	LPCTSTR coreCommandLine;
+	LPCTSTR interceptor;
 	PCWSTR scriptName;
-	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW;	
+	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW, interceptorLength;	
 	PROCESS_INFORMATION processInformation;
 	DWORD exitCode = S_OK;
 	LPCH newEnvironment = NULL;
@@ -80,14 +63,6 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	CheckError(this->connectionPool.Initialize(context));
 
-	// configure logging
-
-	if (TRUE == (this->loggingEnabled = CModuleConfiguration::GetLoggingEnabled(context)))
-	{
-		this->logFlushInterval = CModuleConfiguration::GetLogFileFlushInterval(context);
-		this->maxLogSizeInBytes = (LONGLONG)CModuleConfiguration::GetMaxLogFileSizeInKB(context) * (LONGLONG)1024;
-	}
-
 	// generate the name for the named pipe to communicate with the node.js process
 	
 	ErrorIf(RPC_S_OK != UuidCreate(&uuid), ERROR_CAN_NOT_COMPLETE);
@@ -99,26 +74,30 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	// build the full command line for the node.js process
 
+	interceptor = CModuleConfiguration::GetInterceptor(context);
+	interceptorLength = strlen(interceptor);
 	coreCommandLine = CModuleConfiguration::GetNodeProcessCommandLine(context);
 	scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
 	coreCommandLineLength = _tcslen(coreCommandLine);
 	scriptNameLengthW = wcslen(scriptName) + 1;
 	ErrorIf(0 != wcstombs_s(&scriptNameLength, NULL, 0, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
-	// allocate memory for command line to allow for debugging options plus enclosing the script name in quotes
-	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + scriptNameLength + 256]), ERROR_NOT_ENOUGH_MEMORY); 
+	// allocate memory for command line to allow for debugging options plus interceptor plus spaces and enclosing the script name in quotes
+	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + interceptorLength + scriptNameLength + 256]), ERROR_NOT_ENOUGH_MEMORY); 
 	_tcscpy(fullCommandLine, coreCommandLine);
-	DWORD offset;
+	DWORD offset = 0;
+
+	// add debug options
 	if (app->IsDebuggee())
 	{
 		char buffer[64];
 
 		if (ND_DEBUG_BRK == app->GetDebugCommand())
 		{
-			sprintf(buffer, " --debug-brk=%d \"", app->GetDebugPort());					
+			sprintf(buffer, " --debug-brk=%d ", app->GetDebugPort());					
 		}
 		else if (ND_DEBUG == app->GetDebugCommand())
 		{
-			sprintf(buffer, " --debug=%d \"", app->GetDebugPort());	
+			sprintf(buffer, " --debug=%d ", app->GetDebugPort());	
 		}
 		else
 		{
@@ -126,13 +105,21 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 		}
 
 		_tcscat(fullCommandLine, buffer);	
-		offset = strlen(buffer);
+		offset += strlen(buffer);
 	}
-	else 
+	
+	if (!app->IsDebugger()) 
 	{
-		_tcscat(fullCommandLine, _T(" \""));
-		offset = 2;
-	}	
+		// add interceptor
+		_tcscat(fullCommandLine, _T(" "));
+		offset += 1;
+		_tcscat(fullCommandLine, interceptor);
+		offset += interceptorLength;
+	}
+
+	// add application entry point
+	_tcscat(fullCommandLine, _T(" \""));
+	offset += 2;
 	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + offset, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);	
 	_tcscat(fullCommandLine, _T("\""));
 
@@ -200,30 +187,6 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 		CheckError(hr);
 	}
 		
-
-	// duplicate stdout and stderr handles to allow flushing without regard for whether the node process exited
-	// closing of the original handles will be taken care of by the newly started process
-
-	ErrorIf(0 == DuplicateHandle(
-		GetCurrentProcess(), 
-		this->startupInfo.hStdOutput, 
-		GetCurrentProcess(), 
-		&this->startupInfo.hStdOutput, 
-		0, 
-		TRUE, 
-		DUPLICATE_SAME_ACCESS),
-		GetLastError());
-
-	ErrorIf(0 == DuplicateHandle(
-		GetCurrentProcess(), 
-		this->startupInfo.hStdError, 
-		GetCurrentProcess(), 
-		&this->startupInfo.hStdError, 
-		0, 
-		TRUE, 
-		DUPLICATE_SAME_ACCESS),
-		GetLastError());
-
 	// join a job object if needed, then resume the process
 
 	job = this->GetProcessManager()->GetApplication()->GetApplicationManager()->GetJobObject();
@@ -235,7 +198,8 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	ErrorIf((DWORD) -1 == ResumeThread(processInformation.hThread), GetLastError());
 	ErrorIf(GetExitCodeProcess(processInformation.hProcess, &exitCode) && STILL_ACTIVE != exitCode, exitCode);
 	this->process = processInformation.hProcess;
-
+	this->pid = processInformation.dwProcessId;
+	
 	// start process watcher thread to get notified of premature node process termination in CNodeProcess::OnProcessExited		
 
 	ResumeThread(this->processWatcher);
@@ -331,51 +295,9 @@ Error:
 	{
 		CloseHandle(this->startupInfo.hStdError);
 		this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
-	}	
+	}
 
 	return hr;
-}
-
-void CNodeProcess::FlushStdHandles()
-{
-	if (this->loggingEnabled)
-	{
-		const char* truncateMessage = ">>>> iisnode truncated the log file because it exceeded the configured maximum size\n";
-		LARGE_INTEGER fileSize;
-
-		// flush the file
-
-		FlushFileBuffers(this->startupInfo.hStdOutput);
-
-		// truncate the log file back to 0 if the max size is exceeded
-
-		if (!this->truncatePending && GetFileSizeEx(this->startupInfo.hStdOutput, &fileSize))
-		{
-			if (fileSize.QuadPart > this->maxLogSizeInBytes)
-			{			
-				RtlZeroMemory(&this->overlapped, sizeof this->overlapped); // this also sets the Offset and OffsetHigh to 0		
-				this->overlapped.hEvent = this;
-				this->truncatePending = TRUE; // this will be reset to FALSE in the completion routine of WriteFileEx below
-				if (!WriteFileEx(
-					this->startupInfo.hStdOutput, 
-					(void*)truncateMessage, 
-					strlen(truncateMessage), 
-					&this->overlapped, 
-					CNodeProcess::TruncateLogFileCompleted)) 
-				{
-					this->truncatePending = FALSE;
-				}
-			}
-		}
-	}
-}
-
-void CALLBACK CNodeProcess::TruncateLogFileCompleted(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
-{
-	CNodeProcess* process = (CNodeProcess*)lpOverlapped->hEvent;
-	process->truncatePending = FALSE;
-	SetEndOfFile(process->startupInfo.hStdOutput);
-	FlushFileBuffers(process->startupInfo.hStdOutput);
 }
 
 unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
@@ -388,24 +310,9 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 
 	while (!process->isClosing && process->process)
 	{
-		waitResult = WaitForSingleObjectEx(process->process, process->loggingEnabled ? process->logFlushInterval : INFINITE, TRUE);
-		if (WAIT_TIMEOUT == waitResult)
+		waitResult = WaitForSingleObjectEx(process->process, INFINITE, TRUE);
+		if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
 		{
-			process->FlushStdHandles();
-
-			if (isDebugger)
-			{
-				log->Log(L"iisnode flushed standard handles of the node.exe debugger process", WINEVENT_LEVEL_VERBOSE);
-			}
-			else
-			{
-				log->Log(L"iisnode flushed standard handles of the node.exe process", WINEVENT_LEVEL_VERBOSE);
-			}
-		}
-		else if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
-		{
-			process->FlushStdHandles();
-
 			if (isDebugger)
 			{
 				log->Log(L"iisnode detected termination of node.exe debugger process", WINEVENT_LEVEL_ERROR);
@@ -475,45 +382,6 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 
 	HRESULT hr;
 	SECURITY_ATTRIBUTES security;
-	DWORD creationDisposition;
-
-	if (this->loggingEnabled)
-	{
-		PCWSTR scriptName;
-		LPWSTR logComponentName = CModuleConfiguration::GetLogDirectoryNameSuffix(context);
-		CheckNull(logComponentName);	
-
-		// allocate enough memory to store log file name of the form <scriptName>.<logComponentName>\<ordinalProcessNumber>.txt
-
-		scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
-		ErrorIf(NULL == (logName = new WCHAR[wcslen(scriptName) + 1 + wcslen(logComponentName) + 10 + 4 + 1]), ERROR_NOT_ENOUGH_MEMORY); 
-
-		// ensure a directory for storing the log file exists; the directory name is of the form <scriptName>.<logComponentName>
-
-		swprintf(logName, L"%s.%s", scriptName, logComponentName);
-		if (!CreateDirectoryW(logName, NULL))
-		{
-			hr = GetLastError();
-			if (ERROR_ALREADY_EXISTS != hr)
-			{
-				this->GetProcessManager()->GetEventProvider()->Log(
-					L"iisnode failed to create directory to store log files for the node.exe process", WINEVENT_LEVEL_ERROR);
-
-				hr = IISNODE_ERROR_UNABLE_TO_CREATE_LOG_FILE;
-				CheckError(hr);
-			}
-		}
-
-		// create log file name
-
-		swprintf(logName, L"%s.%s\\%d.txt", scriptName, logComponentName, this->ordinal);		
-
-		creationDisposition = CModuleConfiguration::GetAppendToExistingLog(context) ? OPEN_ALWAYS : CREATE_ALWAYS;
-	}
-	else
-	{
-		creationDisposition = OPEN_EXISTING;
-	}
 
 	// stdout == stderr
 
@@ -521,18 +389,14 @@ HRESULT CNodeProcess::CreateStdHandles(IHttpContext* context)
 	security.bInheritHandle = TRUE;
 	security.nLength = sizeof SECURITY_ATTRIBUTES;
 	
-	if (INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
-		this->loggingEnabled ? logName : L"NUL",
+	ErrorIf(INVALID_HANDLE_VALUE == (this->startupInfo.hStdOutput = CreateFileW(
+		L"NUL",
 		GENERIC_READ | GENERIC_WRITE,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		&security,
-		creationDisposition,
+		OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
-		NULL)))
-	{
-		hr = this->loggingEnabled ? IISNODE_ERROR_UNABLE_TO_CREATE_LOG_FILE : GetLastError();
-		CheckError(hr);
-	}
+		NULL)), GetLastError());
 
 	ErrorIf(0 == DuplicateHandle(
 		GetCurrentProcess(),
@@ -573,42 +437,96 @@ char* CNodeProcess::TryGetLog(IHttpContext* context, DWORD* size)
 	HANDLE file = INVALID_HANDLE_VALUE;
 	char* log = NULL;
 	*size = 0;
+	PWSTR currentDirectory;
+	DWORD currentDirectorySize;
+	PWSTR logRelativeDirectory;
+	DWORD logRelativeDirectoryLength;
+	PWSTR logName;
+	HANDLE findHandle = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATAW findData;
+	WCHAR tmp[64];
+	DWORD computerNameSize;
 
-	if (this->logName)
+	// establish the log file directory name by composing the directory 
+	// of the script with the relative log directory name
+
+	currentDirectory = (PWSTR)context->GetScriptTranslated(&currentDirectorySize);
+	while (currentDirectorySize && currentDirectory[currentDirectorySize] != L'\\' && currentDirectory[currentDirectorySize] != L'/')
+		currentDirectorySize--;
+	logRelativeDirectory = CModuleConfiguration::GetLogDirectory(context);
+	logRelativeDirectoryLength = wcslen(logRelativeDirectory);
+	ErrorIf(NULL == (logName = (WCHAR*)context->AllocateRequestMemory((currentDirectorySize + logRelativeDirectoryLength + 256) * sizeof WCHAR)),
+		ERROR_NOT_ENOUGH_MEMORY);
+	wcsncpy(logName, currentDirectory, currentDirectorySize + 1);
+	logName[currentDirectorySize + 1] = L'\0';
+	wcscat(logName, logRelativeDirectory);
+	if (logRelativeDirectoryLength && logRelativeDirectory[logRelativeDirectoryLength - 1] != L'\\') 
 	{
-		ErrorIf(INVALID_HANDLE_VALUE == (file = CreateFileW(
-			this->logName,
-			GENERIC_READ,
-			FILE_SHARE_READ | FILE_SHARE_WRITE, 
-			NULL,
-			OPEN_EXISTING,
-			0,
-			NULL)), GetLastError());
+		wcscat(logName, L"\\");
+	}
+	currentDirectorySize = wcslen(logName);
 
-		ErrorIf(INVALID_FILE_SIZE == (*size = GetFileSize(file, NULL)), GetLastError());
+	// construct a wildcard stderr log file name from computer name and PID
 
-		if (*size > 65536)
-		{
-			// if log is larger than 64k, return only the last 64k
+	computerNameSize = GetEnvironmentVariableW(L"COMPUTERNAME", tmp, 64);
+	ErrorIf(0 == computerNameSize, GetLastError());
+	ErrorIf(64 < computerNameSize, E_FAIL);
+	wcscat(logName, tmp);
+	swprintf(tmp, L"-%d-stderr-*.txt", this->pid);
+	wcscat(logName, tmp);
+	
+	// find a file matching the wildcard name
 
-			*size = 65536;
-			ErrorIf(INVALID_SET_FILE_POINTER == SetFilePointer(file, *size, NULL, FILE_END), GetLastError());
-		}
+	ErrorIf(INVALID_HANDLE_VALUE == (findHandle = FindFirstFileW(logName, &findData)), GetLastError());
+	FindClose(findHandle);
+	findHandle = INVALID_HANDLE_VALUE;
 
-		ErrorIf(NULL == (log = (char*)context->AllocateRequestMemory(*size)), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(0 == ReadFile(file, log, *size, size, NULL), GetLastError());
+	// construct the actual log file name to read
 
-		CloseHandle(file);
-		file = INVALID_HANDLE_VALUE;
+	logName[currentDirectorySize] = L'\0';
+	wcscat(logName, findData.cFileName);
+
+	// read the log file
+
+	ErrorIf(INVALID_HANDLE_VALUE == (file = CreateFileW(
+		logName,
+		GENERIC_READ,
+		FILE_SHARE_READ | FILE_SHARE_WRITE, 
+		NULL,
+		OPEN_EXISTING,
+		0,
+		NULL)), GetLastError());
+
+	ErrorIf(INVALID_FILE_SIZE == (*size = GetFileSize(file, NULL)), GetLastError());
+
+	if (*size > 65536)
+	{
+		// if log is larger than 64k, return only the last 64k
+
+		*size = 65536;
+		ErrorIf(INVALID_SET_FILE_POINTER == SetFilePointer(file, *size, NULL, FILE_END), GetLastError());
 	}
 
+	ErrorIf(NULL == (log = (char*)context->AllocateRequestMemory(*size)), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(0 == ReadFile(file, log, *size, size, NULL), GetLastError());
+
+	CloseHandle(file);
+	file = INVALID_HANDLE_VALUE;
+
 	return log;
+
 Error:
 
 	if (INVALID_HANDLE_VALUE != file)
 	{
 		CloseHandle(file);
 		file = INVALID_HANDLE_VALUE;
+	}
+
+	if (INVALID_HANDLE_VALUE != findHandle) 
+	{
+		FindClose(findHandle);
+		findHandle = INVALID_HANDLE_VALUE;
 	}
 
 	// log does not need to be freed - IIS will take care of it when IHttpContext is disposed

@@ -28,7 +28,7 @@
         <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
           <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">
             <Component Win64="yes" Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" Guid="*">
-              <File Id="fil98FE22082D3964939C1CB4060FC2A0C7" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode_schema_x64.xml" Name="iisnode_schema.xml"/>
+              <File Id="fil98FE22082D3964939C1CB4060FC2A0C7" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode_schema_x64_wow.xml" Name="iisnode_schema.xml"/>
             </Component>
           </Directory>
       </Directory>
@@ -60,12 +60,16 @@
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.wowsourcedir)\etw.bat" />
       </Component>
       <Component Win64="yes" Id="cmp1C33C88432AC7530411D254B8656120B" Guid="7389761F-64EA-4015-A56D-918198EA7AF5">
-        <File Id="fil3B96A7DAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="logger.js" />
+        <File Id="fil3B96A7DAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.wowsourcedir)\interceptor.js" />
+      </Component>
+      <Component Win64="yes" Id="cmp1C33C88432AB7530411D254B8656120B" Guid="7389761F-64EA-4015-A66D-918198EA7AF5">
+        <File Id="fil3B96A7DAD58C7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.wowsourcedir)\logs.template.html" />
       </Component>
     </DirectoryRef>
   </Fragment>
   <Fragment>
     <ComponentGroup Id="allfileswow">
+      <ComponentRef Id="cmp1C33C88432AB7530411D254B8656120B"/>
       <ComponentRef Id="cmp1C33C88432AC7530411D254B8656120B" />
       <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" />
       <?if $(var.Configuration) = Debug ?>      

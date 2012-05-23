@@ -31,6 +31,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="asyncCompletionThreadCount" type="uint" defaultValue="0"/>
     <attribute name="nodeProcessCountPerApplication" type="uint" defaultValue="1"/>
     <attribute name="nodeProcessCommandLine" type="string" expanded="true" defaultValue="&quot;%programfiles%\nodejs\node.exe&quot;"/>
+    <attribute name="interceptor" type="string" expanded="true" defaultValue="&quot;%programfiles%\iisnode\interceptor.js&quot;" />
     <attribute name="maxConcurrentRequestsPerProcess" type="uint" allowInfitnite="true" defaultValue="1024"/>
     <attribute name="maxNamedPipeConnectionRetry" type="uint" defaultValue="24"/>
     <attribute name="namedPipeConnectionRetryDelay" type="uint" defaultValue="250"/>
@@ -40,14 +41,14 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="maxRequestBufferSize" type="uint" defaultValue="65536"/>
     <attribute name="uncFileChangesPollingInterval" type="uint" defaultValue="5000"/>
     <attribute name="gracefulShutdownTimeout" type="uint" defaultValue="60000"/>
-    <attribute name="logDirectoryNameSuffix" type="string" expanded="true" defaultValue="logs"/>
+    <attribute name="logDirectory" type="string" expanded="true" defaultValue="iisnode"/>
     <attribute name="debuggingEnabled" type="bool" defaultValue="true"/>
     <attribute name="debuggerPathSegment" type="string" expanded="true" defaultValue="debug"/>
     <attribute name="debuggerPortRange" type="string" expanded="true" defaultValue="5058-6058"/>
-    <attribute name="logFileFlushInterval" type="uint" defaultValue="5000"/>
     <attribute name="maxLogFileSizeInKB" type="uint" defaultValue="128"/>
+    <attribute name="maxTotalLogFileSizeInKB" type="uint" defaultValue="1024"/>
+    <attribute name="maxLogFiles" type="uint" defaultValue="20"/>
     <attribute name="loggingEnabled" type="bool" defaultValue="true"/>
-    <attribute name="appendToExistingLog" type="bool" defaultValue="false"/>
     <attribute name="devErrorsEnabled" type="bool" defaultValue="true"/>
     <attribute name="flushResponse" type="bool" defaultValue="false"/>
     <attribute name="watchedFiles" type="string" expanded="true" defaultValue="*.js;iisnode.yml"/>

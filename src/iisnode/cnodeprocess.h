@@ -16,26 +16,20 @@ private:
 	HANDLE processWatcher;
 	DWORD maxConcurrentRequestsPerProcess;
 	BOOL isClosing;
-	DWORD ordinal;
 	STARTUPINFO startupInfo;
-	BOOL loggingEnabled;
-	DWORD logFlushInterval;
-	LONGLONG maxLogSizeInBytes;
 	BOOL hasProcessExited;
 	OVERLAPPED overlapped;
-	BOOL truncatePending;
 	CConnectionPool connectionPool;
-	WCHAR* logName;
+	DWORD pid;
 
 	static unsigned int WINAPI ProcessWatcher(void* arg);
 	void OnProcessExited();
 	HRESULT CreateStdHandles(IHttpContext* context);
 	void FlushStdHandles();	
-	static void CALLBACK TruncateLogFileCompleted(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
 
 public:
 
-	CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context, DWORD ordinal);
+	CNodeProcess(CNodeProcessManager* processManager, IHttpContext* context);
 	~CNodeProcess();
 
 	HRESULT Initialize(IHttpContext* context);

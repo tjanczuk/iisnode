@@ -41,6 +41,8 @@
         <File Id="fil0F1847FEE89C137D02C1A6B34753D194" KeyPath="no" Source="$(var.sourcedir)\LICENSE.txt" />
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C427" KeyPath="no" Source="$(var.sourcedir)\README.md" />
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C428" KeyPath="no" Source="$(var.sourcedir)\etw.bat" />
+        <File Id="fil3B06A7DAD58B7C191C98A67D26D2C42A" KeyPath="no" Source="$(var.sourcedir)\interceptor.js" />
+        <File Id="fil3B16A7DAD58B7C191C98A67D26D2C42A" KeyPath="no" Source="$(var.sourcedir)\logs.template.html" />
       </Component>
     </DirectoryRef>
     <DirectoryRef Id="iisnodesamples">

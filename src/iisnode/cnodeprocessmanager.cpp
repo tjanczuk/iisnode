@@ -71,7 +71,7 @@ HRESULT CNodeProcessManager::AddProcess(int ordinal, IHttpContext* context)
 	HRESULT hr;
 
 	ErrorIf(NULL != this->processes[ordinal], ERROR_INVALID_PARAMETER);
-	ErrorIf(NULL == (this->processes[ordinal] = new CNodeProcess(this, context, ordinal)), ERROR_NOT_ENOUGH_MEMORY);	
+	ErrorIf(NULL == (this->processes[ordinal] = new CNodeProcess(this, context)), ERROR_NOT_ENOUGH_MEMORY);	
 	CheckError(this->processes[ordinal]->Initialize(context));
 
 	return S_OK;

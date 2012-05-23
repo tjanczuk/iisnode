@@ -336,7 +336,10 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\performance\www\default\wcat.ubr" />
     <None Include="..\..\test\performance\www\default\web.config" />
     <None Include="..\config\iisnode_schema.xml" />
-    <None Include="..\config\iisnode_schema_x64.xml" />
+    <None Include="..\config\iisnode_schema_x64.xml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="..\config\iisnode_schema_x64_wow.xml" />
     <None Include="..\samples\configuration\hello.js" />
     <None Include="..\samples\configuration\iisnode.yml" />
     <None Include="..\samples\configuration\readme.htm">
@@ -372,6 +375,8 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     </None>
     <None Include="..\samples\urlrewrite\web.config" />
     <None Include="..\scripts\etw.bat" />
+    <None Include="..\scripts\interceptor.js" />
+    <None Include="..\scripts\logs.template.html" />
     <None Include="..\scripts\setupsamples.bat" />
     <None Include="iisnode.def" />
   </ItemGroup>

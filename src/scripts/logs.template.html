@@ -1,0 +1,82 @@
+<html>
+<head>
+    <title>iisnode logs</title>
+    <style type="text/css">
+        body
+        {
+            font-family: "Trebuchet MS" , Arial, Helvetica, sans-serif;
+        }
+        table
+        {
+            border-collapse: collapse;
+        }
+        td, th
+        {
+            border: 1px solid lightgray;
+            padding: 3px 7px 2px 7px;
+        }
+        th
+        {
+            text-align: left;
+            padding-top: 5px;
+            padding-bottom: 4px;
+            background-color: Gray;
+            color: #ffffff;
+        }
+        td.stderr
+        {
+            color: Red;
+        }
+    </style>
+</head>
+<body>
+    <table id="logFilesTable">
+        <tr>
+            <th>
+                Computer name
+            </th>
+            <th>
+                PID
+            </th>
+            <th>
+                Type
+            </th>
+            <th>
+                Created
+            </th>
+            <th>
+                Link
+            </th>
+        </tr>
+    </table>
+    <p id="lastUpdated"></p>
+    <script type="text/javascript">
+
+        // this is replaced with actual data at runtime by code in interceptor.js
+        var logFiles = []; //##LOGFILES##;
+        var lastUpdated = 0; //##LASTUPDATED##;
+        var date = new Date();
+
+        date.setTime(lastUpdated);
+        document.getElementById('lastUpdated').innerHTML = 'Index was last updated ' + date;
+
+        logFiles.sort(function (a, b) {
+            return b.created - a.created;
+        });
+
+        var logFilesTable = document.getElementById("logFilesTable");        
+        logFiles.forEach(function (logFile) {
+            date.setTime(logFile.created);
+            var row = logFilesTable.insertRow(-1);
+            row.innerHTML = '<tr>' +
+                '<td>' + logFile.computername + '</td>' +
+                '<td>' + logFile.pid + '</td>' +
+                '<td class="' + logFile.type + '">' + logFile.type + '</td>' +
+                '<td>' + date + '</td>' +
+                '<td><a href="' + logFile.file + '">log</a></td>' +
+                '</tr>';
+        });
+
+    </script>
+</body>
+</html>

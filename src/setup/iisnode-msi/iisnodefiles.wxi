@@ -49,6 +49,12 @@
       <Component Id="cmp1B33C88432AC7530411D254B8656120A" Guid="7289761F-64EA-4015-A56D-918198EA7AE5">
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C429" KeyPath="yes" Source="$(var.sourcedir)\etw.bat" />
       </Component>
+      <Component Id="cmp1C33C88422AC7530411D254B8656120B" Guid="7389761F-64AA-4015-A56D-918198EA7AF5">
+        <File Id="fil3B96A7AAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.sourcedir)\interceptor.js" />
+      </Component>
+      <Component Id="cmp1C34C88422AC7530411D254B8656120B" Guid="7389771F-64AA-4015-A56D-918198EA7AF5">
+        <File Id="fil3B96A7BAD58B7C191C98A67D26D2C42A" KeyPath="yes" Source="$(var.sourcedir)\logs.template.html" />
+      </Component>
       <?if $(var.Configuration) = Debug ?>
         <Component Id="cmpE429AFB5AD377FF35803A538B9BE37A7" Guid="640DF20F-AECC-4D43-9D47-2E447EC0ECD9">
           <File Id="fil10F3E910C80F806A860F37AA30660F83" KeyPath="yes" Source="$(var.sourcedir)\iisnode.pdb" />
@@ -338,6 +344,8 @@
   </Fragment>
   <Fragment>
     <ComponentGroup Id="allfiles">
+      <ComponentRef Id="cmp1C34C88422AC7530411D254B8656120B"/>
+      <ComponentRef Id="cmp1C33C88422AC7530411D254B8656120B" />
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" />
       <ComponentRef Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAEC" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120A" />

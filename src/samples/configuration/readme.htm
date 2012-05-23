@@ -54,6 +54,10 @@ console.log('Application started at location ' + process.env.PORT);</pre>
 
     * nodeProcessCommandLine - command line starting the node executable; in shared
       hosting environments this setting would typically be locked at the machine scope.
+
+    * interceptor - fully qualified file name of a node.js application that will run instead of an actual application
+      the request targets; the fully qualified file name of the actual application file is provided as the first parameter
+      to the interceptor application; default interceptor supports iisnode logging
       
     * nodeProcessCountPerApplication - number of node.exe processes that IIS will start per application;
       setting this value to 0 results in creating one node.exe process per each processor on the machine
@@ -95,10 +99,10 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     
     * loggingEnabled - controls whether stdout and stderr streams from node processes are captured and made available over HTTP
     
-    * logDirectoryNameSuffix - suffix of the directory name that will store files with stdout and stderr captures; directly name is created
-      by appending this suffix to the file name of the node.js application; individual log files are stored in that directory, one per node 
-      process (in files of the form x.txt, where x is between 0 and nodeProcessCountPerApplication - 1); given a node.js application at
-      http://localhost/node/hello.js, log files would by default be stored at http://localhost/node/hello.js.logs/0.txt (thrugh 3.txt); 
+    * logDirectory - directory name relative to the main application file that will store files with stdout and stderr captures; 
+      individual log file names have unique file names; log files are created lazily (i.e. when the process actually writes something
+      to stdout or stderr); an HTML index of all log files is also maintained as index.html in that directory;
+      by default, if your application is at http://foo.com/bar.js, logs will be accessible at http://foo.com/iisnode;
       SECURITY NOTE: if log files contain sensitive information, this setting should be modified to contain enough entropy to be considered
       cryptographically secure; in most situations, a GUID is sufficient
       
@@ -111,13 +115,12 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       http://foo.com/bar/baz.js, the debugger can be accessed at http://foo.com/bar/baz.js/{debuggerPathSegment}, by default
       http://foo.com/bar/baz.js/debug
     
-    * maxLogFileSizeInKB - maximum size of a log file in KB; once a log file exceeds this limit it is truncated back to empty
-    
-    * appendToExistingLog - determines whether pre-existing log files are appended to or created fresh when a node process with a given ordinal
-      number starts; appending may be useful to diagnose unorderly node process terminations or recycling
-      
-    * logFileFlushInterval - interval in milliseconds for flushing logs to the log files
+    * maxLogFileSizeInKB - maximum size of a single log file in KB; once a log file exceeds this limit a new log file is created
 
+    * maxTotalLogFileSizeInKB - maximum total size of all log files in the logDirectory; once exceeded, old log files are removed
+    
+    * maxLogFiles - maximum number of log files in the logDirectory; once exceeded, old log files are removed
+    
     * devErrorsEnabled - controls how much information is sent back in the HTTP response to the browser when an error occurrs in iisnode; 
       when true, error conditions in iisnode result in HTTP 200 response with the body containing error details; when false,
       iisnode will return generic HTTP 5xx responses
@@ -156,12 +159,13 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       uncFileChangesPollingInterval="5000"
       gracefulShutdownTimeout="60000"
       loggingEnabled="true"
-      logDirectoryNameSuffix="logs"
+      logDirectory="iisnode"
       debuggingEnabled="true"
       debuggerPortRange="5058-6058"
       debuggerPathSegment="debug"
       maxLogFileSizeInKB="128"
-      appendToExistingLog="false"
+      maxTotalLogFileSizeInKB="1024"
+      maxLogFiles="20"
       devErrorsEnabled="true"
       flushResponse="false"
       enableXFF="false"
@@ -174,7 +178,8 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     One more setting that can be modified is the path to the node.exe executable:
     
     &lt;iisnode
-      nodeProcessCommandLine="&amp;quot;%programfiles%\nodejs\node.exe&amp;quot;" /&gt;
+      nodeProcessCommandLine="&amp;quot;%programfiles%\nodejs\node.exe&amp;quot;" 
+      interceptor="&amp;quot;%programfiles%\iisnode\interceptor.js&amp;quot;" /&gt;
     
     --&gt;
 
@@ -190,12 +195,18 @@ console.log('Application started at location ' + process.env.PORT);</pre>
 # environment variable; the default is the value of the IIS worker process'es NODE_ENV
 # environment variable
 
-node_env: %node_env%
+node_env:
 
 # nodeProcessCommandLine - command line starting the node executable; in shared
 # hosting environments this setting would typically be locked at the machine scope.
 
-# nodeProcessCommandLine: "%programfiles%\nodejs\node.exe"
+# nodeProcessCommandLine: "C:\Program Files\nodejs\node.exe"
+
+# interceptor - fully qualified file name of a node.js application that will run instead of an actual application
+# the request targets; the fully qualified file name of the actual application file is provided as the first parameter
+# to the interceptor application; default interceptor supports iisnode logging
+
+# interceptor: "c:\Program Files\iisnode\interceptor.js"
 
 # nodeProcessCountPerApplication - number of node.exe processes that IIS will start per application;
 # setting this value to 0 results in creating one node.exe process per each processor on the machine
@@ -263,14 +274,14 @@ gracefulShutdownTimeout: 60000
 
 loggingEnabled: true
 
-# logDirectoryNameSuffix - suffix of the directory name that will store files with stdout and stderr captures; directly name is created
-# by appending this suffix to the file name of the node.js application; individual log files are stored in that directory, one per node
-# process (in files of the form x.txt, where x is between 0 and nodeProcessCountPerApplication - 1); given a node.js application at
-# http://localhost/node/hello.js, log files would by default be stored at http://localhost/node/hello.js.logs/0.txt (thrugh 3.txt);
+# logDirectory - directory name relative to the main application file that will store files with stdout and stderr captures; 
+# individual log file names have unique file names; log files are created lazily (i.e. when the process actually writes something
+# to stdout or stderr); an HTML index of all log files is also maintained as index.html in that directory;
+# by default, if your application is at http://foo.com/bar.js, logs will be accessible at http://foo.com/iisnode;
 # SECURITY NOTE: if log files contain sensitive information, this setting should be modified to contain enough entropy to be considered
 # cryptographically secure; in most situations, a GUID is sufficient
 
-logDirectoryNameSuffix: logs
+logDirectory: iisnode
 
 # debuggingEnabled - controls whether the built-in debugger is available
 
@@ -287,22 +298,17 @@ http://foo.com/bar/baz.js/debug
 
 debuggerPathSegment: debug
 
-# maxLogFileSizeInKB - maximum size of a log file in KB; once a log file exceeds this limit it is truncated back to empty
+# maxLogFileSizeInKB - maximum size of a single log file in KB; once a log file exceeds this limit a new log file is created
 
 maxLogFileSizeInKB: 128
 
-# appendToExistingLog - determines whether pre-existing log files are appended to or created fresh when a node process with a given ordinal
-# number starts; appending may be useful to diagnose unorderly node process terminations or recycling
+# maxTotalLogFileSizeInKB - maximum total size of all log files in the logDirectory; once exceeded, old log files are removed
 
-appendToExistingLog: false
+maxTotalLogFileSizeInKB: 1024
+    
+# maxLogFiles - maximum number of log files in the logDirectory; once exceeded, old log files are removed
 
-# logFileFlushInterval - interval in milliseconds for flushing logs to the log files
-
-logFileFlushInterval: 5000
-
-# devErrorsEnabled - controls how much information is sent back in the HTTP response to the browser when an error occurrs in iisnode;
-# when true, error conditions in iisnode result in HTTP 200 response with the body containing error details; when false,
-# iisnode will return generic HTTP 5xx responses
+maxLogFiles: 20
 
 devErrorsEnabled: true
 

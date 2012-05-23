@@ -1,11 +1,30 @@
 /*
-Log file is truncated if it exceeds configured maximum size
+Another log file is created if log size quota is reached
 */
 
-var iisnodeassert = require("iisnodeassert");
+var iisnodeassert = require("iisnodeassert")
+    , fs = require('fs')
+    , path = require('path')
+    , assert = require('assert');
+
+var logDir = path.resolve(__dirname, '../www/110_log_size_quota/iisnode');
+var existsSync = fs.existsSync || path.existsSync;
+
+if (existsSync(logDir)) {
+    fs.readdirSync(logDir).forEach(function (file) {
+        fs.unlinkSync(path.resolve(logDir, file));
+    });
+}
 
 iisnodeassert.sequence([
     iisnodeassert.get(10000, "/110_log_size_quota/hello.js", 200, "Hello, world"),
-    iisnodeassert.wait(1000), // wait for 1 second - configured log flush interval is 500 ms
-    iisnodeassert.get(2000, "/110_log_size_quota/hello.js.logs/0.txt", 200, ">>>> iisnode truncated the log file because it exceeded the configured maximum size\n")
+    iisnodeassert.get(2000, "/110_log_size_quota/hello.js", 200, "Hello, world"),
+    function (next) {
+        assert.ok(existsSync(logDir), 'log directory exists');
+        var files = fs.readdirSync(logDir)
+        assert.equal(files.length, 3, 'three files created in the log directory');
+
+        if (next)
+            next();
+    }
 ]);

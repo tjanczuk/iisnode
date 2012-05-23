@@ -7,10 +7,10 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 BOOL CModuleConfiguration::invalid = FALSE;
 
 CModuleConfiguration::CModuleConfiguration()
-	: nodeProcessCommandLine(NULL), logDirectoryNameSuffix(NULL), debuggerPathSegment(NULL), 
+	: nodeProcessCommandLine(NULL), logDirectory(NULL), debuggerPathSegment(NULL), 
 	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
 	enableXFF(FALSE), promoteServerVars(NULL), promoteServerVarsRaw(NULL), configOverridesFileName(NULL),
-	configOverrides(NULL)
+	configOverrides(NULL), interceptor(NULL)
 {
 	InitializeSRWLock(&this->srwlock);
 }
@@ -23,10 +23,15 @@ CModuleConfiguration::~CModuleConfiguration()
 		this->nodeProcessCommandLine = NULL;
 	}
 
-	if (NULL != this->logDirectoryNameSuffix)
+	if (NULL != this->interceptor) {
+		delete [] this->interceptor;
+		this->interceptor = NULL;
+	}
+
+	if (NULL != this->logDirectory)
 	{
-		delete [] this->logDirectoryNameSuffix;
-		this->logDirectoryNameSuffix = NULL;
+		delete [] this->logDirectory;
+		this->logDirectory = NULL;
 	}
 
 	if (NULL != this->debuggerPathSegment)
@@ -238,6 +243,48 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 		ErrorIf((propertySize + 1) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, node_env, wcslen(node_env), tmpIndex, propertySize, NULL, NULL), E_FAIL);
 		tmpIndex += propertySize + 1;
+	}
+
+	if (CModuleConfiguration::GetLoggingEnabled(ctx)) 
+	{
+		// set IISNODE_LOGGINGENABLED variable	
+
+		ErrorIf((tmpSize - (tmpIndex - tmpStart)) < 25, ERROR_NOT_ENOUGH_MEMORY);
+		sprintf(tmpIndex, "IISNODE_LOGGINGENABLED=1");
+		tmpIndex += 25;
+
+		// set IISNODE_LOGDIRECTORY variable based on the iisnode/@logDirectory configuration setting, if not empty
+
+		LPWSTR logDirectory = CModuleConfiguration::GetLogDirectory(ctx);
+		if (0 != wcscmp(L"", logDirectory))
+		{
+			ErrorIf((tmpSize - (tmpIndex - tmpStart)) < 22, ERROR_NOT_ENOUGH_MEMORY);
+			sprintf(tmpIndex, "IISNODE_LOGDIRECTORY=");
+			tmpIndex += 21;
+			ErrorIf(0 == (propertySize = WideCharToMultiByte(CP_ACP, 0, logDirectory, wcslen(logDirectory), NULL, 0, NULL, NULL)), E_FAIL);
+			ErrorIf((propertySize + 1) > (tmpSize - (tmpStart - tmpIndex)), ERROR_NOT_ENOUGH_MEMORY);
+			ErrorIf(propertySize != WideCharToMultiByte(CP_ACP, 0, logDirectory, wcslen(logDirectory), tmpIndex, propertySize, NULL, NULL), E_FAIL);
+			tmpIndex += propertySize + 1;
+		}
+
+		// set IISNODE_MAXTOTALLOGFILESIZEINKB, IISNODE_MAXLOGFILESIZEINKB, and IISNODE_MAXLOGFILES variables
+
+		char tmp[64];
+		sprintf(tmp, "%d", CModuleConfiguration::GetMaxTotalLogFileSizeInKB(ctx));
+		ErrorIf((tmpSize - (tmpIndex - tmpStart)) < (strlen(tmp) + 33), ERROR_NOT_ENOUGH_MEMORY);
+		sprintf(tmpIndex, "IISNODE_MAXTOTALLOGFILESIZEINKB=%s", tmp);
+		tmpIndex += strlen(tmp) + 33;
+
+		sprintf(tmp, "%d", CModuleConfiguration::GetMaxLogFileSizeInKB(ctx));
+		ErrorIf((tmpSize - (tmpIndex - tmpStart)) < (strlen(tmp) + 28), ERROR_NOT_ENOUGH_MEMORY);
+		sprintf(tmpIndex, "IISNODE_MAXLOGFILESIZEINKB=%s", tmp);
+		tmpIndex += strlen(tmp) + 28;
+
+		sprintf(tmp, "%d", CModuleConfiguration::GetMaxLogFiles(ctx));
+		ErrorIf((tmpSize - (tmpIndex - tmpStart)) < (strlen(tmp) + 21), ERROR_NOT_ENOUGH_MEMORY);
+		sprintf(tmpIndex, "IISNODE_MAXLOGFILES=%s", tmp);
+		tmpIndex += strlen(tmp) + 21;
+
 	}
 
 	// add a trailing zero to new variables
@@ -584,21 +631,21 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	{
 		CheckError(GetDWORD(valueStart, &config->gracefulShutdownTimeout));
 	}
-	else if (0 == strcmpi(keyStart, "logFileFlushInterval"))
+	else if (0 == strcmpi(keyStart, "maxTotalLogFileSizeInKB"))
 	{
-		CheckError(GetDWORD(valueStart, &config->logFileFlushInterval));
+		CheckError(GetDWORD(valueStart, &config->maxTotalLogFileSizeInKB));
 	}
 	else if (0 == strcmpi(keyStart, "maxLogFileSizeInKB"))
 	{
 		CheckError(GetDWORD(valueStart, &config->maxLogFileSizeInKB));
 	}
+	else if (0 == strcmpi(keyStart, "maxLogFiles"))
+	{
+		CheckError(GetDWORD(valueStart, &config->maxLogFiles));
+	}
 	else if (0 == strcmpi(keyStart, "loggingEnabled"))
 	{
 		CheckError(GetBOOL(valueStart, &config->loggingEnabled));
-	}
-	else if (0 == strcmpi(keyStart, "appendToExistingLog"))
-	{
-		CheckError(GetBOOL(valueStart, &config->appendToExistingLog));
 	}
 	else if (0 == strcmpi(keyStart, "devErrorsEnabled"))
 	{
@@ -616,9 +663,9 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	{
 		CheckError(GetBOOL(valueStart, &config->enableXFF));
 	}
-	else if (0 == strcmpi(keyStart, "logDirectoryNameSuffix"))
+	else if (0 == strcmpi(keyStart, "logDirectory"))
 	{
-		CheckError(GetString(valueStart, &config->logDirectoryNameSuffix));
+		CheckError(GetString(valueStart, &config->logDirectory));
 	}
 	else if (0 == strcmpi(keyStart, "node_env"))
 	{
@@ -659,7 +706,24 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 			strcpy(config->nodeProcessCommandLine, "");
 		}
 	}
+	else if (0 == strcmpi(keyStart, "interceptor"))
+	{
+		if (config->interceptor)
+		{
+			delete [] config->interceptor;
+			config->interceptor = NULL;
+		}
 
+		ErrorIf(NULL == (config->interceptor = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
+		if (valueStart)
+		{
+			strcpy(config->interceptor, valueStart);
+		}
+		else
+		{
+			strcpy(config->interceptor, "");
+		}
+	}
 
 	return S_OK;
 Error:
@@ -996,13 +1060,13 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetDWORD(section, L"maxRequestBufferSize", &c->maxRequestBufferSize));
 		CheckError(GetDWORD(section, L"uncFileChangesPollingInterval", &c->uncFileChangesPollingInterval));
 		CheckError(GetDWORD(section, L"gracefulShutdownTimeout", &c->gracefulShutdownTimeout));
-		CheckError(GetDWORD(section, L"logFileFlushInterval", &c->logFileFlushInterval));
+		CheckError(GetDWORD(section, L"maxTotalLogFileSizeInKB", &c->maxTotalLogFileSizeInKB));
 		CheckError(GetDWORD(section, L"maxLogFileSizeInKB", &c->maxLogFileSizeInKB));
+		CheckError(GetDWORD(section, L"maxLogFiles", &c->maxLogFiles));
 		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
-		CheckError(GetBOOL(section, L"appendToExistingLog", &c->appendToExistingLog));
 		CheckError(GetBOOL(section, L"devErrorsEnabled", &c->devErrorsEnabled));
 		CheckError(GetBOOL(section, L"flushResponse", &c->flushResponse));
-		CheckError(GetString(section, L"logDirectoryNameSuffix", &c->logDirectoryNameSuffix));
+		CheckError(GetString(section, L"logDirectory", &c->logDirectory));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
 		CheckError(GetString(section, L"node_env", &c->node_env));
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
@@ -1021,6 +1085,14 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetString(section, L"nodeProcessCommandLine", &commandLine));
 		ErrorIf(NULL == (c->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
 		ErrorIf(0 != wcstombs_s(&i, c->nodeProcessCommandLine, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
+		delete [] commandLine;
+		commandLine = NULL;
+
+		// interceptor
+
+		CheckError(GetString(section, L"interceptor", &commandLine));
+		ErrorIf(NULL == (c->interceptor = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(0 != wcstombs_s(&i, c->interceptor, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
 		delete [] commandLine;
 		commandLine = NULL;
 
@@ -1097,6 +1169,11 @@ LPCTSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)
 	GETCONFIG(nodeProcessCommandLine)
 }
 
+LPCTSTR CModuleConfiguration::GetInterceptor(IHttpContext* ctx)
+{
+	GETCONFIG(interceptor)
+}
+
 DWORD CModuleConfiguration::GetMaxConcurrentRequestsPerProcess(IHttpContext* ctx)
 {
 	GETCONFIG(maxConcurrentRequestsPerProcess)
@@ -1132,9 +1209,9 @@ DWORD CModuleConfiguration::GetGracefulShutdownTimeout(IHttpContext* ctx)
 	GETCONFIG(gracefulShutdownTimeout)
 }
 
-LPWSTR CModuleConfiguration::GetLogDirectoryNameSuffix(IHttpContext* ctx)
+LPWSTR CModuleConfiguration::GetLogDirectory(IHttpContext* ctx)
 {
-	GETCONFIG(logDirectoryNameSuffix)
+	GETCONFIG(logDirectory)
 }
 
 LPWSTR CModuleConfiguration::GetDebuggerPathSegment(IHttpContext* ctx)
@@ -1147,9 +1224,9 @@ DWORD CModuleConfiguration::GetDebuggerPathSegmentLength(IHttpContext* ctx)
 	GETCONFIG(debuggerPathSegmentLength)
 }
 
-DWORD CModuleConfiguration::GetLogFileFlushInterval(IHttpContext* ctx)
+DWORD CModuleConfiguration::GetMaxTotalLogFileSizeInKB(IHttpContext* ctx)
 {
-	GETCONFIG(logFileFlushInterval)
+	GETCONFIG(maxTotalLogFileSizeInKB)
 }
 
 DWORD CModuleConfiguration::GetMaxLogFileSizeInKB(IHttpContext* ctx)
@@ -1157,14 +1234,14 @@ DWORD CModuleConfiguration::GetMaxLogFileSizeInKB(IHttpContext* ctx)
 	GETCONFIG(maxLogFileSizeInKB)
 }
 
+DWORD CModuleConfiguration::GetMaxLogFiles(IHttpContext* ctx)
+{
+	GETCONFIG(maxLogFiles)
+}
+
 BOOL CModuleConfiguration::GetLoggingEnabled(IHttpContext* ctx)
 {
 	GETCONFIG(loggingEnabled);
-}
-
-BOOL CModuleConfiguration::GetAppendToExistingLog(IHttpContext* ctx)
-{
-	GETCONFIG(appendToExistingLog)
 }
 
 BOOL CModuleConfiguration::GetDebuggingEnabled(IHttpContext* ctx)
