@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="iisnoderootdir">
+      <Directory Id="dir_debug" Name="debug">
+        <Directory Id="dir_debug_x86" Name="x86">
+          <Component Id="cmp_debug_x86" Guid="100AD501-3EBD-43AA-A6ED-12E55660B0CE">
+            <File Id="file_debug_x86_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\debug\x86\iisnode.dll" />
+            <File Id="file_debug_x86_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\debug\x86\iisnode.pdb" />
+            <File Id="file_debug_x86_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\debug\x86\interceptor.js" />
+            <File Id="file_debug_x86_iisnode_schema_xml" KeyPath="no" Source="$(var.sourcedir)\debug\x86\iisnode_schema.xml" />
+          </Component>
+        </Directory>
+        <Directory Id="dir_debug_x64" Name="x64">
+          <Component Id="cmp_debug_x64" Guid="101AD501-3EBD-43AA-A6ED-12E55660B0CE">
+            <File Id="file_debug_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\iisnode.dll" />
+            <File Id="file_debug_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\iisnode.pdb" />
+            <File Id="file_debug_x64_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\interceptor.js" />
+            <File Id="file_debug_x64_iisnode_schema_x64_xml" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\iisnode_schema_x64.xml"/>
+            <File Id="file_debug_x64_iisnode_schema_x64_wow_xml" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\iisnode_schema_x64_wow.xml"/>
+          </Component>
+        </Directory>
+      </Directory>
+      <Directory Id="dir_release" Name="release">
+        <Directory Id="dir_release_x86" Name="x86">
+          <Component Id="cmp_release_x86" Guid="102AD501-3EBD-43AA-A6ED-12E55660B0CE">
+            <File Id="file_release_x86_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode.dll" />
+            <File Id="file_release_x86_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode.pdb" />
+            <File Id="file_release_x86_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\release\x86\interceptor.js" />
+            <File Id="file_release_x86_iisnode_schema_xml" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode_schema.xml" />
+          </Component>
+        </Directory>
+        <Directory Id="dir_release_x64" Name="x64">
+          <Component Id="cmp_release_x64" Guid="103AD501-3EBD-43AA-A6ED-12E55660B0CE">
+            <File Id="file_release_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode.dll" />
+            <File Id="file_release_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode.pdb" />
+            <File Id="file_release_x64_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\release\amd64\interceptor.js" />
+            <File Id="file_release_x64_iisnode_schema_x64_xml" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode_schema_x64.xml"/>
+            <File Id="file_release_x64_iisnode_schema_x64_wow_xml" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode_schema_x64_wow.xml"/>
+          </Component>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="allfiles">
+      <ComponentRef Id="cmp_debug_x86" />
+      <ComponentRef Id="cmp_debug_x64" />
+      <ComponentRef Id="cmp_release_x86" />
+      <ComponentRef Id="cmp_release_x64" />
+    </ComponentGroup>
+  </Fragment>
+</Include>
