@@ -326,7 +326,7 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	data[newOffset] = 0; // zero-terminate the reason phrase to reuse it without copying
 
 	IHttpResponse* response = context->GetHttpContext()->GetResponse();
-	response->Clear();
+	//response->Clear();
 	response->SetStatus(statusCode, data + offset, subStatusCode);
 	
 	// adjust buffers
