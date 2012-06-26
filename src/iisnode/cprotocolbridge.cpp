@@ -656,6 +656,15 @@ Error:
 				CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 			}
 		}
+		else if (ctx->GetNodeProcess()->HasProcessExited()) 
+		{
+			// the process has exited, likely due to initialization error
+			// stop trying to establish the named pipe connection to minimize the failure latency
+
+			ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+				L"iisnode was unable to establish named pipe connection to the node.exe process before the process terminated", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
+			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+		}
 		else 
 		{
 			ctx->SetConnectionRetryCount(retry + 1);

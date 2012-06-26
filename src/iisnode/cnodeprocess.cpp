@@ -35,6 +35,11 @@ CNodeProcess::~CNodeProcess()
 	}
 }
 
+BOOL CNodeProcess::HasProcessExited()
+{
+	return this->hasProcessExited;
+}
+
 HRESULT CNodeProcess::Initialize(IHttpContext* context)
 {
 	HRESULT hr;

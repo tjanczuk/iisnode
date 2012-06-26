@@ -148,7 +148,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       node_env="%node_env%"
       nodeProcessCountPerApplication="1"
       maxConcurrentRequestsPerProcess="1024"
-      maxNamedPipeConnectionRetry="24"
+      maxNamedPipeConnectionRetry="100"
       namedPipeConnectionRetryDelay="250"      
       maxNamedPipeConnectionPoolSize="512"
       maxNamedPipePooledConnectionAge="30000"
@@ -221,7 +221,7 @@ maxConcurrentRequestsPerProcess: 1024
 # maxNamedPipeConnectionRetry - number of times IIS will retry to establish a named pipe connection with a
 # node process in order to send a new HTTP request
 
-maxNamedPipeConnectionRetry: 24
+maxNamedPipeConnectionRetry: 100
 
 # namedPipeConnectionRetryDelay - delay in milliseconds between connection retries
 

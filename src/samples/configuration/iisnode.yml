@@ -31,7 +31,7 @@ maxConcurrentRequestsPerProcess: 1024
 # maxNamedPipeConnectionRetry - number of times IIS will retry to establish a named pipe connection with a
 # node process in order to send a new HTTP request
 
-maxNamedPipeConnectionRetry: 24
+maxNamedPipeConnectionRetry: 100
 
 # namedPipeConnectionRetryDelay - delay in milliseconds between connection retries
 

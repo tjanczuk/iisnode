@@ -40,6 +40,7 @@ public:
 	void OnRequestCompleted(CNodeHttpStoredContext* context);	
 	void SignalWhenDrained(HANDLE handle);
 	char* TryGetLog(IHttpContext* context, DWORD* size);
+	BOOL HasProcessExited();
 };
 
 #endif
