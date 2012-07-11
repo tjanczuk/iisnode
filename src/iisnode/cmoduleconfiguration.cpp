@@ -690,39 +690,11 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "nodeProcessCommandLine"))
 	{
-		if (config->nodeProcessCommandLine)
-		{
-			delete [] config->nodeProcessCommandLine;
-			config->nodeProcessCommandLine = NULL;
-		}
-
-		ErrorIf(NULL == (config->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
-		if (valueStart)
-		{
-			strcpy(config->nodeProcessCommandLine, valueStart);
-		}
-		else
-		{
-			strcpy(config->nodeProcessCommandLine, "");
-		}
+		CheckError(GetString(valueStart, &config->nodeProcessCommandLine));
 	}
 	else if (0 == strcmpi(keyStart, "interceptor"))
 	{
-		if (config->interceptor)
-		{
-			delete [] config->interceptor;
-			config->interceptor = NULL;
-		}
-
-		ErrorIf(NULL == (config->interceptor = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
-		if (valueStart)
-		{
-			strcpy(config->interceptor, valueStart);
-		}
-		else
-		{
-			strcpy(config->interceptor, "");
-		}
+		CheckError(GetString(valueStart, &config->interceptor));
 	}
 
 	return S_OK;
@@ -1036,7 +1008,6 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 	HRESULT hr;
 	CModuleConfiguration* c = NULL;
 	IAppHostElement* section = NULL;
-	LPWSTR commandLine = NULL;
 	size_t i;
 	CheckNull(config);
 
@@ -1074,27 +1045,13 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF));
 		CheckError(GetString(section, L"promoteServerVars", &c->promoteServerVarsRaw));
 		CheckError(GetString(section, L"configOverrides", &c->configOverrides));
+		CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
+		CheckError(GetString(section, L"interceptor", &c->interceptor));
 
 		// debuggerPathSegment
 
 		CheckError(GetString(section, L"debuggerPathSegment", &c->debuggerPathSegment));
 		c->debuggerPathSegmentLength = wcslen(c->debuggerPathSegment);
-
-		// nodeProcessCommandLine
-
-		CheckError(GetString(section, L"nodeProcessCommandLine", &commandLine));
-		ErrorIf(NULL == (c->nodeProcessCommandLine = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(0 != wcstombs_s(&i, c->nodeProcessCommandLine, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
-		delete [] commandLine;
-		commandLine = NULL;
-
-		// interceptor
-
-		CheckError(GetString(section, L"interceptor", &commandLine));
-		ErrorIf(NULL == (c->interceptor = new char[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
-		ErrorIf(0 != wcstombs_s(&i, c->interceptor, (size_t)MAX_PATH, commandLine, _TRUNCATE), ERROR_INVALID_PARAMETER);
-		delete [] commandLine;
-		commandLine = NULL;
 
 		// apply config setting overrides from the optional YAML configuration file
 
@@ -1129,12 +1086,6 @@ Error:
 		section = NULL;
 	}
 
-	if (NULL != commandLine)
-	{
-		delete [] commandLine;
-		commandLine = NULL;
-	}
-
 	if (NULL != c)
 	{
 		delete c;
@@ -1164,12 +1115,12 @@ DWORD CModuleConfiguration::GetNodeProcessCountPerApplication(IHttpContext* ctx)
 	GETCONFIG(nodeProcessCountPerApplication)
 }
 
-LPCTSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)
+LPWSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)
 {
 	GETCONFIG(nodeProcessCommandLine)
 }
 
-LPCTSTR CModuleConfiguration::GetInterceptor(IHttpContext* ctx)
+LPWSTR CModuleConfiguration::GetInterceptor(IHttpContext* ctx)
 {
 	GETCONFIG(interceptor)
 }

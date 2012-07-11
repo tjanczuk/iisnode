@@ -9,8 +9,8 @@ private:
 
 	DWORD asyncCompletionThreadCount;
 	DWORD nodeProcessCountPerApplication;
-	LPTSTR nodeProcessCommandLine;
-	LPTSTR interceptor;
+	LPWSTR nodeProcessCommandLine;
+	LPWSTR interceptor;
 	DWORD maxConcurrentRequestsPerProcess;
 	DWORD maxNamedPipeConnectionRetry;
 	DWORD namedPipeConnectionRetryDelay;
@@ -70,8 +70,8 @@ public:
 
 	static DWORD GetAsyncCompletionThreadCount(IHttpContext* ctx); 
 	static DWORD GetNodeProcessCountPerApplication(IHttpContext* ctx);
-	static LPCTSTR GetNodeProcessCommandLine(IHttpContext* ctx); 
-	static LPCTSTR GetInterceptor(IHttpContext* ctx); 
+	static LPWSTR GetNodeProcessCommandLine(IHttpContext* ctx); 
+	static LPWSTR GetInterceptor(IHttpContext* ctx); 
 	static DWORD GetMaxConcurrentRequestsPerProcess(IHttpContext* ctx);
 	static DWORD GetMaxNamedPipeConnectionRetry(IHttpContext* ctx);
 	static DWORD GetNamedPipeConnectionRetryDelay(IHttpContext* ctx); 

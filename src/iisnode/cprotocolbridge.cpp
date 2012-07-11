@@ -160,25 +160,12 @@ BOOL CProtocolBridge::SendIisnodeError(IHttpContext* httpCtx, HRESULT hr)
 		break;
 
 	case IISNODE_ERROR_UNABLE_TO_START_NODE_EXE:
-		LPCTSTR commandLine = CModuleConfiguration::GetNodeProcessCommandLine(httpCtx);
-		char* errorMessage;
-		if (NULL == (errorMessage = (char*)httpCtx->AllocateRequestMemory(strlen(commandLine) + 512)))
-		{
-			errorMessage = 
+		char* errorMessage = 
 				"The iisnode module is unable to start the node.exe process. Make sure the node.exe executable is available "
 				"at the location specified in the <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
 				"system.webServer/iisnode/@nodeProcessCommandLine</a> element of web.config. "
 				"By default node.exe is expected to be installed in %ProgramFiles%\\nodejs folder on x86 systems and "
 				"%ProgramFiles(x86)%\\nodejs folder on x64 systems.";
-		}
-		else
-		{
-			sprintf(errorMessage, 
-				"The iisnode module is unable to start the node.exe process. Make sure the node.exe executable is available "
-				"at the location specified in the <a href=""https://github.com/tjanczuk/iisnode/blob/master/src/samples/configuration/web.config"">"
-				"system.webServer/iisnode/@nodeProcessCommandLine</a> element of web.config. "
-				"The command line iisnode attempted to run was:<br><br>%s", commandLine);
-		}
 
 		CProtocolBridge::SendSyncResponse(
 			httpCtx, 

@@ -45,20 +45,18 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	HRESULT hr;
 	UUID uuid;
 	RPC_CSTR suuid = NULL;
-	LPTSTR fullCommandLine = NULL;
-	LPCTSTR coreCommandLine;
-	LPCTSTR interceptor;
+	LPWSTR fullCommandLine = NULL;
+	LPCWSTR coreCommandLine;
+	LPCWSTR interceptor;
 	PCWSTR scriptName;
-	size_t coreCommandLineLength, scriptNameLength, scriptNameLengthW, interceptorLength;	
 	PROCESS_INFORMATION processInformation;
 	DWORD exitCode = S_OK;
 	LPCH newEnvironment = NULL;
 	DWORD flags;
 	HANDLE job;
 	PWSTR currentDirectory = NULL;
-	PSTR currentDirectoryA = NULL;
+	PWSTR scriptTranslated = NULL;
 	DWORD currentDirectorySize = 0;
-	DWORD currentDirectorySizeA = 0;
 	CNodeApplication* app = this->GetProcessManager()->GetApplication();
 
 	RtlZeroMemory(&processInformation, sizeof processInformation);
@@ -80,53 +78,44 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	// build the full command line for the node.js process
 
 	interceptor = CModuleConfiguration::GetInterceptor(context);
-	interceptorLength = strlen(interceptor);
 	coreCommandLine = CModuleConfiguration::GetNodeProcessCommandLine(context);
 	scriptName = this->GetProcessManager()->GetApplication()->GetScriptName();
-	coreCommandLineLength = _tcslen(coreCommandLine);
-	scriptNameLengthW = wcslen(scriptName) + 1;
-	ErrorIf(0 != wcstombs_s(&scriptNameLength, NULL, 0, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);
 	// allocate memory for command line to allow for debugging options plus interceptor plus spaces and enclosing the script name in quotes
-	ErrorIf(NULL == (fullCommandLine = new TCHAR[coreCommandLineLength + interceptorLength + scriptNameLength + 256]), ERROR_NOT_ENOUGH_MEMORY); 
-	_tcscpy(fullCommandLine, coreCommandLine);
-	DWORD offset = 0;
+	ErrorIf(NULL == (fullCommandLine = new WCHAR[wcslen(coreCommandLine) + wcslen(interceptor) + wcslen(scriptName) + 256]), ERROR_NOT_ENOUGH_MEMORY); 
+	wcscpy(fullCommandLine, coreCommandLine);
 
 	// add debug options
 	if (app->IsDebuggee())
 	{
-		char buffer[64];
+		WCHAR buffer[64];
 
 		if (ND_DEBUG_BRK == app->GetDebugCommand())
 		{
-			sprintf(buffer, " --debug-brk=%d ", app->GetDebugPort());					
+			swprintf(buffer, L" --debug-brk=%d ", app->GetDebugPort());					
 		}
 		else if (ND_DEBUG == app->GetDebugCommand())
 		{
-			sprintf(buffer, " --debug=%d ", app->GetDebugPort());	
+			swprintf(buffer, L" --debug=%d ", app->GetDebugPort());	
 		}
 		else
 		{
 			CheckError(ERROR_INVALID_PARAMETER);
 		}
 
-		_tcscat(fullCommandLine, buffer);	
-		offset += strlen(buffer);
+		wcscat(fullCommandLine, buffer);	
 	}
 	
 	if (!app->IsDebugger()) 
 	{
 		// add interceptor
-		_tcscat(fullCommandLine, _T(" "));
-		offset += 1;
-		_tcscat(fullCommandLine, interceptor);
-		offset += interceptorLength;
+		wcscat(fullCommandLine, L" ");
+		wcscat(fullCommandLine, interceptor);
 	}
 
 	// add application entry point
-	_tcscat(fullCommandLine, _T(" \""));
-	offset += 2;
-	ErrorIf(0 != wcstombs_s(&scriptNameLength, fullCommandLine + coreCommandLineLength + offset, scriptNameLength, scriptName, _TRUNCATE), ERROR_CAN_NOT_COMPLETE);	
-	_tcscat(fullCommandLine, _T("\""));
+	wcscat(fullCommandLine, L" \"");
+	wcscat(fullCommandLine, scriptName);
+	wcscat(fullCommandLine, L"\"");
 
 	// create the environment block for the node.js process 	
 
@@ -139,18 +128,17 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	// establish the current directory for node.exe process to be the same as the location of the application *.js file
 	// (in case of the debugger process, it is still the debuggee application file)
 
-	currentDirectory = (PWSTR)context->GetScriptTranslated(&currentDirectorySize);
-	while (currentDirectorySize && currentDirectory[currentDirectorySize] != L'\\' && currentDirectory[currentDirectorySize] != L'/')
+	scriptTranslated = (PWSTR)context->GetScriptTranslated(&currentDirectorySize);
+	while (currentDirectorySize && scriptTranslated[currentDirectorySize] != L'\\' && scriptTranslated[currentDirectorySize] != L'/')
 		currentDirectorySize--;
-	ErrorIf(0 == (currentDirectorySizeA = WideCharToMultiByte(CP_ACP, 0, currentDirectory, currentDirectorySize, NULL, 0, NULL, NULL)), E_FAIL);
-	ErrorIf(NULL == (currentDirectoryA = new char[currentDirectorySize + 1]), ERROR_NOT_ENOUGH_MEMORY);
-	ErrorIf(currentDirectorySizeA != WideCharToMultiByte(CP_ACP, 0, currentDirectory, currentDirectorySize, currentDirectoryA, currentDirectorySizeA, NULL, NULL), E_FAIL);
-	currentDirectoryA[currentDirectorySizeA] = '\0';
+	ErrorIf(NULL == (currentDirectory = new WCHAR[wcslen(scriptTranslated) + 1]), ERROR_NOT_ENOUGH_MEMORY);
+	wcscpy(currentDirectory, scriptTranslated);
+	currentDirectory[currentDirectorySize] = L'\0';
 
 	// create startup info for the node.js process
 
 	RtlZeroMemory(&this->startupInfo, sizeof this->startupInfo);
-	GetStartupInfo(&startupInfo);
+	GetStartupInfoW(&startupInfo);
 	CheckError(this->CreateStdHandles(context));
 
 	// create process watcher thread in a suspended state
@@ -172,7 +160,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 		flags |= CREATE_BREAKAWAY_FROM_JOB;
 	}
 	
-	if(!CreateProcess(
+	if(!CreateProcessW(
 			NULL,
 			fullCommandLine,
 			NULL,
@@ -180,7 +168,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 			TRUE,
 			flags,
 			newEnvironment,
-			currentDirectoryA,
+			currentDirectory,
 			&this->startupInfo,
 			&processInformation)) 
 	{
@@ -211,8 +199,8 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 
 	// clean up
 
-	delete [] currentDirectoryA;
-	currentDirectoryA = NULL;
+	delete [] currentDirectory;
+	currentDirectory = NULL;
 	delete [] newEnvironment;
 	newEnvironment = NULL;
 	delete [] fullCommandLine;
@@ -245,10 +233,10 @@ Error:
 			L"iisnode failed to initialize a new node.exe process", WINEVENT_LEVEL_ERROR);
 	}
 
-	if (currentDirectoryA)
+	if (currentDirectory)
 	{
-		delete [] currentDirectoryA;
-		currentDirectoryA = NULL;
+		delete [] currentDirectory;
+		currentDirectory = NULL;
 	}
 
 	if (suuid != NULL)

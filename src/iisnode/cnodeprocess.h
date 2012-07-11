@@ -16,7 +16,7 @@ private:
 	HANDLE processWatcher;
 	DWORD maxConcurrentRequestsPerProcess;
 	BOOL isClosing;
-	STARTUPINFO startupInfo;
+	STARTUPINFOW startupInfo;
 	BOOL hasProcessExited;
 	OVERLAPPED overlapped;
 	CConnectionPool connectionPool;
