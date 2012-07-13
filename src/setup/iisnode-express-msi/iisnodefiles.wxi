@@ -16,11 +16,11 @@
       <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
         <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">
           <Component Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAB" Guid="0EC0F08E-89B3-4C35-A286-8DB8598597F2">
-            <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="no" Source="$(var.sourcedir)\iisnode_schema.xml" />
+            <File Id="fil98FE22082D3964939C1CB4060FC2A0C6" KeyPath="no" Source="$(var.sourcedir)\iisnode_express_schema.xml" Name="iisnode_schema.xml"/>
             <Condition><![CDATA[NOT(VersionNT64)]]></Condition>
           </Component>
           <Component Id="cmpCFBC3A88B5FB1B48E1CB3DBC62C46CAB" Guid="1EC0F08E-89B3-4C35-A286-8DB8598597F2">
-            <File Id="fil08FE22082D3964939C1CB4060FC2A0C6" KeyPath="no" Source="$(var.sourcedir)\iisnode_schema_x64.xml" Name="iisnode_schema.xml"/>
+            <File Id="fil08FE22082D3964939C1CB4060FC2A0C6" KeyPath="no" Source="$(var.sourcedir)\iisnode_express_schema_x64.xml" Name="iisnode_schema.xml"/>
             <Condition><![CDATA[VersionNT64]]></Condition>
           </Component>
         </Directory>

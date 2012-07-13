@@ -657,6 +657,12 @@
     <None Include="..\scripts\logs.template.html">
       <Filter>Scripts</Filter>
     </None>
+    <None Include="..\config\iisnode_express_schema.xml">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\config\iisnode_express_schema_x64.xml">
+      <Filter>Config</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="iisnode.rc" />
