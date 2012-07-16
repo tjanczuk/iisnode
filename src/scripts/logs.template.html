@@ -64,18 +64,23 @@
             return b.created - a.created;
         });
 
-        var logFilesTable = document.getElementById("logFilesTable");        
-        logFiles.forEach(function (logFile) {
+        var logFilesTable = document.getElementById("logFilesTable");
+        for (var i = 0; i < logFiles.length; i++) {
+            var logFile = logFiles[i];
             date.setTime(logFile.created);
             var row = logFilesTable.insertRow(-1);
-            row.innerHTML = '<tr>' +
-                '<td>' + logFile.computername + '</td>' +
-                '<td>' + logFile.pid + '</td>' +
-                '<td class="' + logFile.type + '">' + logFile.type + '</td>' +
-                '<td>' + date + '</td>' +
-                '<td><a href="' + logFile.file + '">log</a></td>' +
-                '</tr>';
-        });
+            var computerNameCell = row.insertCell(0);
+            var pidCell = row.insertCell(1);
+            var typeCell = row.insertCell(2);
+            var dateCell = row.insertCell(3);
+            var logCell = row.insertCell(4);
+            computerNameCell.innerHTML = logFile.computername;
+            pidCell.innerHTML = logFile.pid.toString();
+            typeCell.innerHTML = logFile.type;
+            typeCell.setAttribute('class', logFile.type);
+            dateCell.innerHTML = date.toString();
+            logCell.innerHTML = '<a href="' + logFile.file + '">log</a>';
+        };
 
     </script>
 </body>
