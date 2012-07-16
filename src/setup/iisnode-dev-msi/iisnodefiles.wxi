@@ -22,6 +22,7 @@
             <File Id="file_release_x86_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode.dll" />
             <File Id="file_release_x86_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode.pdb" />
             <File Id="file_release_x86_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\release\x86\interceptor.js" />
+            <File Id="file_release_x86_logs_template_html" KeyPath="no" Source="$(var.sourcedir)\release\x86\logs.template.html" />
             <File Id="file_release_x86_x86_iisnode_schema_xml" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode_dev_x86_on_x86.xml" Name="iisnode_schema_x86.xml"/>
             <File Id="file_release_x86_x64_iisnode_schema_xml" KeyPath="no" Source="$(var.sourcedir)\release\x86\iisnode_dev_x86_on_x64.xml" Name="iisnode_schema_x64.xml"/>
           </Component>
@@ -31,6 +32,7 @@
             <File Id="file_release_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode.dll" />
             <File Id="file_release_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode.pdb" />
             <File Id="file_release_x64_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\release\amd64\interceptor.js" />
+            <File Id="file_release_x64_logs_template_html" KeyPath="no" Source="$(var.sourcedir)\release\amd64\logs.template.html" />
             <File Id="file_release_x64_iisnode_schema_x64_xml" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode_dev_x64.xml" Name="iisnode_schema.xml"/>
           </Component>
         </Directory>
