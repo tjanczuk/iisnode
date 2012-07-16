@@ -335,9 +335,14 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\performance\www\default\server.js" />
     <None Include="..\..\test\performance\www\default\wcat.ubr" />
     <None Include="..\..\test\performance\www\default\web.config" />
+    <None Include="..\config\iisnode_dev_x64.xml" />
+    <None Include="..\config\iisnode_dev_x86_on_x64.xml" />
+    <None Include="..\config\iisnode_dev_x86_on_x86.xml" />
     <None Include="..\config\iisnode_express_schema.xml" />
     <None Include="..\config\iisnode_express_schema_x64.xml" />
-    <None Include="..\config\iisnode_schema.xml" />
+    <None Include="..\config\iisnode_schema.xml">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="..\config\iisnode_schema_x64.xml">
       <SubType>Designer</SubType>
     </None>
