@@ -28,7 +28,6 @@
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS 7.x">
       <ComponentGroupRef Id="allfiles" />
-      <ComponentGroupRef Id="Product.Generated" />
     </Feature>
 
     <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\..\iisnode-msi\License.rtf" />

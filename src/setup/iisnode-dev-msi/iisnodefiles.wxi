@@ -11,8 +11,8 @@
         </Directory>
         <Directory Id="dir_debug_x64" Name="x64">
           <Component Id="cmp_debug_x64" Guid="101AD501-3EBD-43AA-A6ED-12E55660B0CE">
-            <File Id="file_debug_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\iisnode.dll" />
-            <File Id="file_debug_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\debug\amd64\iisnode.pdb" />
+            <File Id="file_debug_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\debug\x64\iisnode.dll" />
+            <File Id="file_debug_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\debug\x64\iisnode.pdb" />
           </Component>
         </Directory>
       </Directory>
@@ -29,11 +29,11 @@
         </Directory>
         <Directory Id="dir_release_x64" Name="x64">
           <Component Id="cmp_release_x64" Guid="103AD501-3EBD-43AA-A6ED-12E55660B0CE">
-            <File Id="file_release_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode.dll" />
-            <File Id="file_release_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode.pdb" />
-            <File Id="file_release_x64_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\release\amd64\interceptor.js" />
-            <File Id="file_release_x64_logs_template_html" KeyPath="no" Source="$(var.sourcedir)\release\amd64\logs.template.html" />
-            <File Id="file_release_x64_iisnode_schema_x64_xml" KeyPath="no" Source="$(var.sourcedir)\release\amd64\iisnode_dev_x64.xml" Name="iisnode_schema.xml"/>
+            <File Id="file_release_x64_iisnode_dll" KeyPath="no" Source="$(var.sourcedir)\release\x64\iisnode.dll" />
+            <File Id="file_release_x64_iisnode_pdb" KeyPath="no" Source="$(var.sourcedir)\release\x64\iisnode.pdb" />
+            <File Id="file_release_x64_interceptor_js" KeyPath="no" Source="$(var.sourcedir)\release\x64\interceptor.js" />
+            <File Id="file_release_x64_logs_template_html" KeyPath="no" Source="$(var.sourcedir)\release\x64\logs.template.html" />
+            <File Id="file_release_x64_iisnode_schema_x64_xml" KeyPath="no" Source="$(var.sourcedir)\release\x64\iisnode_dev_x64.xml" Name="iisnode_schema.xml"/>
           </Component>
         </Directory>
       </Directory>
