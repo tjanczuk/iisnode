@@ -16,7 +16,7 @@ Hosting node.js applications in IIS on Windows
 **Prerequisites for using**
 
 - Windows Vista, Windows 7, or Windows Server 2008
-- IIS 7.x with IIS Management Tools
+- IIS 7.x with IIS Management Tools and ASP.NET
 - [URL rewrite module for IIS](http://www.iis.net/download/URLRewrite)
 - [Latest node.js build for Windows](http://go.microsoft.com/?linkid=9784334)
 - Visual C++ 2010 Redistributable Package for [x86](http://www.microsoft.com/download/en/details.aspx?id=5555) or [x64](http://www.microsoft.com/download/en/details.aspx?id=14632) (skip this if you install Visual Studio; on x64 systems you need to install both x86 and x64 if you intend to use IIS Express/WebMatrix)
