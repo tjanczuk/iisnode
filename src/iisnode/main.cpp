@@ -24,7 +24,7 @@ HRESULT __stdcall RegisterModule(
     ErrorIf(NULL == (pFactory = new CNodeHttpModuleFactory()), HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY));
     CheckError(pFactory->Initialize(pHttpServer, pModuleInfo->GetId()));
 
-    CheckError(pModuleInfo->SetRequestNotifications(pFactory, RQ_EXECUTE_REQUEST_HANDLER, 0));
+    CheckError(pModuleInfo->SetRequestNotifications(pFactory, RQ_EXECUTE_REQUEST_HANDLER | RQ_SEND_RESPONSE, 0));
     
     return S_OK;
 

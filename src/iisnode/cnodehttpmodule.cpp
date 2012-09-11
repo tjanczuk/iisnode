@@ -5,6 +5,25 @@ CNodeHttpModule::CNodeHttpModule(CNodeApplicationManager* applicationManager)
 {
 }
 
+REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnSendResponse(IN IHttpContext* pHttpContext, IN ISendResponseProvider* pProvider)
+{
+	if (NULL != pHttpContext && NULL != pProvider)
+	{
+		CNodeHttpStoredContext* ctx = (CNodeHttpStoredContext*)pHttpContext->GetModuleContextContainer()->GetModuleContext(this->applicationManager->GetModuleId());
+		DWORD flags = pProvider->GetFlags();
+		if (NULL != ctx && ctx->GetIsUpgrade() && !ctx->GetOpaqueFlagSet())
+		{
+			// Set opaque mode in HTTP.SYS to enable exchanging raw bytes.
+
+			
+			pProvider->SetFlags(flags | HTTP_SEND_RESPONSE_FLAG_OPAQUE);
+			ctx->SetOpaqueFlag();
+		}
+	}
+
+	return RQ_NOTIFICATION_CONTINUE;
+}
+
 #if TRUE
 REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 	IN IHttpContext* pHttpContext, 
@@ -17,11 +36,11 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 
 	this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
 
-	// reject websocket connections since iisnode does not support them
+	// TODO: reject websocket connections on IIS < 8
 	// http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#page-17
 
-	PCSTR upgrade = pHttpContext->GetRequest()->GetHeader(HttpHeaderUpgrade, NULL);
-	ErrorIf(upgrade && 0 == strcmp("websocket", upgrade), ERROR_NOT_SUPPORTED);		
+	//PCSTR upgrade = pHttpContext->GetRequest()->GetHeader(HttpHeaderUpgrade, NULL);
+	//ErrorIf(upgrade && 0 == strcmp("websocket", upgrade), ERROR_NOT_SUPPORTED);		
 
 	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider, &ctx));
 
@@ -133,7 +152,18 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 {
 	if (NULL != pCompletionInfo && NULL != pHttpContext)
 	{
-		CNodeHttpStoredContext* ctx = (CNodeHttpStoredContext*)pHttpContext->GetModuleContextContainer()->GetModuleContext(this->applicationManager->GetModuleId());		
+		CNodeHttpStoredContext* ctx = (CNodeHttpStoredContext*)pHttpContext->GetModuleContextContainer()->GetModuleContext(this->applicationManager->GetModuleId());
+
+		if (ctx->GetIsUpgrade())
+		{
+			IHttpCompletionInfo2* pCompletionInfo2 = (IHttpCompletionInfo2*)pCompletionInfo;
+			if (1 == pCompletionInfo2->GetCompletedOperation()) 
+			{
+				// This is completion of the read request for incoming bytes of an opaque byte stream after 101 Switching protocol response was sent
+
+				ctx = ctx->GetUpgradeContext();
+			}
+		}
 
 		ctx->IncreasePendingAsyncOperationCount();
 

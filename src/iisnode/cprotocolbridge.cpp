@@ -816,7 +816,7 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 	DWORD bytesReceived = 0;
 	BOOL completionPending = FALSE;
 
-	if (0 < context->GetHttpContext()->GetRequest()->GetRemainingEntityBytes())
+	if (0 < context->GetHttpContext()->GetRequest()->GetRemainingEntityBytes() || context->GetIsUpgrade())
 	{
 		context->SetNextProcessor(CProtocolBridge::ReadRequestBodyCompleted);
 		
@@ -851,7 +851,11 @@ Error:
 		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
-		if (context->GetIsChunked() && !context->GetIsLastChunk())
+		if (context->GetIsUpgrade())
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(context, S_OK);
+		}
+		else if (context->GetIsChunked() && !context->GetIsLastChunk())
 		{
 			// send the terminating zero-length chunk
 
@@ -866,7 +870,15 @@ Error:
 	{
 		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode failed reading http request body", WINEVENT_LEVEL_ERROR, context->GetActivityId());
-		CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), HRESULT_FROM_WIN32(hr));
+
+		if (context->GetIsUpgrade()) 
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(context, HRESULT_FROM_WIN32(hr));
+		}
+		else
+		{
+			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), HRESULT_FROM_WIN32(hr));
+		}
 	}
 
 	return;
@@ -887,7 +899,11 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode detected the end of the http request body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
-		if (ctx->GetIsChunked() && !ctx->GetIsLastChunk()) 
+		if (ctx->GetIsUpgrade()) 
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK);
+		}
+		else if (ctx->GetIsChunked() && !ctx->GetIsLastChunk()) 
 		{
 			// send the zero-length last chunk to indicate the end of a chunked entity body
 
@@ -902,7 +918,15 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 	{
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode failed reading http request body", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
+
+		if (ctx->GetIsUpgrade())
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(ctx, error);
+		}
+		else
+		{
+			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
+		}
 	}
 }
 
@@ -1001,13 +1025,20 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 			// Node.exe has closed the named pipe. This means it does not expect any more request data, but it does not mean there is no response.
 			// This may happen even for POST requests if the node.js application does not register event handlers for the 'data' or 'end' request events.
 			// Ignore the write error and attempt to read the response instead (which might have been written by node.exe before the named pipe connection 
-			// was closed). 
+			// was closed). This may also happen for WebSocket traffic. 
 
 			etw->Log(L"iisnode detected the node.exe process closed the named pipe connection", 
 				WINEVENT_LEVEL_VERBOSE, 
 				&activityId);
 
-			CProtocolBridge::StartReadResponse(context);
+			if (context->GetIsUpgrade()) 
+			{
+				CProtocolBridge::FinalizeUpgradeResponse(context, S_OK);
+			}
+			else
+			{
+				CProtocolBridge::StartReadResponse(context);
+			}
 		}
 		else
 		{
@@ -1017,7 +1048,14 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 				WINEVENT_LEVEL_ERROR, 
 				&activityId);
 
-			CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+			if (context->GetIsUpgrade())
+			{
+				CProtocolBridge::FinalizeUpgradeResponse(context, hr);
+			}
+			else
+			{
+				CProtocolBridge::SendEmptyResponse(context, 500, _T("Internal Server Error"), hr);
+			}
 		}
 	}
 
@@ -1038,7 +1076,15 @@ void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTr
 	{
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode failed to send http request body chunk to the node.exe process", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
+
+		if (ctx->GetIsUpgrade())
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(ctx, error);
+		}
+		else
+		{
+			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), error);
+		}
 	}
 }
 
@@ -1230,7 +1276,14 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	}
 	else
 	{
-		if (ctx->GetCloseConnection())
+		if (ctx->GetIsUpgrade())
+		{
+			ctx->SetIsChunked(FALSE);
+			ctx->SetChunkLength(MAXLONGLONG);
+			ctx->SetIsLastChunk(TRUE);
+			ctx->SetNextProcessor(CProtocolBridge::ProcessUpgradeResponse);
+		}
+		else if (ctx->GetCloseConnection())
 		{
 			ctx->SetIsChunked(FALSE);
 			ctx->SetChunkLength(MAXLONGLONG);
@@ -1325,6 +1378,18 @@ Error:
 	return;
 }
 
+void CProtocolBridge::EnsureRequestPumpStarted(CNodeHttpStoredContext* context) 
+{
+	if (context->GetOpaqueFlagSet() && !context->GetRequestPumpStarted())
+	{
+		// Ensure that we start reading the request of an HTTP Upgraded request 
+		// only after the 101 Switching Protocols response had been sent. 
+
+		context->SetRequestPumpStarted();
+		CProtocolBridge::ReadRequestBody(context->GetUpgradeContext());
+	}
+}
+
 void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
 	HRESULT hr;
@@ -1412,13 +1477,26 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 	{
 		// finish request
 
-		CProtocolBridge::FinalizeResponse(ctx);
+		if (ctx->GetIsUpgrade())
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK);
+		}
+		else
+		{
+			CProtocolBridge::FinalizeResponse(ctx);
+		}
 	}
 
 	return;
 Error:
 
-	if (ERROR_BROKEN_PIPE == hr && ctx->GetCloseConnection())
+	if (ERROR_BROKEN_PIPE == hr && ctx->GetIsUpgrade())
+	{
+		// Termination of a connection indicates the end of the upgraded request 
+
+		CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK);
+	}
+	else if (ERROR_BROKEN_PIPE == hr && ctx->GetCloseConnection())
 	{
 		// Termination of a connection indicates the end of the response body if Connection: close response header was present
 
@@ -1428,7 +1506,15 @@ Error:
 	{
 		ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode failed to send http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+
+		if (ctx->GetIsUpgrade())
+		{
+			CProtocolBridge::FinalizeUpgradeResponse(ctx, hr);
+		}
+		else
+		{
+			CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+		}
 	}
 
 	return;
@@ -1442,7 +1528,11 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	BOOL completionExpected = FALSE;
 
 	CheckError(error);
-	ctx->SetChunkTransmitted(ctx->GetChunkTransmitted() + bytesTransfered);
+
+	if (!ctx->GetIsUpgrade())
+	{
+		ctx->SetChunkTransmitted(ctx->GetChunkTransmitted() + bytesTransfered);
+	}
 
 	if (ctx->GetIsLastChunk() && ctx->GetChunkLength() == ctx->GetChunkTransmitted())
 	{
@@ -1471,10 +1561,36 @@ Error:
 
 	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 		L"iisnode failed to flush http response body chunk", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+
+	if (ctx->GetIsUpgrade())
+	{
+		CProtocolBridge::FinalizeUpgradeResponse(ctx, hr);
+	}
+	else 
+	{
+		CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
+	}
 
 	return;
 }
+
+void WINAPI CProtocolBridge::ProcessUpgradeResponse(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+{
+	BOOL completionExpected;
+	DWORD bytesSent;
+	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
+
+	ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
+	ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+		L"iisnode initiated flushing http upgrade response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+	ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
+
+	if (!completionExpected)
+	{
+		CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped());
+	}
+}
+
 
 void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
@@ -1482,6 +1598,11 @@ void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD 
 	CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
 	CheckError(error);	
+
+	// Start reading the request bytes if the request was an accepted HTTP Upgrade
+	CProtocolBridge::EnsureRequestPumpStarted(ctx);
+
+	// Continue on to reading the response body
 	ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
 	CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
 
@@ -1493,6 +1614,33 @@ Error:
 	CProtocolBridge::SendEmptyResponse(ctx, 500, _T("Internal Server Error"), hr);
 	
 	return;
+}
+
+void CProtocolBridge::FinalizeUpgradeResponse(CNodeHttpStoredContext* context, HRESULT hresult)
+{
+	context->SetNextProcessor(NULL);
+	context->SetHresult(hresult);	
+
+	if (0 == context->DecreasePendingAsyncOperationCount())
+	{
+		context->GetNodeProcess()->OnRequestCompleted(context);
+
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode finished processing both directions of upgraded http request/response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
+
+		context->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);
+		CloseHandle(context->GetPipe());
+		context->SetPipe(INVALID_HANDLE_VALUE);
+		context->GetHttpContext()->GetResponse()->SetNeedDisconnect();
+		context->GetHttpContext()->PostCompletion(0);
+	}
+	else
+	{
+		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+			L"iisnode finished processing one direction of upgraded http request/response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
+
+		context->SetRequestNotificationStatus(RQ_NOTIFICATION_PENDING);
+	}
 }
 
 void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)

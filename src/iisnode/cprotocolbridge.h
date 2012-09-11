@@ -36,9 +36,14 @@ private:
 	static void WINAPI ProcessChunkHeader(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 	static void WINAPI ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 	static void WINAPI SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
+
+	static void WINAPI ProcessUpgradeResponse(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 	static void WINAPI ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 
+	static void EnsureRequestPumpStarted(CNodeHttpStoredContext* context);
+
 	static void FinalizeResponse(CNodeHttpStoredContext* context);
+	static void FinalizeUpgradeResponse(CNodeHttpStoredContext* context, HRESULT hresult);
 
 public:
 

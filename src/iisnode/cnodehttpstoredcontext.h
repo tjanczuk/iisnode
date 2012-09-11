@@ -32,6 +32,10 @@ private:
 	BOOL isConnectionFromPool;
 	BOOL expectResponseBody;
 	BOOL closeConnection;
+	BOOL isUpgrade;
+	CNodeHttpStoredContext* upgradeContext;
+	BOOL opaqueFlagSet;
+	BOOL requestPumpStarted;
 
 public:
 
@@ -91,6 +95,13 @@ public:
 	BOOL GetExpectResponseBody();
 	void SetCloseConnection(BOOL close);
 	BOOL GetCloseConnection();
+	HRESULT SetupUpgrade();
+	BOOL GetIsUpgrade();
+	CNodeHttpStoredContext* GetUpgradeContext(); 
+	void SetOpaqueFlag();
+	BOOL GetOpaqueFlagSet();
+	void SetRequestPumpStarted();
+	BOOL GetRequestPumpStarted();
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

@@ -5,7 +5,7 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	chunkLength(0), chunkTransmitted(0), isChunked(FALSE), pipe(INVALID_HANDLE_VALUE), result(S_OK), isLastChunk(FALSE),
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
 	targetUrl(NULL), targetUrlLength(0), childContext(NULL), isConnectionFromPool(FALSE), expectResponseBody(TRUE),
-	closeConnection(FALSE)
+	closeConnection(FALSE), isUpgrade(FALSE), upgradeContext(NULL), opaqueFlagSet(FALSE), requestPumpStarted(FALSE)
 {
 	IHttpTraceContext* tctx;
 	LPCGUID pguid;
@@ -25,7 +25,12 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 
 CNodeHttpStoredContext::~CNodeHttpStoredContext()
 {
-	if (INVALID_HANDLE_VALUE != this->pipe)
+	if (NULL != this->upgradeContext)
+	{
+		delete this->upgradeContext;
+		this->upgradeContext = NULL;
+	}
+	else if (INVALID_HANDLE_VALUE != this->pipe)
 	{
 		CloseHandle(this->pipe);
 		this->pipe = INVALID_HANDLE_VALUE;
@@ -243,12 +248,26 @@ GUID* CNodeHttpStoredContext::GetActivityId()
 
 long CNodeHttpStoredContext::IncreasePendingAsyncOperationCount()
 {
-	return InterlockedIncrement(&this->pendingAsyncOperationCount);
+	if (this->requestPumpStarted)
+	{
+		return InterlockedIncrement(&this->upgradeContext->pendingAsyncOperationCount);
+	}
+	else
+	{
+		return InterlockedIncrement(&this->pendingAsyncOperationCount);
+	}
 }
 
 long CNodeHttpStoredContext::DecreasePendingAsyncOperationCount()
 {
-	return InterlockedDecrement(&this->pendingAsyncOperationCount);
+	if (this->requestPumpStarted)
+	{
+		return InterlockedDecrement(&this->upgradeContext->pendingAsyncOperationCount);
+	}
+	else
+	{
+		return InterlockedDecrement(&this->pendingAsyncOperationCount);
+	}
 }
 
 PCSTR CNodeHttpStoredContext::GetTargetUrl()
@@ -305,4 +324,77 @@ void CNodeHttpStoredContext::SetCloseConnection(BOOL close)
 BOOL CNodeHttpStoredContext::GetCloseConnection()
 {
 	return this->closeConnection;
+}
+
+HRESULT CNodeHttpStoredContext::SetupUpgrade()
+{
+	HRESULT hr;
+
+	ErrorIf(this->isUpgrade, E_FAIL);
+
+	// The upgradeContext is used to pump incoming bytes to the node.js application. 
+	// The 'this' context is used to pump outgoing bytes to IIS. Once the response headers are flushed,
+	// both contexts are used concurrently in a full duplex, asynchronous fashion. 
+	// The last context to complete pumping closes the IIS request. 
+
+	ErrorIf(NULL == (this->upgradeContext = new CNodeHttpStoredContext(this->GetNodeApplication(), this->GetHttpContext())), 
+		ERROR_NOT_ENOUGH_MEMORY);	
+	this->upgradeContext->bufferSize = CModuleConfiguration::GetInitialRequestBufferSize(this->context);
+	ErrorIf(NULL == (this->upgradeContext->buffer = this->context->AllocateRequestMemory(this->upgradeContext->bufferSize)),
+		ERROR_NOT_ENOUGH_MEMORY);	
+
+	// Enable duplex read/write of data 
+
+	IHttpContext3* ctx3 = (IHttpContext3*)this->GetHttpContext();
+	ctx3->EnableFullDuplex();
+
+	// Disable caching and buffering
+
+	ctx3->GetResponse()->DisableBuffering();
+	ctx3->GetResponse()->DisableKernelCache();
+
+	this->upgradeContext->SetPipe(this->GetPipe());
+	this->upgradeContext->SetNodeProcess(this->GetNodeProcess());
+	this->upgradeContext->isUpgrade = TRUE;
+	this->isUpgrade = TRUE;
+
+	return S_OK;
+
+Error:
+
+	return hr;
+}
+
+BOOL CNodeHttpStoredContext::GetIsUpgrade()
+{
+	return this->isUpgrade;
+}
+
+CNodeHttpStoredContext* CNodeHttpStoredContext::GetUpgradeContext() 
+{
+	return this->upgradeContext;
+}
+
+void CNodeHttpStoredContext::SetOpaqueFlag()
+{
+	this->opaqueFlagSet = TRUE;
+}
+
+BOOL CNodeHttpStoredContext::GetOpaqueFlagSet()
+{
+	return this->opaqueFlagSet;
+}
+
+void CNodeHttpStoredContext::SetRequestPumpStarted()
+{
+	// The pending async operation count for the pair of CNodeHttpStoredContexts will be maintained in the upgradeContext instance from now on.
+	// The +1 represents the creation of the upgradeContext and the corresponding decrease happens when the pumping of incoming bytes completes.
+	this->upgradeContext->pendingAsyncOperationCount = this->pendingAsyncOperationCount + 1;
+	this->pendingAsyncOperationCount = 0;
+	this->requestPumpStarted = TRUE;
+}
+
+BOOL CNodeHttpStoredContext::GetRequestPumpStarted() 
+{
+	return this->requestPumpStarted;
 }

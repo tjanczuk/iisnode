@@ -304,7 +304,11 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	// Determine whether to expect response entity body
 	// http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
 
-	if (statusCode >= 100 && statusCode < 200
+	if (statusCode == 101) 
+	{
+		CheckError(context->SetupUpgrade());
+	}
+	else if (statusCode >= 100 && statusCode < 200
 		|| statusCode == 204
 		|| statusCode == 304)
 	{
@@ -326,7 +330,6 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 	data[newOffset] = 0; // zero-terminate the reason phrase to reuse it without copying
 
 	IHttpResponse* response = context->GetHttpContext()->GetResponse();
-	//response->Clear();
 	response->SetStatus(statusCode, data + offset, subStatusCode);
 	
 	// adjust buffers
@@ -460,6 +463,7 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 	DWORD offset = 0;	
 	DWORD nameEndOffset, valueEndOffset;
 	IHttpResponse* response = context->GetHttpContext()->GetResponse();
+	BOOL needConnectionHeaderFixup = FALSE;
 
 	while (offset < (dataSize - 1) && data[offset] != 0x0D)
 	{
@@ -486,8 +490,10 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 		
 		data[nameEndOffset] = 0; // zero-terminate name to reuse without copying		
 
-		// skip the connection header because it relates to the iisnode <-> node.exe communication over named pipes 
-		if (0 != strcmpi("Connection", data + offset))
+		// Skip the Connection header because it relates to the iisnode <-> node.exe communication over named pipes,
+		// unless this is a 101 response to HTTP Upgrade request, in which case this is used to inform HTTP.SYS to keep the
+		// connection open.
+		if (context->GetIsUpgrade() || 0 != strcmpi("Connection", data + offset))
 		{
 			data[valueEndOffset] = 0; // zero-terminate header value because this is what IHttpResponse::SetHeader expects
 
@@ -498,7 +504,20 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 			while (*(data + nameEndOffset) == ' ') // data is already zero-terminated, so this loop has sentinel value
 				nameEndOffset++;
 
-			CheckError(response->SetHeader(data + offset, data + nameEndOffset, valueEndOffset - nameEndOffset, FALSE));
+			if (context->GetIsUpgrade() && 0 == strcmpi("Connection", data + offset))
+			{
+				// Add the Connection header under a custom name to force it to be added to unknown headers collection.
+				// Header name will subsequently be fixed up back to Connection. 
+				// The end result is that the Connection header ends up in the unknown headers collection rather then
+				// known headers collection where it would get ignored by http.sys.
+				
+				CheckError(response->SetHeader("x-iisnode-connection", data + nameEndOffset, valueEndOffset - nameEndOffset, FALSE));
+				needConnectionHeaderFixup = TRUE;
+			}
+			else
+			{
+				CheckError(response->SetHeader(data + offset, data + nameEndOffset, valueEndOffset - nameEndOffset, FALSE));
+			}
 		}
 		else if ((valueEndOffset - nameEndOffset) >= 5 && 0 == memcmp((void*)(data + valueEndOffset - 5), "close", 5))
 		{
@@ -510,10 +529,26 @@ HRESULT CHttpProtocol::ParseResponseHeaders(CNodeHttpStoredContext* context)
 		context->SetParsingOffset(context->GetParsingOffset() + valueEndOffset - offset + 2);
 		offset = valueEndOffset + 2;
 	}
+
 	ErrorIf(offset >= dataSize - 1, ERROR_MORE_DATA);
 	ErrorIf(0x0A != data[offset + 1], ERROR_BAD_FORMAT);
 
 	context->SetParsingOffset(context->GetParsingOffset() + 2);
+
+	if (needConnectionHeaderFixup)
+	{
+		HTTP_RESPONSE* rawResponse = response->GetRawHttpResponse();
+		for (int i = 0; i < response->GetRawHttpResponse()->Headers.UnknownHeaderCount; i++)
+		{
+			if (20 == rawResponse->Headers.pUnknownHeaders[i].NameLength 
+				&& 0 == _strnicmp("x-iisnode-connection", rawResponse->Headers.pUnknownHeaders[i].pName, 20))
+			{
+				rawResponse->Headers.pUnknownHeaders[i].NameLength = 10;
+				rawResponse->Headers.pUnknownHeaders[i].pName = "Connection";
+				break;
+			}
+		}
+	}
 
 	return S_OK;
 Error:
