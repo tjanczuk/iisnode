@@ -147,6 +147,9 @@
     <Filter Include="Tests\functional\www\126_node_config_syntax">
       <UniqueIdentifier>{11747cf2-9384-4591-992e-4bc85c6fe7c8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\130_websocket_onetwothree">
+      <UniqueIdentifier>{3ed37931-60f3-4898-98ac-01d5b0b19b07}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -671,6 +674,15 @@
     </None>
     <None Include="..\config\iisnode_dev_x86_on_x86.xml">
       <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\130_websocket_onetwothree\server.js">
+      <Filter>Tests\functional\www\130_websocket_onetwothree</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\130_websocket_onetwothree\web.config">
+      <Filter>Tests\functional\www\130_websocket_onetwothree</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\130_websocket_onetwothree.js">
+      <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

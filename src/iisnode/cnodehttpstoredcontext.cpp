@@ -97,6 +97,10 @@ HANDLE CNodeHttpStoredContext::GetPipe()
 void CNodeHttpStoredContext::SetPipe(HANDLE pipe)
 {
 	this->pipe = pipe;
+	if (NULL != this->upgradeContext)
+	{
+		this->upgradeContext->SetPipe(pipe);
+	}
 }
 
 DWORD CNodeHttpStoredContext::GetConnectionRetryCount()
