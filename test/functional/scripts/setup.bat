@@ -58,6 +58,12 @@ if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 183 (
 	exit /b -1
 )
 
+%appcmd% add app /site.name:%site% /path:/131_websocket_echo /physicalPath:"%www%\131_websocket_echo" /applicationPool:%apppool% >> %log%
+if %ERRORLEVEL% neq 0 if %ERRORLEVEL% neq 183 (
+	echo FAILED. Cannot add app 131_websocket_echo to site %site%.
+	exit /b -1
+)
+
 set RETRY=0
 
 :retry
