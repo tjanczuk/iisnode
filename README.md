@@ -38,7 +38,7 @@ Hosting node.js applications in IIS on Windows
 
 [the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)  
 [the basics (Pусский перевод)](http://softdroid.net/hosting-nodejs-applications-ru)  
-websockets - coming up!
+websockets - coming up!  
 [using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)  
 [using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)  
 [using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)  
@@ -60,14 +60,16 @@ websockets - coming up!
 
 **Building**
 
-For 32 bit Windows: 
+Build commands should be issued from the build environment set up with `"%programfiles(x86)\Microsoft Visual Studio 11.0\Common7\Tools\VsDevCmd.bat"`, assuming default installation location of Visual Studio 2012 on x64 platform.
+
+For x86 build: 
 
 ```
 set VisualStudioVersion=11.0
 msbuild /p:Platform=Win32 src\iisnode\iisnode.sln
 ```
 
-For 64 bit Windows: 
+For x64 build: 
 
 ```
 set VisualStudioVersion=11.0
