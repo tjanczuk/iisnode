@@ -35,18 +35,12 @@
       </DirectorySearch>
     </Property>
 
-    <!-- http://blogs.msdn.com/b/astebner/archive/2010/05/05/10008146.aspx -->
-
-    <Property Id="VCREDIST2010INSTALLED">
-      <RegistrySearch Id="VCRedist2010Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{196BB40D-1578-3D01-B289-BEFC77A11A1E}" Name="InstallDate" Type="raw" />
-    </Property>
-    
-    <Property Id="VCREDIST2010SP1INSTALLED">
-      <RegistrySearch Id="VCRedist2010SP1Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{F0C3E5D1-1ADE-321E-8167-68EF0DE699A5}" Name="InstallDate" Type="raw" />
+    <Property Id="VCREDIST2012INSTALLED">
+      <RegistrySearch Id="VCRedist2012Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{22154f09-719a-4619-bb71-5b3356999fbf}" Name="Installed" Type="raw" />
     </Property>
 
-    <Condition Message="Microsoft Visual C++ 2010 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[INstalled OR VCREDIST2010INSTALLED OR VCREDIST2010SP1INSTALLED]]>
+    <Condition Message="Microsoft Visual C++ 2012 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
+      <![CDATA[Installed OR VCREDIST2012INSTALLED]]>
     </Condition>
 
     <Condition Message="Setting the ALLUSERS property is not allowed because iisnode for iis express 7.x is a per-user application.">

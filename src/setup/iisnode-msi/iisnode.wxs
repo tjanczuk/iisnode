@@ -54,33 +54,23 @@
       </DirectorySearch>
     </Property>
 
-    <!-- http://blogs.msdn.com/b/astebner/archive/2010/05/05/10008146.aspx -->
-
-    <Property Id="VCREDIST2010INSTALLED">
+    <Property Id="VCREDIST2012INSTALLED">
       <?if $(var.isWin64) = "yes"?>
-      <RegistrySearch Id="VCRedist2010Search64" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{DA5E371C-6333-3D8A-93A4-6FD5B20BCC6E}" Name="InstallDate" Type="raw" />
+      <RegistrySearch Id="VCRedist2012Search64" Root="HKLM" Key="Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{15134cb0-b767-4960-a911-f2d16ae54797}" Name="Installed" Type="raw" />
       <?else?>
-      <RegistrySearch Id="VCRedist2010Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{196BB40D-1578-3D01-B289-BEFC77A11A1E}" Name="InstallDate" Type="raw" />
-      <?endif?>
-    </Property>
-
-    <Property Id="VCREDIST2010SP1INSTALLED">
-      <?if $(var.isWin64) = "yes"?>
-      <RegistrySearch Id="VCRedist2010SP1Search64" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{1D8E6291-B0D5-35EC-8441-6616F567A0F7}" Name="InstallDate" Type="raw" />
-      <?else?>
-      <RegistrySearch Id="VCRedist2010SP1Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{F0C3E5D1-1ADE-321E-8167-68EF0DE699A5}" Name="InstallDate" Type="raw" />
+      <RegistrySearch Id="VCRedist2012Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{22154f09-719a-4619-bb71-5b3356999fbf}" Name="Installed" Type="raw" />
       <?endif?>
     </Property>
     
     <PropertyRef Id="IISMAJORVERSION" />
 
     <?if $(var.isWin64) = "yes"?>
-    <Condition Message="Microsoft Visual C++ 2010 Redistributable Package (x64) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[INstalled OR VCREDIST2010INSTALLED OR VCREDIST2010SP1INSTALLED]]>
+    <Condition Message="Microsoft Visual C++ 2012 Redistributable Package (x64) is required but not installed. Please install it then rerun this installer.">
+      <![CDATA[INstalled OR VCREDIST2012INSTALLED]]>
     </Condition>
     <?else?>
-    <Condition Message="Microsoft Visual C++ 2010 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[INstalled OR VCREDIST2010INSTALLED OR VCREDIST2010SP1INSTALLED]]>
+    <Condition Message="Microsoft Visual C++ 2012 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
+      <![CDATA[INstalled OR VCREDIST2012INSTALLED]]>
     </Condition>
     <?endif?>
 
