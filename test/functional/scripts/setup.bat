@@ -5,7 +5,6 @@ set apppool=iisnodetest
 set site=iisnodetest
 set port=31415
 set node="%programfiles%\nodejs\node.exe"
-if "%PROCESSOR_ARCHITECTURE%" neq "x86" set node="%programfiles(x86)%\nodejs\node.exe"
 set www=
 for /F %%I in ('dir /b /s %~dp0..\test.bat') do set www=%%~dI%%~pIwww
 if "%log%" equ "" set log="%~dp0log.out"
