@@ -108,6 +108,11 @@ http://foo.com/bar/baz.js/debug
 
 debuggerPathSegment: debug
 
+# debugHeaderEnabled - boolean indicating whether iisnode should attach the iisnode-debug HTTP response header with 
+# diagnostics information to all responses
+
+debugHeaderEnabled: false
+
 # maxLogFileSizeInKB - maximum size of a single log file in KB; once a log file exceeds this limit a new log file is created
 
 maxLogFileSizeInKB: 128

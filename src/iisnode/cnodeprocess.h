@@ -34,6 +34,8 @@ public:
 
 	HRESULT Initialize(IHttpContext* context);
 	CNodeProcessManager* GetProcessManager();
+	HANDLE GetProcess();
+	DWORD GetPID();
 	LPCTSTR GetNamedPipeName();
 	CConnectionPool* GetConnectionPool();
 	HRESULT AcceptRequest(CNodeHttpStoredContext* context);
@@ -41,6 +43,7 @@ public:
 	void SignalWhenDrained(HANDLE handle);
 	char* TryGetLog(IHttpContext* context, DWORD* size);
 	BOOL HasProcessExited();
+	DWORD GetActiveRequestCount();
 };
 
 #endif

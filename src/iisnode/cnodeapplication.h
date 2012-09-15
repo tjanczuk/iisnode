@@ -37,6 +37,8 @@ public:
 	NodeDebugCommand GetDebugCommand();
 	HRESULT Recycle();
 	DWORD GetDebugPort();
+	DWORD GetActiveRequestCount();
+	DWORD GetProcessCount();
 };
 
 #endif

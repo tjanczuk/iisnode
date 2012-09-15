@@ -10,7 +10,7 @@ CModuleConfiguration::CModuleConfiguration()
 	: nodeProcessCommandLine(NULL), logDirectory(NULL), debuggerPathSegment(NULL), 
 	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
 	enableXFF(FALSE), promoteServerVars(NULL), promoteServerVarsRaw(NULL), configOverridesFileName(NULL),
-	configOverrides(NULL), interceptor(NULL)
+	configOverrides(NULL), interceptor(NULL), debugHeaderEnabled(FALSE)
 {
 	InitializeSRWLock(&this->srwlock);
 }
@@ -659,6 +659,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	{
 		CheckError(GetBOOL(valueStart, &config->debuggingEnabled));
 	}
+	else if (0 == strcmpi(keyStart, "debugHeaderEnabled"))
+	{
+		CheckError(GetBOOL(valueStart, &config->debugHeaderEnabled));
+	}
 	else if (0 == strcmpi(keyStart, "enableXFF"))
 	{
 		CheckError(GetBOOL(valueStart, &config->enableXFF));
@@ -1199,6 +1203,12 @@ BOOL CModuleConfiguration::GetDebuggingEnabled(IHttpContext* ctx)
 {
 	GETCONFIG(debuggingEnabled)
 }
+
+BOOL CModuleConfiguration::GetDebugHeaderEnabled(IHttpContext* ctx)
+{
+	GETCONFIG(debugHeaderEnabled)
+}
+
 
 LPWSTR CModuleConfiguration::GetNodeEnv(IHttpContext* ctx)
 {

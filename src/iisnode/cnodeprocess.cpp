@@ -332,6 +332,21 @@ CNodeProcessManager* CNodeProcess::GetProcessManager()
 	return this->processManager;
 }
 
+HANDLE CNodeProcess::GetProcess()
+{
+	return this->process;
+}
+
+DWORD CNodeProcess::GetPID()
+{
+	return this->pid;
+}
+
+DWORD CNodeProcess::GetActiveRequestCount()
+{
+	return this->activeRequestPool.GetRequestCount();
+}
+
 HRESULT CNodeProcess::AcceptRequest(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;

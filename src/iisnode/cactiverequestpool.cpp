@@ -11,6 +11,11 @@ CActiveRequestPool::~CActiveRequestPool()
 	DeleteCriticalSection(&this->syncRoot);
 }
 
+DWORD CActiveRequestPool::GetRequestCount()
+{
+	return this->requestCount;
+}
+
 HRESULT CActiveRequestPool::Add(CNodeHttpStoredContext* context)
 {
 	HRESULT hr;

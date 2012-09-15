@@ -36,6 +36,7 @@ private:
 	CNodeHttpStoredContext* upgradeContext;
 	BOOL opaqueFlagSet;
 	BOOL requestPumpStarted;
+	FILETIME startTime;
 
 public:
 
@@ -102,6 +103,7 @@ public:
 	BOOL GetOpaqueFlagSet();
 	void SetRequestPumpStarted();
 	BOOL GetRequestPumpStarted();
+	FILETIME* GetStartTime();
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

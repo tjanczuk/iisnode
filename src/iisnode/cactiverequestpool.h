@@ -19,6 +19,7 @@ public:
 	HRESULT Add(CNodeHttpStoredContext* context);
 	HRESULT Remove();
 	void SignalWhenDrained(HANDLE drainHandle);
+	DWORD GetRequestCount();
 };
 
 #endif

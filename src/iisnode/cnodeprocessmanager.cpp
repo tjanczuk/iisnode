@@ -390,3 +390,24 @@ CNodeEventProvider* CNodeProcessManager::GetEventProvider()
 {
 	return this->eventProvider;
 }
+
+DWORD CNodeProcessManager::GetActiveRequestCount()
+{
+	DWORD result = 0;
+
+	ENTER_SRW_SHARED(this->srwlock)
+
+	for (DWORD i = 0; i < this->processCount; i++)
+	{
+		result += this->processes[i]->GetActiveRequestCount();
+	}
+
+	LEAVE_SRW_SHARED(this->srwlock)
+
+	return result;
+}
+
+DWORD CNodeProcessManager::GetProcessCount()
+{
+	return this->processCount;
+}

@@ -136,3 +136,13 @@ DWORD CNodeApplication::GetDebugPort()
 {
 	return this->debugPort;
 }
+
+DWORD CNodeApplication::GetActiveRequestCount()
+{
+	return this->processManager->GetActiveRequestCount();
+}
+
+DWORD CNodeApplication::GetProcessCount()
+{
+	return this->processManager->GetProcessCount();
+}

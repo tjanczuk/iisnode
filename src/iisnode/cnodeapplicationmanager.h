@@ -36,6 +36,7 @@ private:
 	BOOL initialized;
 	DWORD currentDebugPort;
 	HMODULE inspector;
+	LONG totalRequests;
 
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
 	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);	
@@ -70,6 +71,7 @@ public:
 	HRESULT Initialize(IHttpContext* context);
 	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
 	HRESULT RecycleApplication(CNodeApplication* app);
+	LONG GetTotalRequests();
 };
 
 #endif

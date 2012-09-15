@@ -402,3 +402,8 @@ BOOL CNodeHttpStoredContext::GetRequestPumpStarted()
 {
 	return this->requestPumpStarted;
 }
+
+FILETIME* CNodeHttpStoredContext::GetStartTime()
+{
+	return &this->startTime;
+}

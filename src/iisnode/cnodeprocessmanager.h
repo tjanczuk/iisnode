@@ -46,6 +46,8 @@ public:
 	CNodeEventProvider* GetEventProvider();
 	long AddRef();
 	long DecRef();
+	DWORD GetActiveRequestCount();
+	DWORD GetProcessCount();
 };
 
 #endif

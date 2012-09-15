@@ -678,6 +678,10 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 	DWORD length;
 	IHttpRequest *request;
 
+	// set the start time of the request
+
+	GetSystemTimeAsFileTime(context->GetStartTime());
+
 	// capture ETW provider since after a successful call to WriteFile the context may be asynchronously deleted
 
 	CNodeEventProvider* etw = context->GetNodeApplication()->GetApplicationManager()->GetEventProvider();
@@ -1253,6 +1257,118 @@ Error:
 	return;
 }
 
+HRESULT CProtocolBridge::AddDebugHeader(CNodeHttpStoredContext* context)
+{
+	HRESULT hr;
+	char* header;
+	char buffer[256];
+
+	ErrorIf(NULL == (header = (char*)context->GetHttpContext()->AllocateRequestMemory(512)), ERROR_NOT_ENOUGH_MEMORY);
+	*header = 0;
+
+	// iisnode version
+
+	strcat(header, "http://bit.ly/NsU2nd#iisnode_ver=");
+	strcat(header, IISNODE_VERSION);
+
+	// node process command line
+
+	WCHAR* npcl = CModuleConfiguration::GetNodeProcessCommandLine(context->GetHttpContext());	
+    size_t npcl_length = wcslen(npcl) + 1;
+	char* npcl_c;
+	ErrorIf(NULL == (npcl_c = (char*)context->GetHttpContext()->AllocateRequestMemory(npcl_length)), ERROR_NOT_ENOUGH_MEMORY);
+    size_t converted;
+    wcstombs_s(&converted, 	npcl_c, npcl_length, npcl, _TRUNCATE);
+	strcat(header, "&node=");
+	strcat(header, npcl_c);
+
+	// dns name
+
+	DWORD length = sizeof buffer;
+	if (GetComputerNameEx(ComputerNameDnsFullyQualified, buffer, &length))
+	{
+		strcat(header, "&dns=");
+		strcat(header, buffer);
+	}
+
+	// worker PID
+
+	sprintf(buffer, "&worker_pid=%d", GetCurrentProcessId());
+	strcat(header, buffer);
+
+	// node PID
+
+	sprintf(buffer, "&node_pid=%d", context->GetNodeProcess()->GetPID());
+	strcat(header, buffer);
+
+	// worker working set and private bytes
+
+	PROCESS_MEMORY_COUNTERS_EX memory;
+	ErrorIf(!GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&memory, sizeof memory), GetLastError());
+	sprintf(buffer, "&worker_mem_ws=%u&worker_mem_pagefile=%u", memory.WorkingSetSize / 1024, memory.PagefileUsage / 1024);
+	strcat(header, buffer);
+
+	// node working set and private bytes
+
+	ErrorIf(!GetProcessMemoryInfo(context->GetNodeProcess()->GetProcess(), (PROCESS_MEMORY_COUNTERS*)&memory, sizeof memory), GetLastError());
+	sprintf(buffer, "&node_mem_ws=%u&node_mem_pagefile=%u", memory.WorkingSetSize / 1024, memory.PagefileUsage / 1024);
+	strcat(header, buffer);
+
+	// number of processes
+
+	sprintf(buffer, "&app_processes=%d", context->GetNodeApplication()->GetProcessCount());
+	strcat(header, buffer);
+
+	// process active requests
+
+	sprintf(buffer, "&process_active_req=%d", context->GetNodeProcess()->GetActiveRequestCount());
+	strcat(header, buffer);
+
+	// application active requests
+
+	sprintf(buffer, "&app_active_req=%d", context->GetNodeApplication()->GetActiveRequestCount());
+	strcat(header, buffer);
+
+	// worker total requests
+
+	sprintf(buffer, "&worker_total_req=%d", context->GetNodeApplication()->GetApplicationManager()->GetTotalRequests());
+	strcat(header, buffer);
+
+	// named pipe reconnect attempts
+
+	sprintf(buffer, "&np_retry=%d", context->GetConnectionRetryCount());
+	strcat(header, buffer);
+
+	// request time
+
+	FILETIME endTime;
+	GetSystemTimeAsFileTime(&endTime);
+	ULARGE_INTEGER start, end;
+	start.HighPart = context->GetStartTime()->dwHighDateTime;
+	start.LowPart = context->GetStartTime()->dwLowDateTime;
+	end.HighPart = endTime.dwHighDateTime;
+	end.LowPart = endTime.dwLowDateTime;
+	end.QuadPart -= start.QuadPart;
+	end.QuadPart /= 10000; // convert to milliseconds
+	sprintf(buffer, "&req_time=%u", end.LowPart);
+	strcat(header, buffer);
+
+	// hresult
+
+	sprintf(buffer, "&hresult=%d", context->GetHresult());
+	strcat(header, buffer);
+
+	// add header
+
+	CheckError(context->GetHttpContext()->GetResponse()->SetHeader("iisnode-debug", header, strlen(header), TRUE));
+
+	return S_OK;
+
+Error:
+
+	return hr;
+}
+
 void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
 {
 	HRESULT hr;
@@ -1266,6 +1382,11 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
 	CheckError(error);
 	ctx->SetDataSize(ctx->GetDataSize() + bytesTransfered);
 	CheckError(CHttpProtocol::ParseResponseHeaders(ctx));
+
+	if (CModuleConfiguration::GetDebugHeaderEnabled(ctx->GetHttpContext()))
+	{
+		CheckError(CProtocolBridge::AddDebugHeader(ctx));
+	}
 
 	if (!ctx->GetExpectResponseBody())
 	{

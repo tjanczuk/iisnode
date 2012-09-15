@@ -26,6 +26,7 @@ private:
 	DWORD maxLogFiles;
 	BOOL loggingEnabled;
 	BOOL debuggingEnabled;
+	BOOL debugHeaderEnabled;
 	LPWSTR debugPortRange;
 	DWORD debugPortStart;
 	DWORD debugPortEnd;
@@ -87,6 +88,7 @@ public:
 	static DWORD GetMaxLogFiles(IHttpContext* ctx);
 	static BOOL GetLoggingEnabled(IHttpContext* ctx);
 	static BOOL GetDebuggingEnabled(IHttpContext* ctx);
+	static BOOL GetDebugHeaderEnabled(IHttpContext* ctx);
 	static HRESULT GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end);
 	static LPWSTR GetNodeEnv(IHttpContext* ctx);
 	static BOOL GetDevErrorsEnabled(IHttpContext* ctx);

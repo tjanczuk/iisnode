@@ -3,7 +3,7 @@
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
     : server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
     breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL),
-    currentDebugPort(0), inspector(NULL)
+    currentDebugPort(0), inspector(NULL), totalRequests(0)
 {
     InitializeSRWLock(&this->srwlock);
 }
@@ -30,6 +30,11 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
     }
 
     return hr;
+}
+
+LONG CNodeApplicationManager::GetTotalRequests()
+{
+	return this->totalRequests;
 }
 
 HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
@@ -176,6 +181,8 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 
     CheckNull(ctx);
     *ctx = NULL;
+
+	InterlockedIncrement(&this->totalRequests);
 
     CheckError(CNodeDebugger::GetDebugCommand(context, this->GetEventProvider(), &debugCommand));
 
