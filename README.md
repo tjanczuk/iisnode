@@ -65,14 +65,12 @@ Build commands should be issued from the build environment set up with `"%progra
 For x86 build: 
 
 ```
-set VisualStudioVersion=11.0
 msbuild /p:Platform=Win32 src\iisnode\iisnode.sln
 ```
 
 For x64 build: 
 
 ```
-set VisualStudioVersion=11.0
 msbuild /p:Platform=x64 src\iisnode\iisnode.sln
 ```
 
