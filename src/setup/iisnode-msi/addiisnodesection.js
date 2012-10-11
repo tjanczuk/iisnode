@@ -15,5 +15,18 @@ function main() {
         // nothing to remove
     }
     var iisnode = systemWebServer.Sections.AddSection("iisnode");
+
+    var webSocketSection;
+    try {
+        webSocketSection = systemWebServer.Sections.Item("webSocket");
+    }
+    catch (e) {
+        // the section may not exist if we are on IIS 7
+    }
+
+    if (webSocketSection) {
+        webSocketSection.overrideModeDefault = 'Allow';
+    }
+
     ahwrite.CommitChanges();
 }
