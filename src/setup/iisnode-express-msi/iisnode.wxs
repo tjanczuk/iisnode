@@ -23,18 +23,6 @@
 
     <Property Id="ALLUSERS" Secure="yes"/>
     
-    <Property Id="NODEEXE32">
-      <DirectorySearch Id="NodeDir32" Path="[ProgramFilesFolder]nodejs">
-        <FileSearch Name="node.exe" />
-      </DirectorySearch>
-    </Property>
-
-    <Property Id="NODEEXE64">
-      <DirectorySearch Id="NodeDir64" Path="[ProgramFiles64Folder]nodejs">
-        <FileSearch Name="node.exe" />
-      </DirectorySearch>
-    </Property>
-
     <Property Id="APPCMDEXE">
       <DirectorySearch Id="IISExpressDir" Path="[ProgramFilesFolder]IIS Express">
         <FileSearch Name="appcmd.exe" />
@@ -55,14 +43,6 @@
     
     <Condition Message="IIS Express 7.x or later must be installed before iisnode for IIS Express 7.x installation.">
       <![CDATA[Installed or APPCMDEXE]]>
-    </Condition>
-
-    <Condition Message="Node.js x64 is not found in the [ProgramFiles64Folder]\nodejs folder. Please install node.js x64 and restart this installer.">
-      <![CDATA[VersionNT64 and (Installed OR NODEEXE64)]]>
-    </Condition>
-
-    <Condition Message="Node.js x86 is not found in the [ProgramFilesFolder]\nodejs folder. Please install node.js x86 and restart this installer.">
-      <![CDATA[NOT(VersionNT64) and (Installed OR NODEEXE32)]]>
     </Condition>
     
     <PropertyRef Id="WIX_DIR_COMMON_DOCUMENTS"/>

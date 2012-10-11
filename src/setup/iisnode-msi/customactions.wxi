@@ -106,21 +106,5 @@
                   Impersonate="no"/>
     <?endif?>
 
-    <?if $(var.isWin64) = "yes" ?>
-    <CustomAction Id="AddPermissionsToNodeExeForDefaultIISUser"
-                  ExeCommand="[System64Folder]icacls.exe &quot;[NODEEXE64]&quot; /grant IIS_IUSRS:rx"
-                  Directory="TARGETDIR"
-                  Execute="deferred"
-                  Return="check"
-                  Impersonate="no"/>
-    <?else?>
-    <CustomAction Id="AddPermissionsToNodeExeForDefaultIISUser"
-                  ExeCommand="[SystemFolder]icacls.exe &quot;[NODEEXE32]&quot; /grant IIS_IUSRS:rx"
-                  Directory="TARGETDIR"
-                  Execute="deferred"
-                  Return="check"
-                  Impersonate="no"/>
-    <?endif?>
-    
   </Fragment>
 </Include>
