@@ -151,7 +151,7 @@
         var currentLogCreated;
 
         var rolloverLog = function () {
-            var now = Date.now();
+            var now = new Date().getTime();
             var filename = process.env.COMPUTERNAME + '-' + process.pid + '-' + type + '-' + now + '.txt';
             currentLog = path.resolve(logDir, filename);
             currentSize = 0;
