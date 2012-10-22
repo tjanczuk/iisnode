@@ -1,0 +1,125 @@
+<html>
+<head>
+    <title>130_websocket_chat</title>
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+</head>
+<body>
+    <h1>130_websocket_chat</h1>
+    <table>
+        <tr>
+            <td>Running time:</td>
+            <td id="time">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Messages sent:</td>
+            <td id="sent">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Messages received:</td>
+            <td id="received">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Websockets created:</td>
+            <td id="wscount">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Websocket errors:</td>
+            <td id="errors">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Distinct node.exe PIDs:</td>
+            <td id="pids">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Last RSS of node.exe:</td>
+            <td id="rss">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Last heap total of node.exe:</td>
+            <td id="heaptotal">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Last heap used of node.exe:</td>
+            <td id="heapused">&nbsp;</td>
+        </tr>
+    </table>
+    <script>
+        var start = new Date().getTime();
+        var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+        var address = protocol + window.location.host + window.location.pathname + '/server.js';
+        var errors = 0;
+        var wscount = 0;
+        var sent = 0;
+        var received = 0;
+        var lastPID = -1;
+        var pids = 0;
+        var sendFrequency = 200;
+        var maxErrors = 100;
+        var maxWebSockets = 50;
+
+        function openSocket() {
+            var socket = new WebSocket(address);
+            wscount++;
+            $('#wscount').html(wscount);
+            if (wscount > maxWebSockets) {
+                clearInterval(elapsedTime);
+                return;
+            }
+
+            socket.onmessage = function (msg) {
+                var json = JSON.parse(msg.data);
+                received++;
+                $('#received').html(received);
+                if (json.pid != lastPID) {
+                    pids++;
+                    lastPID = json.pid;
+                    $('#pids').html(pids);
+                }                
+                $('#rss').html(json.memory.rss);
+                $('#heaptotal').html(json.memory.heapTotal);
+                $('#heapused').html(json.memory.heapUsed);
+            };
+
+            socket.onerror = function (e) {
+                errors++;
+                $('#errors').html(errors);
+                if (errors > maxErrors) {
+                    clearInterval(sendTimer);
+                    clearInterval(elapsedTime);
+                }
+            };
+
+            socket.onclose = function () {
+                socket = null;
+                openSocket();
+            };
+
+            var sendTimer = setInterval(function () {
+                if (socket) {
+                    socket.send('Check out the Websockets through iisnode!');
+                    sent++;
+                    $('#sent').html(sent);
+                }
+                else {
+                    clearInterval(sendTimer);
+                }
+            }, sendFrequency);
+        }
+
+        var elapsedTime = setInterval(function () {
+            var diff = new Date().getTime() - start;
+            var days = Math.floor(diff / (24 * 3600 * 1000));
+            diff %= (24 * 3600 * 1000);
+            var hours = Math.floor(diff / (3600 * 1000));
+            diff %= (3600 * 1000);
+            var minutes = Math.floor(diff / (60 * 1000));
+            diff %= (60 * 1000);
+            var seconds = Math.floor(diff / 1000);
+            $('#time').html(days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's');
+        }, 1000);
+
+        openSocket();
+
+    </script>
+</body>
+</html>
