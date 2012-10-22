@@ -153,6 +153,9 @@
     <Filter Include="Tests\functional\www\131_websocket_echo">
       <UniqueIdentifier>{43a77b03-30e9-4377-9dcd-a8bbcb255b5a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\132_debug_header">
+      <UniqueIdentifier>{c186f452-9528-4731-97e6-f9a3d797bb10}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -695,6 +698,15 @@
     </None>
     <None Include="..\..\test\functional\www\131_websocket_echo\web.config">
       <Filter>Tests\functional\www\131_websocket_echo</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\132_debug_header\hello.js">
+      <Filter>Tests\functional\www\132_debug_header</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\132_debug_header\web.config">
+      <Filter>Tests\functional\www\132_debug_header</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\132_debug_header.js">
+      <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -1043,6 +1043,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"flushResponse", &c->flushResponse));
 		CheckError(GetString(section, L"logDirectory", &c->logDirectory));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
+		CheckError(GetBOOL(section, L"debugHeaderEnabled", &c->debugHeaderEnabled));
 		CheckError(GetString(section, L"node_env", &c->node_env));
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
