@@ -5,10 +5,14 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	chunkLength(0), chunkTransmitted(0), isChunked(FALSE), pipe(INVALID_HANDLE_VALUE), result(S_OK), isLastChunk(FALSE),
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
 	targetUrl(NULL), targetUrlLength(0), childContext(NULL), isConnectionFromPool(FALSE), expectResponseBody(TRUE),
-	closeConnection(FALSE), isUpgrade(FALSE), upgradeContext(NULL), opaqueFlagSet(FALSE), requestPumpStarted(FALSE)
+	closeConnection(FALSE), isUpgrade(FALSE), upgradeContext(NULL), opaqueFlagSet(FALSE), requestPumpStarted(FALSE),
+	responseChunkBufferSize(0)
 {
 	IHttpTraceContext* tctx;
 	LPCGUID pguid;
+
+	this->responseChunk.DataChunkType = HttpDataChunkFromMemory;
+	this->responseChunk.FromMemory.pBuffer = NULL;
 
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
 	if (NULL != (tctx = context->GetTraceContext()) && NULL != (pguid = tctx->GetTraceActivityId()))
@@ -35,6 +39,36 @@ CNodeHttpStoredContext::~CNodeHttpStoredContext()
 		CloseHandle(this->pipe);
 		this->pipe = INVALID_HANDLE_VALUE;
 	}
+
+	if (this->responseChunk.FromMemory.pBuffer) {
+		free(this->responseChunk.FromMemory.pBuffer);
+		this->responseChunk.FromMemory.pBuffer = NULL;
+		responseChunkBufferSize = 0;
+	}
+}
+
+HRESULT CNodeHttpStoredContext::EnsureResponseChunk(DWORD size, HTTP_DATA_CHUNK** chunk)
+{
+	HRESULT hr;
+
+	if (size > this->responseChunkBufferSize)
+	{
+		if (this->responseChunk.FromMemory.pBuffer) 
+		{
+			free(this->responseChunk.FromMemory.pBuffer);
+			this->responseChunk.FromMemory.pBuffer = NULL;
+			this->responseChunkBufferSize = 0;
+		}
+
+		ErrorIf(NULL == (this->responseChunk.FromMemory.pBuffer = malloc(size)), ERROR_NOT_ENOUGH_MEMORY);
+		this->responseChunkBufferSize = size;
+	}
+
+	*chunk = &this->responseChunk;
+
+	return S_OK;
+Error:
+	return hr;
 }
 
 IHttpContext* CNodeHttpStoredContext::GetHttpContext() 

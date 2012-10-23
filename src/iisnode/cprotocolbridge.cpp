@@ -1537,12 +1537,8 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			DWORD remainingChunkSize = ctx->GetChunkLength() - ctx->GetChunkTransmitted();
 			DWORD bytesToSend = dataInBuffer < remainingChunkSize ? dataInBuffer : remainingChunkSize;
 
-			// CR: consider using malloc here (memory can be released after Flush)
-
-			ErrorIf(NULL == (chunk = (HTTP_DATA_CHUNK*) ctx->GetHttpContext()->AllocateRequestMemory(sizeof HTTP_DATA_CHUNK)), ERROR_NOT_ENOUGH_MEMORY);
-			chunk->DataChunkType = HttpDataChunkFromMemory;
+			CheckError(ctx->EnsureResponseChunk(bytesToSend, &chunk));
 			chunk->FromMemory.BufferLength = bytesToSend;
-			ErrorIf(NULL == (chunk->FromMemory.pBuffer = ctx->GetHttpContext()->AllocateRequestMemory(chunk->FromMemory.BufferLength)), ERROR_NOT_ENOUGH_MEMORY);
 			memcpy(chunk->FromMemory.pBuffer, (char*)ctx->GetBuffer() + ctx->GetParsingOffset(), chunk->FromMemory.BufferLength);
 
 			if (bytesToSend == dataInBuffer)

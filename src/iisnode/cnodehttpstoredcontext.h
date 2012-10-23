@@ -37,6 +37,8 @@ private:
 	BOOL opaqueFlagSet;
 	BOOL requestPumpStarted;
 	FILETIME startTime;
+	HTTP_DATA_CHUNK responseChunk;
+	DWORD responseChunkBufferSize;
 
 public:
 
@@ -104,6 +106,7 @@ public:
 	void SetRequestPumpStarted();
 	BOOL GetRequestPumpStarted();
 	FILETIME* GetStartTime();
+	HRESULT EnsureResponseChunk(DWORD size, HTTP_DATA_CHUNK** chunk);
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 
