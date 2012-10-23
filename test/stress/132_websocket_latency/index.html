@@ -29,9 +29,10 @@
         var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
         var scenarioAddress = {
             iisnode: protocol + window.location.host + window.location.pathname + '/server.js',
-            node: protocol + 'localhost:8888'
+            node: protocol + window.location.host + ':8888/'
         };
         var measurements = 30;
+        var maxErrors = 5;
         var progress = 0;
 
         function measureOne(address, callback) {
@@ -54,6 +55,10 @@
             }
 
             socket.onclose = function () {
+                if (!error && (isNaN(open) || isNaN(receive))) {
+                    error = new Error('Inconclusive measurement');
+                }
+                 
                 callback(error, open ? open - start : undefined, receive ? receive - start: undefined);
             };
         }
@@ -70,15 +75,20 @@
                 var count = 0;
                 var openSum = 0;
                 var echoSum = 0;
+                var errorCount = 0;
 
                 function runOnce() {
-                    measureOne(scenarioAddress[scenario], function (error, open, echo) {                        
+                    measureOne(scenarioAddress[scenario], function (error, open, echo) {
                         if (error) {
-                            return callback(error);
+                            if (++errorCount > maxErrors) {
+                                return callback(error);
+                            }
+                            else {
+                                return runOnce();
+                            }
                         }
 
                         setProgress(++progress);
-
                         openSum += open;
                         echoSum += echo;
                         count++;
