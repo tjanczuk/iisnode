@@ -1,0 +1,116 @@
+<html>
+<head>
+    <title>132_websocket_latency</title>
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+</head>
+<body>
+    <h1>132_websocket_latency</h1>
+    <p>The iisnode is expected at ws://localhost/132_websocket_latency/server.js. The node.exe is expected at ws://localhost:8888.</p>
+    <table>
+        <tr>
+            <th>Measurement</th>
+            <th>node.exe</th>
+            <th>iisnode</th>
+        </tr>
+        <tr>
+            <th>Open latency [ms]</th>
+            <td id="node-open">...</td>
+            <td id="iisnode-open">...</td>
+        </tr>
+        <tr>
+            <th>Echo latency [ms]</th>
+            <td id="node-echo">...</td>
+            <td id="iisnode-echo">...</td>
+        </tr>
+    </table>
+    <p>Progress: <span id="progress">0%</span></p>
+    <script>
+        var start = new Date().getTime();
+        var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+        var scenarioAddress = {
+            iisnode: protocol + window.location.host + window.location.pathname + '/server.js',
+            node: protocol + 'localhost:8888'
+        };
+        var measurements = 30;
+        var progress = 0;
+
+        function measureOne(address, callback) {
+            var start = new Date().getTime();
+            var open, receive, error;
+            var socket = new WebSocket(address);
+
+            socket.onopen = function () {
+                open = new Date().getTime();
+                socket.send('Hello');
+            };
+
+            socket.onmessage = function () {
+                receive = new Date().getTime();
+                socket.close();
+            };
+
+            socket.onerror = function (e) {
+                error = e;
+            }
+
+            socket.onclose = function () {
+                callback(error, open ? open - start : undefined, receive ? receive - start: undefined);
+            };
+        }
+
+        function measureScenario(scenario, callback) {
+            // warmup
+            measureOne(scenarioAddress[scenario], function (error) {
+                if (error) {
+                    return callback(error);
+                }
+
+                // actual test
+
+                var count = 0;
+                var openSum = 0;
+                var echoSum = 0;
+
+                function runOnce() {
+                    measureOne(scenarioAddress[scenario], function (error, open, echo) {                        
+                        if (error) {
+                            return callback(error);
+                        }
+
+                        setProgress(++progress);
+
+                        openSum += open;
+                        echoSum += echo;
+                        count++;
+                        if (count < measurements) {
+                            runOnce();
+                        }
+                        else {
+                            callback(null, openSum / count, echoSum / count);
+                        }
+                    });
+                }
+
+                runOnce();
+            });
+        }
+
+        function setProgress(p) {
+            progress = p;
+            $('#progress').html((100 * p / (measurements * 2)).toFixed(0) + '%');
+        }
+
+        measureScenario('node', function (error, open, echo) {
+            setProgress(measurements);
+            $('#node-open').html(error ? error.toString() : open.toFixed(2));
+            $('#node-echo').html(error ? error.toString() : echo.toFixed(2));
+            measureScenario('iisnode', function (error, open, echo) {
+                setProgress(measurements * 2);
+                $('#iisnode-open').html(error ? error.toString() : open.toFixed(2));
+                $('#iisnode-echo').html(error ? error.toString() : echo.toFixed(2));
+            });
+        });
+
+    </script>
+</body>
+</html>

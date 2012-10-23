@@ -159,11 +159,14 @@
     <Filter Include="Tests\stress">
       <UniqueIdentifier>{e5dade76-fb92-4baa-a16b-41d7df056829}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Tests\stress\132_websoket_chat">
-      <UniqueIdentifier>{2081befc-0e1b-498c-b3ca-056e0c37305b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Tests\stress\131_websocket_connections">
       <UniqueIdentifier>{8b577c52-0888-4778-8c01-308bf573cb77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\stress\130_websocket_chat">
+      <UniqueIdentifier>{2081befc-0e1b-498c-b3ca-056e0c37305b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\stress\132_websocket_latency">
+      <UniqueIdentifier>{44ee30b6-3875-4e2d-99f0-f9e5cf6b38ac}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -718,13 +721,13 @@
       <Filter>Tests\functional\tests</Filter>
     </None>
     <None Include="..\..\test\stress\130_websocket_chat\server.js">
-      <Filter>Tests\stress\132_websoket_chat</Filter>
+      <Filter>Tests\stress\130_websocket_chat</Filter>
     </None>
     <None Include="..\..\test\stress\130_websocket_chat\web.config">
-      <Filter>Tests\stress\132_websoket_chat</Filter>
+      <Filter>Tests\stress\130_websocket_chat</Filter>
     </None>
     <None Include="..\..\test\stress\130_websocket_chat\index.html">
-      <Filter>Tests\stress\132_websoket_chat</Filter>
+      <Filter>Tests\stress\130_websocket_chat</Filter>
     </None>
     <None Include="..\..\test\stress\131_websoket_connections\index.html">
       <Filter>Tests\stress\131_websocket_connections</Filter>
@@ -739,7 +742,19 @@
       <Filter>Tests\stress\131_websocket_connections</Filter>
     </None>
     <None Include="..\..\test\stress\130_websocket_chat\setup.bat">
-      <Filter>Tests\stress\132_websoket_chat</Filter>
+      <Filter>Tests\stress\130_websocket_chat</Filter>
+    </None>
+    <None Include="..\..\test\stress\132_websocket_latency\index.html">
+      <Filter>Tests\stress\132_websocket_latency</Filter>
+    </None>
+    <None Include="..\..\test\stress\132_websocket_latency\server.js">
+      <Filter>Tests\stress\132_websocket_latency</Filter>
+    </None>
+    <None Include="..\..\test\stress\132_websocket_latency\setup.bat">
+      <Filter>Tests\stress\132_websocket_latency</Filter>
+    </None>
+    <None Include="..\..\test\stress\132_websocket_latency\web.config">
+      <Filter>Tests\stress\132_websocket_latency</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
