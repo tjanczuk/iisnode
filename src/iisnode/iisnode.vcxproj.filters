@@ -156,6 +156,12 @@
     <Filter Include="Tests\functional\www\132_debug_header">
       <UniqueIdentifier>{c186f452-9528-4731-97e6-f9a3d797bb10}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\stress">
+      <UniqueIdentifier>{e5dade76-fb92-4baa-a16b-41d7df056829}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\stress\132_websoket_chat">
+      <UniqueIdentifier>{2081befc-0e1b-498c-b3ca-056e0c37305b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -707,6 +713,15 @@
     </None>
     <None Include="..\..\test\functional\tests\132_debug_header.js">
       <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\stress\130_websocket_chat\server.js">
+      <Filter>Tests\stress\132_websoket_chat</Filter>
+    </None>
+    <None Include="..\..\test\stress\130_websocket_chat\web.config">
+      <Filter>Tests\stress\132_websoket_chat</Filter>
+    </None>
+    <None Include="..\..\test\stress\130_websocket_chat\index.html">
+      <Filter>Tests\stress\132_websoket_chat</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
