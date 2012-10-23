@@ -350,7 +350,12 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\performance\www\default\web.config" />
     <None Include="..\..\test\stress\130_websocket_chat\index.html" />
     <None Include="..\..\test\stress\130_websocket_chat\server.js" />
+    <None Include="..\..\test\stress\130_websocket_chat\setup.bat" />
     <None Include="..\..\test\stress\130_websocket_chat\web.config" />
+    <None Include="..\..\test\stress\131_websoket_connections\index.html" />
+    <None Include="..\..\test\stress\131_websoket_connections\server.js" />
+    <None Include="..\..\test\stress\131_websoket_connections\setup.bat" />
+    <None Include="..\..\test\stress\131_websoket_connections\web.config" />
     <None Include="..\config\iisnode_dev_x64.xml">
       <SubType>Designer</SubType>
     </None>

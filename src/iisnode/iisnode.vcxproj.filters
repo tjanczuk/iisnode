@@ -162,6 +162,9 @@
     <Filter Include="Tests\stress\132_websoket_chat">
       <UniqueIdentifier>{2081befc-0e1b-498c-b3ca-056e0c37305b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\stress\131_websocket_connections">
+      <UniqueIdentifier>{8b577c52-0888-4778-8c01-308bf573cb77}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -721,6 +724,21 @@
       <Filter>Tests\stress\132_websoket_chat</Filter>
     </None>
     <None Include="..\..\test\stress\130_websocket_chat\index.html">
+      <Filter>Tests\stress\132_websoket_chat</Filter>
+    </None>
+    <None Include="..\..\test\stress\131_websoket_connections\index.html">
+      <Filter>Tests\stress\131_websocket_connections</Filter>
+    </None>
+    <None Include="..\..\test\stress\131_websoket_connections\server.js">
+      <Filter>Tests\stress\131_websocket_connections</Filter>
+    </None>
+    <None Include="..\..\test\stress\131_websoket_connections\setup.bat">
+      <Filter>Tests\stress\131_websocket_connections</Filter>
+    </None>
+    <None Include="..\..\test\stress\131_websoket_connections\web.config">
+      <Filter>Tests\stress\131_websocket_connections</Filter>
+    </None>
+    <None Include="..\..\test\stress\130_websocket_chat\setup.bat">
       <Filter>Tests\stress\132_websoket_chat</Filter>
     </None>
   </ItemGroup>
