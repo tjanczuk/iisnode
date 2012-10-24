@@ -5,7 +5,8 @@
 </head>
 <body>
     <h1>132_websocket_latency</h1>
-    <p>The iisnode is expected at ws://localhost/132_websocket_latency/server.js. The node.exe is expected at ws://localhost:8888.</p>
+    <p>The iisnode is expected at ws://127.0.0.1/132_websocket_latency/server.js. The node.exe is expected at ws://127.0.0.1:8888.</p>
+    <p>Make sure to invoke this test using IP address instead of a host name in the URL to avoid DNS resolution issues affecting the measurement.</p>
     <table>
         <tr>
             <th>Measurement</th>
@@ -31,7 +32,7 @@
             iisnode: protocol + window.location.host + window.location.pathname + '/server.js',
             node: protocol + window.location.host + ':8888/'
         };
-        var measurements = 30;
+        var measurements = 1000;
         var maxErrors = 5;
         var progress = 0;
 
