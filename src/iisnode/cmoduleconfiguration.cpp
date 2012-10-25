@@ -441,7 +441,7 @@ Error:
     return hr;
 }
 
-HRESULT CModuleConfiguration::GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value)
+HRESULT CModuleConfiguration::GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value, BOOL defaultValue)
 {
 	HRESULT hr = S_OK;
     BSTR sysPropertyName = NULL;
@@ -452,10 +452,16 @@ HRESULT CModuleConfiguration::GetBOOL(IAppHostElement* section, LPCWSTR property
 	*value = FALSE;
 	VariantInit(&var);
 	ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(section->GetPropertyByName(sysPropertyName, &prop));
-	CheckError(prop->get_Value(&var));
-	CheckError(VariantChangeType(&var, &var, 0, VT_BOOL));
-	*value = (V_BOOL(&var) == VARIANT_TRUE);
+	if (S_OK != section->GetPropertyByName(sysPropertyName, &prop)) 
+	{
+		*value = defaultValue;
+	}
+	else 
+	{
+		CheckError(prop->get_Value(&var));
+		CheckError(VariantChangeType(&var, &var, 0, VT_BOOL));
+		*value = (V_BOOL(&var) == VARIANT_TRUE);
+	}
 
 Error:
 
@@ -1038,16 +1044,16 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetDWORD(section, L"maxTotalLogFileSizeInKB", &c->maxTotalLogFileSizeInKB));
 		CheckError(GetDWORD(section, L"maxLogFileSizeInKB", &c->maxLogFileSizeInKB));
 		CheckError(GetDWORD(section, L"maxLogFiles", &c->maxLogFiles));
-		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled));
-		CheckError(GetBOOL(section, L"devErrorsEnabled", &c->devErrorsEnabled));
-		CheckError(GetBOOL(section, L"flushResponse", &c->flushResponse));
+		CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled, TRUE));
+		CheckError(GetBOOL(section, L"devErrorsEnabled", &c->devErrorsEnabled, TRUE));
+		CheckError(GetBOOL(section, L"flushResponse", &c->flushResponse, FALSE));
 		CheckError(GetString(section, L"logDirectory", &c->logDirectory));
-		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled));
-		CheckError(GetBOOL(section, L"debugHeaderEnabled", &c->debugHeaderEnabled));
+		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled, TRUE));
+		CheckError(GetBOOL(section, L"debugHeaderEnabled", &c->debugHeaderEnabled, FALSE));
 		CheckError(GetString(section, L"node_env", &c->node_env));
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
-		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF));
+		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF, FALSE));
 		CheckError(GetString(section, L"promoteServerVars", &c->promoteServerVarsRaw));
 		CheckError(GetString(section, L"configOverrides", &c->configOverrides));
 		CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));

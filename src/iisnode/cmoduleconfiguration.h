@@ -49,7 +49,7 @@ private:
 	static HTTP_MODULE_ID moduleId;
 	static HRESULT GetConfigSection(IHttpContext* context, IAppHostElement** section, OLECHAR* configElement = L"system.webServer/iisnode");
 	static HRESULT GetString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value);
-	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value);
+	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value, BOOL defaultValue);
 	static HRESULT GetDWORD(char* str, DWORD* value);
 	static HRESULT GetBOOL(char* str, BOOL* value);
 	static HRESULT GetString(char* str, LPWSTR* value);	
