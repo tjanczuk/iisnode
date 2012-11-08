@@ -12,6 +12,7 @@ Hosting node.js applications in IIS on Windows
 [appharbor.com](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)  
 [discountasp.net](http://discountasp.net/press/2012_06_12_free-webmatrix-v2-rc-hosting-with-nodejs.aspx)  
 [arvixe.com](http://arvixe.com)  
+[smarterasp.net](http://www.smarterasp.net/)  
 
 **Prerequisites for using**
 
