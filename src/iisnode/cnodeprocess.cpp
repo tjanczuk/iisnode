@@ -125,15 +125,27 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 		this->namedPipe, 
 		&newEnvironment));
 
-	// establish the current directory for node.exe process to be the same as the location of the application *.js file
+	// establish the current directory for node.exe process as the value of the 'nodeProcessWorkingDirectory' configuration option.
+	// if option is not set, establish the current directory to be the same as the location of the application *.js file
 	// (in case of the debugger process, it is still the debuggee application file)
 
-	scriptTranslated = (PWSTR)context->GetScriptTranslated(&currentDirectorySize);
-	while (currentDirectorySize && scriptTranslated[currentDirectorySize] != L'\\' && scriptTranslated[currentDirectorySize] != L'/')
-		currentDirectorySize--;
-	ErrorIf(NULL == (currentDirectory = new WCHAR[wcslen(scriptTranslated) + 1]), ERROR_NOT_ENOUGH_MEMORY);
-	wcscpy(currentDirectory, scriptTranslated);
-	currentDirectory[currentDirectorySize] = L'\0';
+	LPCWSTR nodeWorkingDirectory = CModuleConfiguration::GetNodeProcessWorkingDirectory(context);
+	if (wcslen(nodeWorkingDirectory) == 0)
+	{
+		scriptTranslated = (PWSTR)context->GetScriptTranslated(&currentDirectorySize);
+		while (currentDirectorySize && scriptTranslated[currentDirectorySize] != L'\\' && scriptTranslated[currentDirectorySize] != L'/')
+			currentDirectorySize--;
+		ErrorIf(NULL == (currentDirectory = new WCHAR[wcslen(scriptTranslated) + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(currentDirectory, scriptTranslated);
+		currentDirectory[currentDirectorySize] = L'\0';
+	}
+	else
+	{
+		currentDirectorySize = wcslen(nodeWorkingDirectory);
+		ErrorIf(NULL == (currentDirectory = new WCHAR[currentDirectorySize + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(currentDirectory, nodeWorkingDirectory);
+		currentDirectory[currentDirectorySize] = L'\0';
+	}
 
 	// create startup info for the node.js process
 

@@ -31,6 +31,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="asyncCompletionThreadCount" type="uint" defaultValue="0"/>
     <attribute name="nodeProcessCountPerApplication" type="uint" defaultValue="1"/>
     <attribute name="nodeProcessCommandLine" type="string" expanded="true" defaultValue="node.exe"/>
+		<attribute name="nodeProcessWorkingDirectory" type="string" expanded="true" defaultValue=""/>
     <attribute name="interceptor" type="string" expanded="true" defaultValue="&quot;%programfiles%\iisnode-express\interceptor.js&quot;" />
     <attribute name="maxConcurrentRequestsPerProcess" type="uint" allowInfitnite="true" defaultValue="1024"/>
     <attribute name="maxNamedPipeConnectionRetry" type="uint" defaultValue="100"/>

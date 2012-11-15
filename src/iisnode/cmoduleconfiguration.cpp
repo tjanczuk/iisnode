@@ -7,7 +7,7 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 BOOL CModuleConfiguration::invalid = FALSE;
 
 CModuleConfiguration::CModuleConfiguration()
-	: nodeProcessCommandLine(NULL), logDirectory(NULL), debuggerPathSegment(NULL), 
+	: nodeProcessCommandLine(NULL), nodeProcessWorkingDirectory(NULL), logDirectory(NULL), debuggerPathSegment(NULL), 
 	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
 	enableXFF(FALSE), promoteServerVars(NULL), promoteServerVarsRaw(NULL), configOverridesFileName(NULL),
 	configOverrides(NULL), interceptor(NULL), debugHeaderEnabled(FALSE)
@@ -21,6 +21,12 @@ CModuleConfiguration::~CModuleConfiguration()
 	{
 		delete [] this->nodeProcessCommandLine;
 		this->nodeProcessCommandLine = NULL;
+	}
+
+	if (NULL != this->nodeProcessWorkingDirectory)
+	{
+		delete [] this->nodeProcessWorkingDirectory;
+		this->nodeProcessWorkingDirectory = NULL;
 	}
 
 	if (NULL != this->interceptor) {
@@ -702,6 +708,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	{
 		CheckError(GetString(valueStart, &config->nodeProcessCommandLine));
 	}
+	else if (0 == strcmpi(keyStart, "nodeProcessWorkingDirectory"))
+	{
+		CheckError(GetString(valueStart, &config->nodeProcessWorkingDirectory));
+	}
 	else if (0 == strcmpi(keyStart, "interceptor"))
 	{
 		CheckError(GetString(valueStart, &config->interceptor));
@@ -1057,6 +1067,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetString(section, L"promoteServerVars", &c->promoteServerVarsRaw));
 		CheckError(GetString(section, L"configOverrides", &c->configOverrides));
 		CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
+		CheckError(GetString(section, L"nodeProcessWorkingDirectory", &c->nodeProcessWorkingDirectory));
 		CheckError(GetString(section, L"interceptor", &c->interceptor));
 
 		// debuggerPathSegment
@@ -1129,6 +1140,11 @@ DWORD CModuleConfiguration::GetNodeProcessCountPerApplication(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)
 {
 	GETCONFIG(nodeProcessCommandLine)
+}
+
+LPWSTR CModuleConfiguration::GetNodeProcessWorkingDirectory(IHttpContext* ctx)
+{
+	GETCONFIG(nodeProcessWorkingDirectory)
 }
 
 LPWSTR CModuleConfiguration::GetInterceptor(IHttpContext* ctx)
