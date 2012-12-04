@@ -22,7 +22,6 @@ Hosting node.js applications in IIS on Windows
 - WebSocket functionality requires IIS 8.x on Windows 8 or Windows Server 2012
 - [URL rewrite module for IIS](http://www.iis.net/download/URLRewrite)
 - [Latest node.js build for Windows](http://go.microsoft.com/?linkid=9784334)
-- Visual C++ 2012 Redistributable Package for [x86](http://www.microsoft.com/en-us/download/details.aspx?id=30679) or [x64](http://www.microsoft.com/en-us/download/details.aspx?id=30679) (on x64 systems you need to install both x86 and x64 if you intend to use IIS Express/WebMatrix)
 
 **Installing for IIS 7.x/8.x**
 
