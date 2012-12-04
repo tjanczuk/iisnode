@@ -47,26 +47,8 @@
     <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
 
     <Property Id="ALLUSERS" Value="1" />
-
-    <Property Id="VCREDIST2012INSTALLED">
-      <?if $(var.isWin64) = "yes"?>
-      <RegistrySearch Id="VCRedist2012Search64" Root="HKLM" Key="Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{15134cb0-b767-4960-a911-f2d16ae54797}" Name="Installed" Type="raw" />
-      <?else?>
-      <RegistrySearch Id="VCRedist2012Search32" Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\{22154f09-719a-4619-bb71-5b3356999fbf}" Name="Installed" Type="raw" />
-      <?endif?>
-    </Property>
     
     <PropertyRef Id="IISMAJORVERSION" />
-
-    <?if $(var.isWin64) = "yes"?>
-    <Condition Message="Microsoft Visual C++ 2012 Redistributable Package (x64) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[Installed OR VCREDIST2012INSTALLED]]>
-    </Condition>
-    <?else?>
-    <Condition Message="Microsoft Visual C++ 2012 Redistributable Package (x86) is required but not installed. Please install it then rerun this installer.">
-      <![CDATA[Installed OR VCREDIST2012INSTALLED]]>
-    </Condition>
-    <?endif?>
 
     <Condition Message="IIS 7.x or later must be installed before iisnode installation.">
       <![CDATA[IISMAJORVERSION >= "#7"]]>
