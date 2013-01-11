@@ -125,7 +125,6 @@
             });
 
             var totalCount = stats.length;
-            maxLogFiles--;
 
             stats.some(function (stat) {
                 try {
