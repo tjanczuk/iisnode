@@ -403,20 +403,58 @@ Error:
     return hr;
 }
 
+HRESULT CModuleConfiguration::GetEnvVariable(LPCWSTR propertyName, LPWSTR buffer, DWORD bufferSize, LPWSTR* result)
+{
+	HRESULT hr;
+	WCHAR variableName[124];
+
+	CheckNull(result);
+	ErrorIf(124 < (wcslen(propertyName) + 9), IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_FROM_ENVIRONMENT);
+	wcscpy(variableName, L"IISNODE_");
+	wcscat(variableName, propertyName);
+	DWORD size = GetEnvironmentVariableW(variableName, buffer, bufferSize);
+	ErrorIf(size > bufferSize, IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_FROM_ENVIRONMENT);
+	if (size == 0)
+	{
+		*result = NULL;
+		ErrorIf(ERROR_ENVVAR_NOT_FOUND != (hr = GetLastError()), hr);
+	}
+	else 
+	{
+		*result = buffer;
+	}
+
+	return S_OK;
+Error:
+	return hr;
+}
+
 HRESULT CModuleConfiguration::GetString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value)
 {
 	HRESULT hr = S_OK;
     BSTR sysPropertyName = NULL;
     BSTR sysPropertyValue = NULL;
     IAppHostProperty* prop = NULL;
+	WCHAR variableValueBuffer[1024];
+	WCHAR* variableValue = NULL;
 
 	CheckNull(value);
 	*value = NULL;
-	ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(section->GetPropertyByName(sysPropertyName, &prop));
-	CheckError(prop->get_StringValue(&sysPropertyValue));
-	ErrorIf(NULL == (*value = new WCHAR[wcslen(sysPropertyValue) + 1]), ERROR_NOT_ENOUGH_MEMORY);
-	wcscpy(*value, sysPropertyValue);
+	
+	CheckError(CModuleConfiguration::GetEnvVariable(propertyName, variableValueBuffer, 1024, &variableValue));
+	if (variableValue)
+	{
+		ErrorIf(NULL == (*value = new WCHAR[wcslen(variableValue) + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(*value, variableValue);
+	}
+	else
+	{
+		ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
+		CheckError(section->GetPropertyByName(sysPropertyName, &prop));
+		CheckError(prop->get_StringValue(&sysPropertyValue));
+		ErrorIf(NULL == (*value = new WCHAR[wcslen(sysPropertyValue) + 1]), ERROR_NOT_ENOUGH_MEMORY);
+		wcscpy(*value, sysPropertyValue);
+	}
 
 Error:
 
@@ -447,20 +485,42 @@ HRESULT CModuleConfiguration::GetBOOL(IAppHostElement* section, LPCWSTR property
     BSTR sysPropertyName = NULL;
     IAppHostProperty* prop = NULL;
 	VARIANT var;
+	WCHAR variableValueBuffer[8];
+	WCHAR* variableValue = NULL;
 
 	CheckNull(value);
 	*value = FALSE;
 	VariantInit(&var);
-	ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
-	if (S_OK != section->GetPropertyByName(sysPropertyName, &prop)) 
+	
+	CheckError(CModuleConfiguration::GetEnvVariable(propertyName, variableValueBuffer, 8, &variableValue));
+	if (variableValue)
 	{
-		*value = defaultValue;
+		if (0 == _wcsicmp(variableValue, L"true") || 0 == _wcsicmp(variableValue, L"1"))
+		{
+			*value = TRUE;
+		}
+		else if (0 == _wcsicmp(variableValue, L"false") || 0 == _wcsicmp(variableValue, L"0"))
+		{
+			*value = FALSE;
+		}
+		else 
+		{
+			CheckError(IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_FROM_ENVIRONMENT);
+		}
 	}
-	else 
+	else
 	{
-		CheckError(prop->get_Value(&var));
-		CheckError(VariantChangeType(&var, &var, 0, VT_BOOL));
-		*value = (V_BOOL(&var) == VARIANT_TRUE);
+		ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
+		if (S_OK != section->GetPropertyByName(sysPropertyName, &prop)) 
+		{
+			*value = defaultValue;
+		}
+		else 
+		{
+			CheckError(prop->get_Value(&var));
+			CheckError(VariantChangeType(&var, &var, 0, VT_BOOL));
+			*value = (V_BOOL(&var) == VARIANT_TRUE);
+		}
 	}
 
 Error:
@@ -488,15 +548,29 @@ HRESULT CModuleConfiguration::GetDWORD(IAppHostElement* section, LPCWSTR propert
     BSTR sysPropertyName = NULL;
     IAppHostProperty* prop = NULL;
 	VARIANT var;
+	WCHAR variableValueBuffer[64];
+	WCHAR* variableValue = NULL;
+	WCHAR* endValue = NULL;
 
 	CheckNull(value);
-	*value = 0;
+	*value = NULL;
 	VariantInit(&var);
-	ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
-	CheckError(section->GetPropertyByName(sysPropertyName, &prop));
-	CheckError(prop->get_Value(&var));
-	CheckError(VariantChangeType(&var, &var, 0, VT_UI4));
-	*value = var.ulVal;
+	
+	CheckError(CModuleConfiguration::GetEnvVariable(propertyName, variableValueBuffer, 64, &variableValue));
+	if (variableValue)
+	{
+		long parsed = wcstol(variableValue, &endValue, 10);
+		ErrorIf(ERANGE == errno || parsed < 0 || variableValue == endValue, IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_FROM_ENVIRONMENT);
+		*value = parsed;
+	}
+	else
+	{
+		ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
+		CheckError(section->GetPropertyByName(sysPropertyName, &prop));
+		CheckError(prop->get_Value(&var));
+		CheckError(VariantChangeType(&var, &var, 0, VT_UI4));
+		*value = var.ulVal;
+	}
 
 Error:
 

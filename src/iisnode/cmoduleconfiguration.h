@@ -59,6 +59,7 @@ private:
 	static HRESULT TokenizePromoteServerVars(CModuleConfiguration* c);
 	static HRESULT ApplyDefaults(CModuleConfiguration* c);
 	static HRESULT EnsureCurrent(IHttpContext* context, CModuleConfiguration* config);
+	static HRESULT GetEnvVariable(LPCWSTR propertyName, LPWSTR buffer, DWORD bufferSize, LPWSTR* result);
 
 	CModuleConfiguration();
 	~CModuleConfiguration();
