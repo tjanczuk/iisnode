@@ -84,6 +84,7 @@ CNodeApplication* CNodeHttpStoredContext::GetNodeApplication()
 void CNodeHttpStoredContext::SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor)
 {
 	this->asyncContext.completionProcessor = processor;
+	this->SetContinueSynchronously(FALSE);
 }
 
 LPOVERLAPPED CNodeHttpStoredContext::GetOverlapped()
@@ -440,4 +441,19 @@ BOOL CNodeHttpStoredContext::GetRequestPumpStarted()
 FILETIME* CNodeHttpStoredContext::GetStartTime()
 {
 	return &this->startTime;
+}
+
+DWORD CNodeHttpStoredContext::GetBytesCompleted()
+{
+	return this->asyncContext.bytesCompleteted;
+}
+
+void CNodeHttpStoredContext::SetBytesCompleted(DWORD bytesCompleted)
+{
+	this->asyncContext.bytesCompleteted = bytesCompleted;
+}
+
+void CNodeHttpStoredContext::SetContinueSynchronously(BOOL continueSynchronously)
+{
+	this->asyncContext.continueSynchronously = continueSynchronously;
 }

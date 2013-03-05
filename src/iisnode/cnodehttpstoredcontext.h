@@ -75,6 +75,7 @@ public:
 	void SetTargetUrl(PCSTR targetUrl, DWORD targetUrlLength);
 	void SetChildContext(IHttpContext* context);
 	IHttpContext* GetChildContext();
+	DWORD GetBytesCompleted();
 
 	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
 	void SetNodeProcess(CNodeProcess* process);
@@ -107,6 +108,8 @@ public:
 	BOOL GetRequestPumpStarted();
 	FILETIME* GetStartTime();
 	HRESULT EnsureResponseChunk(DWORD size, HTTP_DATA_CHUNK** chunk);
+	void SetBytesCompleted(DWORD bytesCompleted);
+	void SetContinueSynchronously(BOOL continueSynchronously);
 
 	static CNodeHttpStoredContext* Get(LPOVERLAPPED overlapped);
 

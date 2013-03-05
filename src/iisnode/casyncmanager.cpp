@@ -2,6 +2,19 @@
 
 extern RtlNtStatusToDosError pRtlNtStatusToDosError;
 
+void ASYNC_CONTEXT::RunSynchronousContinuations()
+{
+	while (this->continueSynchronously)
+	{
+		// The continueSynchronously is used to unwind the call stack 
+		// to avoid stack overflow in case of a synchronous IO completions
+		this->continueSynchronously = FALSE;
+		DWORD bytesCompleteted = this->bytesCompleteted;
+		this->bytesCompleteted = 0;
+		this->completionProcessor(S_OK, bytesCompleteted, (LPOVERLAPPED)this);
+	}
+}
+
 CAsyncManager::CAsyncManager()
 	: threads(NULL), threadCount(0), completionPort(NULL), timerThread(NULL), timerSignal(NULL)
 {
@@ -170,6 +183,7 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 						(0 == entry->dwNumberOfBytesTransferred && ERROR_SUCCESS == error) ? ERROR_NO_DATA : error, 
 						entry->dwNumberOfBytesTransferred, 
 						(LPOVERLAPPED)ctx);
+					ctx->RunSynchronousContinuations();
 				}
 				else if (-1L == entry->lpCompletionKey) // shutdown initiated from Terminate
 				{
@@ -181,6 +195,7 @@ unsigned int WINAPI CAsyncManager::Worker(void* arg)
 					{
 						ctx = (ASYNC_CONTEXT*)entry->lpOverlapped;
 						ctx->completionProcessor(S_OK, 0, (LPOVERLAPPED)ctx);
+						ctx->RunSynchronousContinuations();
 					}
 					else if (-3L == entry->lpCompletionKey) // continuation initiated form PostContinuation
 					{

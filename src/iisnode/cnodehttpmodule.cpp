@@ -36,13 +36,9 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 
 	this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
 
-	// TODO: reject websocket connections on IIS < 8
-	// http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17#page-17
-
-	//PCSTR upgrade = pHttpContext->GetRequest()->GetHeader(HttpHeaderUpgrade, NULL);
-	//ErrorIf(upgrade && 0 == strcmp("websocket", upgrade), ERROR_NOT_SUPPORTED);		
-
 	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider, &ctx));
+	ASYNC_CONTEXT* async = ctx->GetAsyncContext();
+	async->RunSynchronousContinuations();
 
 	if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count set to 1 in the ctor of CNodeHttpStoredContext
 	{
@@ -175,7 +171,14 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 		ASYNC_CONTEXT* async = ctx->GetAsyncContext();
 		if (NULL != async->completionProcessor)
 		{
-			async->completionProcessor(pCompletionInfo->GetCompletionStatus(), pCompletionInfo->GetCompletionBytes(), ctx->GetOverlapped());
+			DWORD bytesCompleted = pCompletionInfo->GetCompletionBytes();
+			if (async->completionProcessor == CProtocolBridge::SendResponseBodyCompleted)
+			{
+				bytesCompleted = async->bytesCompleteted;
+				async->bytesCompleteted = 0;
+			}
+			async->completionProcessor(pCompletionInfo->GetCompletionStatus(), bytesCompleted, ctx->GetOverlapped());
+			async->RunSynchronousContinuations();
 		}
 
 		if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased on entering OnAsyncCompletion

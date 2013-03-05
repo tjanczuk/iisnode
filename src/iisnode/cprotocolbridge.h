@@ -35,8 +35,7 @@ private:
 	static void WINAPI ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 
 	static void WINAPI ProcessChunkHeader(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
-	static void WINAPI ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
-	static void WINAPI SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
+	static void WINAPI ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
 
 	static void WINAPI ProcessUpgradeResponse(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 	static void WINAPI ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);	
@@ -47,6 +46,8 @@ private:
 	static void FinalizeUpgradeResponse(CNodeHttpStoredContext* context, HRESULT hresult);
 
 public:
+
+	static void WINAPI SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped);
 
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
 	static BOOL SendIisnodeError(IHttpContext* httpCtx, HRESULT hr);

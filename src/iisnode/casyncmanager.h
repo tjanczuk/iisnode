@@ -4,10 +4,14 @@
 typedef struct {
 	OVERLAPPED overlapped; // this member must be first in the struct
 	LPOVERLAPPED_COMPLETION_ROUTINE completionProcessor;	
+	BOOL continueSynchronously;
 	void* data;
 	HANDLE timer;
 	LARGE_INTEGER dueTime;
 	HANDLE completionPort;
+	DWORD bytesCompleteted;
+
+	void RunSynchronousContinuations();
 } ASYNC_CONTEXT;
 
 typedef void (*ContinuationCallback)(void* data);

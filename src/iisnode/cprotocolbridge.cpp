@@ -818,6 +818,7 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 	HRESULT hr;	
 	DWORD bytesReceived = 0;
 	BOOL completionPending = FALSE;
+	BOOL continueSynchronouslyNow = TRUE;
 
 	if (0 < context->GetHttpContext()->GetRequest()->GetRemainingEntityBytes() || context->GetIsUpgrade())
 	{
@@ -831,6 +832,13 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 		{
 			CheckError(context->GetHttpContext()->GetRequest()->ReadEntityBody(context->GetBuffer(), context->GetBufferSize(), TRUE, &bytesReceived, &completionPending));
 		}
+
+		if (!completionPending)
+		{
+			context->SetContinueSynchronously(TRUE);
+			continueSynchronouslyNow = FALSE;
+			context->SetBytesCompleted(bytesReceived);
+		}
 	}
 
 	if (!completionPending)
@@ -838,7 +846,11 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
 			L"iisnode initiated reading http request body chunk and completed synchronously", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
 
-		CProtocolBridge::ReadRequestBodyCompleted(S_OK, bytesReceived, context->GetOverlapped());
+		context->SetBytesCompleted(bytesReceived);
+		if (continueSynchronouslyNow)
+		{
+			CProtocolBridge::ReadRequestBodyCompleted(S_OK, 0, context->GetOverlapped());
+		}
 	}
 	else
 	{
@@ -1507,6 +1519,8 @@ void CProtocolBridge::EnsureRequestPumpStarted(CNodeHttpStoredContext* context)
 
 		context->SetRequestPumpStarted();
 		CProtocolBridge::ReadRequestBody(context->GetUpgradeContext());
+		ASYNC_CONTEXT* async = context->GetUpgradeContext()->GetAsyncContext();
+		async->RunSynchronousContinuations();
 	}
 }
 
@@ -1552,6 +1566,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 			}
 
 			ctx->SetNextProcessor(CProtocolBridge::SendResponseBodyCompleted);
+			ctx->SetBytesCompleted(bytesToSend);
 
 			CheckError(ctx->GetHttpContext()->GetResponse()->WriteEntityChunks(
 				chunk,
@@ -1566,7 +1581,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 		
 			if (!completionExpected)
 			{
-				CProtocolBridge::SendResponseBodyCompleted(S_OK, chunk->FromMemory.BufferLength, ctx->GetOverlapped());
+				ctx->SetContinueSynchronously(TRUE);
 			}
 		}
 		else if (ctx->GetIsChunked())
@@ -1646,8 +1661,13 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 	CheckError(error);
 
 	if (!ctx->GetIsUpgrade())
-	{
+	{		
 		ctx->SetChunkTransmitted(ctx->GetChunkTransmitted() + bytesTransfered);
+		if (ctx->GetChunkLength() == ctx->GetChunkTransmitted())
+		{
+			ctx->SetChunkTransmitted(0);
+			ctx->SetChunkLength(0);
+		}
 	}
 
 	if (ctx->GetIsLastChunk() && ctx->GetChunkLength() == ctx->GetChunkTransmitted())
