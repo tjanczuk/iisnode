@@ -271,6 +271,9 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\tests\130_websocket_onetwothree.js" />
     <None Include="..\..\test\functional\tests\131_websocket_echo.js" />
     <None Include="..\..\test\functional\tests\132_debug_header.js" />
+    <None Include="..\..\test\functional\tests\140_large_download.js" />
+    <None Include="..\..\test\functional\tests\141_large_upload.js" />
+    <None Include="..\..\test\functional\tests\142_large_upload_download.js" />
     <None Include="..\..\test\functional\tests\200_samples.bat" />
     <None Include="..\..\test\functional\tests\node_modules\iisnodeassert.js" />
     <None Include="..\..\test\functional\tests\parts\106_autoupdate_first.js" />
@@ -345,6 +348,10 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\..\test\functional\www\131_websocket_echo\web.config" />
     <None Include="..\..\test\functional\www\132_debug_header\hello.js" />
     <None Include="..\..\test\functional\www\132_debug_header\web.config" />
+    <None Include="..\..\test\functional\www\140_large_download\hello.js" />
+    <None Include="..\..\test\functional\www\140_large_download\web.config" />
+    <None Include="..\..\test\functional\www\141_large_upload\hello.js" />
+    <None Include="..\..\test\functional\www\141_large_upload\web.config" />
     <None Include="..\..\test\performance\client.bat" />
     <None Include="..\..\test\performance\localRun.bat" />
     <None Include="..\..\test\performance\readme.txt" />

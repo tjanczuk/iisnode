@@ -168,6 +168,12 @@
     <Filter Include="Tests\stress\132_websocket_latency">
       <UniqueIdentifier>{44ee30b6-3875-4e2d-99f0-f9e5cf6b38ac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tests\functional\www\140_large_download">
+      <UniqueIdentifier>{d55c12ae-4311-4695-855b-76a504d76888}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests\functional\www\141_large_upload">
+      <UniqueIdentifier>{c9b72a3c-ca3e-48a9-90a0-d86d681918fa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -755,6 +761,27 @@
     </None>
     <None Include="..\..\test\stress\132_websocket_latency\web.config">
       <Filter>Tests\stress\132_websocket_latency</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\140_large_download.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\140_large_download\hello.js">
+      <Filter>Tests\functional\www\140_large_download</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\140_large_download\web.config">
+      <Filter>Tests\functional\www\140_large_download</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\141_large_upload.js">
+      <Filter>Tests\functional\tests</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\141_large_upload\hello.js">
+      <Filter>Tests\functional\www\141_large_upload</Filter>
+    </None>
+    <None Include="..\..\test\functional\www\141_large_upload\web.config">
+      <Filter>Tests\functional\www\141_large_upload</Filter>
+    </None>
+    <None Include="..\..\test\functional\tests\142_large_upload_download.js">
+      <Filter>Tests\functional\tests</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
