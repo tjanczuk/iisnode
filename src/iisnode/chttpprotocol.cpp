@@ -55,7 +55,7 @@ HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD 
 		contentLength = strlen(content);
 	}
 
-	if ((contentLength + *offset) > *bufferLength)
+	while ((contentLength + *offset) > *bufferLength)
 	{
 		DWORD quota = CModuleConfiguration::GetMaxRequestBufferSize(context);
 		ErrorIf(*bufferLength >= quota, ERROR_NOT_ENOUGH_QUOTA);
