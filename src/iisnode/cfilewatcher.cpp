@@ -298,9 +298,9 @@ HRESULT CFileWatcher::WatchFile(PCWSTR directoryName, DWORD directoryNameLength,
 	directory = this->directories;
 	while (NULL != directory)
 	{
-		if (0 == wcsncmp(directory->directoryName, directoryName, directoryNameLength)
-			&& (startFileName == startSubdirectoryName 
-			    || 0 == wcsncmp(directory->directoryName + directoryNameLength, startSubdirectoryName, startFileName - startSubdirectoryName)))
+		if (wcslen(directory->directoryName) == directoryNameLength + startFileName - startSubdirectoryName
+			&& 0 == wcsncmp(directory->directoryName, directoryName, directoryNameLength)
+			&& 0 == wcsncmp(directory->directoryName + directoryNameLength, startSubdirectoryName, startFileName - startSubdirectoryName))
 		{
 			break;
 		}
@@ -413,48 +413,60 @@ HRESULT CFileWatcher::RemoveWatch(CNodeApplication* application)
 	{
 		WatchedFile* file = directory->files;
 		WatchedFile* previousFile = NULL;
-		while (file && file->application != application)
+
+		while (file)
 		{
-			previousFile = file;
-			file = file->next;
-		}
-
-		if (file)
-		{
-			delete [] file->fileName;
-			if (previousFile)
+			if (file->application == application)
 			{
-				previousFile->next = file->next;
-			}
-			else
-			{
-				directory->files = file->next;
-			}
-
-			delete file;
-
-			if (!directory->files)
-			{
-				delete [] directory->directoryName;
-				CloseHandle(directory->watchHandle);
-
-				if (previousDirectory)
+				WatchedFile* tmpFile = file;
+				delete [] file->fileName;
+				if (previousFile)
 				{
-					previousDirectory->next = directory->next;
+					previousFile->next = file->next;
+					file = file->next;
+					if (!file)
+					{
+						previousDirectory = directory;
+						directory = directory->next;
+					}
 				}
 				else
 				{
-					this->directories = directory->next;
+					directory->files = file->next;
+					file = file->next;
+					if (!directory->files)
+					{
+						delete [] directory->directoryName;
+						CloseHandle(directory->watchHandle);
+
+						if (previousDirectory)
+						{
+							previousDirectory->next = directory->next;
+						}
+						else
+						{
+							this->directories = directory->next;
+						}
+
+						WatchedDirectory* tmpDirectory = directory;
+						directory = directory->next;
+						delete tmpDirectory;
+					}
 				}
 
-				delete directory;
+				delete tmpFile;
 			}
-
-			break;
+			else
+			{
+				previousFile = file;
+				file = file->next;
+				if (!file)
+				{
+					previousDirectory = directory;
+					directory = directory->next;
+				}
+			}
 		}
-
-		previousDirectory = directory;
-		directory = directory->next;
 	}
 
 	LEAVE_CS(this->syncRoot)
