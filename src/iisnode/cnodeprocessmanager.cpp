@@ -2,7 +2,7 @@
 
 CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpContext* context)
 	: application(application), processes(NULL), currentProcess(0), isClosing(FALSE),
-	refCount(1)
+	refCount(1), gracefulShutdownProcessCount(0)
 {
 	if (this->GetApplication()->IsDebugMode())
 	{
@@ -18,6 +18,7 @@ CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpCon
 
 	this->gracefulShutdownTimeout = CModuleConfiguration::GetGracefulShutdownTimeout(context);
 	InitializeSRWLock(&this->srwlock);
+	this->gracefulShutdownDrainHandle = CreateEvent(NULL, TRUE, TRUE, NULL);
 }
 
 CNodeProcessManager::~CNodeProcessManager()
@@ -40,6 +41,9 @@ void CNodeProcessManager::Cleanup()
 		delete[] this->processes;
 		this->processes = NULL;
 	}
+
+	CloseHandle(this->gracefulShutdownDrainHandle);
+	this->gracefulShutdownDrainHandle = NULL;
 }
 
 CNodeApplication* CNodeProcessManager::GetApplication()
@@ -203,6 +207,12 @@ HRESULT CNodeProcessManager::RecycleProcess(CNodeProcess* process)
 
 			this->processes[i] = NULL;
 
+			// prevent the CNodeProcessManager from recycling until all CNodeProcesses that died finished graceful shutdown
+			if (1L == InterlockedIncrement(&this->gracefulShutdownProcessCount))
+			{
+				ResetEvent(this->gracefulShutdownDrainHandle);
+			}
+
 			gracefulRecycle = TRUE;
 		}
 	}
@@ -237,6 +247,11 @@ Error:
 		delete args;
 	}
 
+	if (0L == InterlockedDecrement(&this->gracefulShutdownProcessCount))
+	{
+		SetEvent(this->gracefulShutdownDrainHandle);
+	}
+
 	return hr;
 }
 
@@ -245,47 +260,24 @@ HRESULT CNodeProcessManager::Recycle()
 	HRESULT hr;
 	HANDLE recycler;
 	ProcessRecycleArgs* args = NULL;
-	BOOL deleteApplication = FALSE;
 
 	ENTER_SRW_EXCLUSIVE(this->srwlock)
 
 	this->isClosing = TRUE;	
 
-	BOOL hasActiveProcess = FALSE;
-	for (int i = 0; i < this->processCount; i++)
-	{
-		if (this->processes[i])
-		{
-			hasActiveProcess = TRUE;
-			break;
-		}
-	}
+	// perform actual recycling on a diffrent thread to free up the file watcher thread
 
-	if (hasActiveProcess)
-	{
-		// perform actual recycling on a diffrent thread to free up the file watcher thread
-
-		ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
-		args->count = this->processCount;
-		args->process = NULL;
-		args->processes = this->processes;
-		args->processManager = this;
-		args->disposeApplication = TRUE;
-		args->disposeProcess = FALSE;
-		ErrorIf((HANDLE)-1L == (recycler = (HANDLE) _beginthreadex(NULL, 0, CNodeProcessManager::GracefulShutdown, args, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
-		CloseHandle(recycler);
-	}
-	else
-	{
-		deleteApplication = TRUE;
-	}
+	ErrorIf(NULL == (args = new ProcessRecycleArgs), ERROR_NOT_ENOUGH_MEMORY);
+	args->count = this->processCount;
+	args->process = NULL;
+	args->processes = this->processes;
+	args->processManager = this;
+	args->disposeApplication = TRUE;
+	args->disposeProcess = FALSE;
+	ErrorIf((HANDLE)-1L == (recycler = (HANDLE) _beginthreadex(NULL, 0, CNodeProcessManager::GracefulShutdown, args, 0, NULL)), ERROR_NOT_ENOUGH_MEMORY);
+	CloseHandle(recycler);
 
 	LEAVE_SRW_EXCLUSIVE(this->srwlock)
-
-	if (deleteApplication)
-	{
-		delete this->GetApplication();
-	}
 
 	return S_OK;
 Error:
@@ -309,7 +301,7 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 
 	// drain active requests 
 
-	ErrorIf(NULL == (drainHandles = new HANDLE[args->count]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(NULL == (drainHandles = new HANDLE[args->count + 1]), ERROR_NOT_ENOUGH_MEMORY);
 	RtlZeroMemory(drainHandles, args->count * sizeof HANDLE);
 	for (int i = 0; i < args->count; i++)
 	{
@@ -320,10 +312,22 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 			drainHandleCount++;
 		}
 	}
+
+	if (args->disposeApplication)
+	{
+		// prevent the application from exiting until pending graceful shutdown of died CNodeProcesses has finished
+		drainHandles[drainHandleCount++] = args->processManager->gracefulShutdownDrainHandle;
+	}
 	
 	if (args->processManager->gracefulShutdownTimeout > 0)
 	{
 		WaitForMultipleObjects(drainHandleCount, drainHandles, TRUE, args->processManager->gracefulShutdownTimeout);
+	}
+
+	if (args->disposeApplication)
+	{
+		// do not close the gracefulShutdownDrainHandle as it is owned by CNodeProcessManager
+		drainHandleCount--;
 	}
 
 	for (int i = 0; i < drainHandleCount; i++)
@@ -346,6 +350,11 @@ unsigned int CNodeProcessManager::GracefulShutdown(void* arg)
 		// this is the single process recycling code path (e.g. node.exe died)
 
 		delete args->processes[0];
+		if (0L == InterlockedDecrement(&args->processManager->gracefulShutdownProcessCount))
+		{
+			// release recycle of CNodeApplication that may be running concurrently
+			SetEvent(args->processManager->gracefulShutdownDrainHandle);
+		}
 	}
 
 	delete args;
@@ -356,6 +365,15 @@ Error:
 
 	if (args)
 	{
+		if (args->disposeProcess)
+		{
+			if (0L == InterlockedDecrement(&args->processManager->gracefulShutdownProcessCount))
+			{
+				// release recycle of CNodeApplication that may be running concurrently
+				SetEvent(args->processManager->gracefulShutdownDrainHandle);
+			}
+		}
+
 		delete args;
 		args = NULL;
 	}

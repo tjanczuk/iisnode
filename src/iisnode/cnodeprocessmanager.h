@@ -28,6 +28,8 @@ private:
 	BOOL isClosing;
 	long refCount;
 	CNodeEventProvider* eventProvider;
+	HANDLE gracefulShutdownDrainHandle;
+	long gracefulShutdownProcessCount;
 
 	HRESULT AddProcess(int ordinal, IHttpContext* context);
 	static unsigned int WINAPI GracefulShutdown(void* arg);
