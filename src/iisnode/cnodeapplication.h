@@ -17,6 +17,7 @@ private:
 	BOOL isDebugger;
 	NodeDebugCommand debugCommand;
 	DWORD debugPort;
+	BOOL needsRecycling;
 
 	void Cleanup();	
 
@@ -39,6 +40,8 @@ public:
 	DWORD GetDebugPort();
 	DWORD GetActiveRequestCount();
 	DWORD GetProcessCount();
+	void SetNeedsRecycling();
+	BOOL GetNeedsRecycling();
 };
 
 #endif

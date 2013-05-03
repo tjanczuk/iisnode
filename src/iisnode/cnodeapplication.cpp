@@ -2,7 +2,7 @@
 
 CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort)
 	: applicationManager(applicationManager), scriptName(NULL), processManager(NULL),
-	isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand), debugPort(debugPort)
+	isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand), debugPort(debugPort), needsRecycling(FALSE)
 {
 }
 
@@ -146,3 +146,14 @@ DWORD CNodeApplication::GetProcessCount()
 {
 	return this->processManager->GetProcessCount();
 }
+
+void CNodeApplication::SetNeedsRecycling()
+{
+	this->needsRecycling = TRUE;
+}
+
+BOOL CNodeApplication::GetNeedsRecycling()
+{
+	return this->needsRecycling;
+}
+

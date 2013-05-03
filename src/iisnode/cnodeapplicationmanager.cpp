@@ -193,7 +193,7 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
         ENTER_SRW_SHARED(this->srwlock)
 
         CheckError(this->GetOrCreateNodeApplication(context, debugCommand, FALSE, &application));
-		if (application)
+		if (application && !application->GetNeedsRecycling())
 		{
 			// this is the sweetspot code path: application already exists, shared read lock is sufficient
 
@@ -202,7 +202,7 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 
         LEAVE_SRW_SHARED(this->srwlock)
 
-		if (!application)
+		if (!application || application->GetNeedsRecycling())
 		{
 			// this is the initialization code path for activating request:
 			// application must be created which requires an exclusive lock
@@ -210,6 +210,12 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 			ENTER_SRW_EXCLUSIVE(this->srwlock)
 
 			CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
+			if (application->GetNeedsRecycling())
+			{
+				this->RecycleApplicationAssumeLock(application);
+				CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
+			}
+
 			CheckError(application->Dispatch(context, pProvider, ctx));
 
 			LEAVE_SRW_EXCLUSIVE(this->srwlock)
@@ -339,7 +345,7 @@ HRESULT CNodeApplicationManager::RecycleApplicationAssumeLock(CNodeApplication* 
 
 void CNodeApplicationManager::OnScriptModified(CNodeApplicationManager* manager, CNodeApplication* application)
 {
-    manager->RecycleApplication(application);
+    application->SetNeedsRecycling();
 }
 
 // this method is always called under exclusive this->srwlock
