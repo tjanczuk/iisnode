@@ -417,7 +417,10 @@ DWORD CNodeProcessManager::GetActiveRequestCount()
 
 	for (DWORD i = 0; i < this->processCount; i++)
 	{
-		result += this->processes[i]->GetActiveRequestCount();
+		if (this->processes[i])
+		{
+			result += this->processes[i]->GetActiveRequestCount();
+		}
 	}
 
 	LEAVE_SRW_SHARED(this->srwlock)
