@@ -145,10 +145,17 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 				}
 
 				CheckError(this->processes[processToUse]->AcceptRequest(request));
+				request = NULL;
 			}
 
 			LEAVE_SRW_EXCLUSIVE(this->srwlock)
 		}
+	}
+	
+	if (request)
+	{
+		this->GetEventProvider()->Log(L"iisnode failed to accept a request beacuse the application is recycling", WINEVENT_LEVEL_ERROR, request->GetActivityId());
+		CProtocolBridge::SendEmptyResponse(request, 503, _T("Service Unavailable"), IISNODE_ERROR_APPLICATION_IS_RECYCLING);
 	}
 
 	this->DecRef(); // incremented at the beginning of this method

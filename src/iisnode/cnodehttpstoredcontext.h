@@ -24,7 +24,7 @@ private:
 	BOOL isChunked;
 	HRESULT result;
 	REQUEST_NOTIFICATION_STATUS requestNotificationStatus;	
-	long pendingAsyncOperationCount;
+	long volatile pendingAsyncOperationCount;
 	PCSTR targetUrl;
 	DWORD targetUrlLength;
 	IHttpContext* childContext;
@@ -39,6 +39,7 @@ private:
 	FILETIME startTime;
 	HTTP_DATA_CHUNK responseChunk;
 	DWORD responseChunkBufferSize;
+	CNodeEventProvider* eventProvider;
 
 public:
 

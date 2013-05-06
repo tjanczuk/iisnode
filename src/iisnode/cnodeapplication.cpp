@@ -86,7 +86,9 @@ HRESULT CNodeApplication::Dispatch(IHttpContext* context, IHttpEventProvider* pP
 	// CProtocolBridge::FinalizeResponseCore, possibly after several context switches
 	(*ctx)->IncreasePendingAsyncOperationCount(); 
 
-	CheckError(this->processManager->Dispatch(*ctx));
+	// At this point ownership of the request is handed over to Dispach below, including error handling.
+	// Therefore we don't propagate any errors up the stack.
+	this->processManager->Dispatch(*ctx);
 
 	return S_OK;
 

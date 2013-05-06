@@ -15,16 +15,10 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	this->responseChunk.FromMemory.pBuffer = NULL;
 
 	RtlZeroMemory(&this->asyncContext, sizeof(ASYNC_CONTEXT));
-	if (NULL != (tctx = context->GetTraceContext()) && NULL != (pguid = tctx->GetTraceActivityId()))
-	{
-		memcpy(&this->activityId, pguid, sizeof GUID);
-	}
-	else
-	{
-		CoCreateGuid(&this->activityId);
-	}
+	CoCreateGuid(&this->activityId);
 	
 	this->asyncContext.data = this;
+	this->eventProvider = nodeApplication->GetApplicationManager()->GetEventProvider();
 }
 
 CNodeHttpStoredContext::~CNodeHttpStoredContext()
@@ -287,6 +281,10 @@ GUID* CNodeHttpStoredContext::GetActivityId()
 
 long CNodeHttpStoredContext::IncreasePendingAsyncOperationCount()
 {
+	this->eventProvider->Log(
+		L"iisnode increases pending async operation count", 
+		WINEVENT_LEVEL_VERBOSE, 
+		this->GetActivityId());
 	if (this->requestPumpStarted)
 	{
 		return InterlockedIncrement(&this->upgradeContext->pendingAsyncOperationCount);
@@ -299,6 +297,10 @@ long CNodeHttpStoredContext::IncreasePendingAsyncOperationCount()
 
 long CNodeHttpStoredContext::DecreasePendingAsyncOperationCount()
 {
+	this->eventProvider->Log(
+		L"iisnode decreases pending async operation count", 
+		WINEVENT_LEVEL_VERBOSE, 
+		this->GetActivityId());
 	if (this->requestPumpStarted)
 	{
 		return InterlockedDecrement(&this->upgradeContext->pendingAsyncOperationCount);

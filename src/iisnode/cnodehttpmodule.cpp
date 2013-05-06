@@ -14,7 +14,6 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnSendResponse(IN IHttpContext* pHt
 		if (NULL != ctx && ctx->GetIsUpgrade() && !ctx->GetOpaqueFlagSet())
 		{
 			// Set opaque mode in HTTP.SYS to enable exchanging raw bytes.
-
 			
 			pProvider->SetFlags(flags | HTTP_SEND_RESPONSE_FLAG_OPAQUE);
 			ctx->SetOpaqueFlag();
@@ -37,17 +36,49 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 	this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
 
 	CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider, &ctx));
+	this->applicationManager->GetEventProvider()->Log(L"iisnode dispatched new http request", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
 	ASYNC_CONTEXT* async = ctx->GetAsyncContext();
 	async->RunSynchronousContinuations();
 
+	REQUEST_NOTIFICATION_STATUS result;
 	if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count set to 1 in the ctor of CNodeHttpStoredContext
 	{
-		return ctx->GetRequestNotificationStatus();
+		result = ctx->GetRequestNotificationStatus();
 	}
 	else
 	{
-		return RQ_NOTIFICATION_PENDING;
+		result = RQ_NOTIFICATION_PENDING;
 	}
+
+	switch (result) 
+	{
+	default:
+		this->applicationManager->GetEventProvider()->Log(
+			L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler", 
+			WINEVENT_LEVEL_VERBOSE, 
+			ctx->GetActivityId());
+		break;
+	case RQ_NOTIFICATION_CONTINUE:
+		this->applicationManager->GetEventProvider()->Log(
+			L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler with RQ_NOTIFICATION_CONTINUE", 
+			WINEVENT_LEVEL_VERBOSE, 
+			ctx->GetActivityId());
+		break;
+	case RQ_NOTIFICATION_FINISH_REQUEST:
+		this->applicationManager->GetEventProvider()->Log(
+			L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler with RQ_NOTIFICATION_FINISH_REQUEST", 
+			WINEVENT_LEVEL_VERBOSE, 
+			ctx->GetActivityId());
+		break;
+	case RQ_NOTIFICATION_PENDING:
+		this->applicationManager->GetEventProvider()->Log(
+			L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler with RQ_NOTIFICATION_PENDING", 
+			WINEVENT_LEVEL_VERBOSE, 
+			ctx->GetActivityId());
+		break;
+	};
+
+	return result;
 
 Error:
 
@@ -55,7 +86,14 @@ Error:
 
 	if (log)
 	{
-		log->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
+		if (ctx)
+		{
+			log->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
+		}
+		else
+		{
+			log->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
+		}
 	}
 
 	if (ERROR_NOT_ENOUGH_QUOTA == hr)
@@ -181,22 +219,39 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 			async->RunSynchronousContinuations();
 		}
 
-		if (0 == ctx->DecreasePendingAsyncOperationCount()) // decreases ref count increased on entering OnAsyncCompletion
+		ctx->DecreasePendingAsyncOperationCount();
+
+		REQUEST_NOTIFICATION_STATUS result = ctx->GetRequestNotificationStatus();
+
+		switch (result) 
 		{
+		default:
 			this->applicationManager->GetEventProvider()->Log(
-				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion and completes the request", 
+				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion", 
 				WINEVENT_LEVEL_VERBOSE, 
 				ctx->GetActivityId());
-			return ctx->GetRequestNotificationStatus();
-		}
-		else
-		{
+			break;
+		case RQ_NOTIFICATION_CONTINUE:
 			this->applicationManager->GetEventProvider()->Log(
-				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion and continues the request", 
+				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion with RQ_NOTIFICATION_CONTINUE", 
 				WINEVENT_LEVEL_VERBOSE, 
 				ctx->GetActivityId());
-			return RQ_NOTIFICATION_PENDING;
-		}
+			break;
+		case RQ_NOTIFICATION_FINISH_REQUEST:
+			this->applicationManager->GetEventProvider()->Log(
+				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion with RQ_NOTIFICATION_FINISH_REQUEST", 
+				WINEVENT_LEVEL_VERBOSE, 
+				ctx->GetActivityId());
+			break;
+		case RQ_NOTIFICATION_PENDING:
+			this->applicationManager->GetEventProvider()->Log(
+				L"iisnode leaves CNodeHttpModule::OnAsyncCompletion with RQ_NOTIFICATION_PENDING", 
+				WINEVENT_LEVEL_VERBOSE, 
+				ctx->GetActivityId());
+			break;
+		};
+
+		return result;
 	}
 
 	return RQ_NOTIFICATION_CONTINUE;
