@@ -44,7 +44,7 @@ private:
 public:
 
 	// Context is owned by the caller
-	CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context);
+	CNodeHttpStoredContext(CNodeApplication* nodeApplication, CNodeEventProvider* eventProvider, IHttpContext* context);
 	~CNodeHttpStoredContext();
 
 	IHttpContext* GetHttpContext();

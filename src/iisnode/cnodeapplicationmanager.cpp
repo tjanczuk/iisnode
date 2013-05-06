@@ -251,7 +251,7 @@ HRESULT CNodeApplicationManager::DebugRedirect(IHttpContext* context, CNodeHttpS
 {
     HRESULT hr;
 
-    ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(NULL, context)), ERROR_NOT_ENOUGH_MEMORY);
+    ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(NULL, this->GetEventProvider(), context)), ERROR_NOT_ENOUGH_MEMORY);
     IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
     moduleContextContainer->SetModuleContext(*ctx, this->GetModuleId());
     (*ctx)->IncreasePendingAsyncOperationCount(); // will be decreased in CProtocolBridge::FinalizeResponseCore
@@ -278,7 +278,7 @@ HRESULT CNodeApplicationManager::EnsureDebuggedApplicationKilled(IHttpContext* c
 
     if (ctx)
     {
-        ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(NULL, context)), ERROR_NOT_ENOUGH_MEMORY);
+        ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(NULL, this->GetEventProvider(), context)), ERROR_NOT_ENOUGH_MEMORY);
         IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
         moduleContextContainer->SetModuleContext(*ctx, this->GetModuleId());        
         (*ctx)->SetRequestNotificationStatus(RQ_NOTIFICATION_CONTINUE);

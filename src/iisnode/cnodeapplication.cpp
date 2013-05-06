@@ -78,7 +78,7 @@ HRESULT CNodeApplication::Dispatch(IHttpContext* context, IHttpEventProvider* pP
 	CheckNull(context);
 	CheckNull(pProvider);
 
-	ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(this, context)), ERROR_NOT_ENOUGH_MEMORY);	
+	ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(this, this->GetApplicationManager()->GetEventProvider(), context)), ERROR_NOT_ENOUGH_MEMORY);	
 	IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();
 	moduleContextContainer->SetModuleContext(*ctx, this->GetApplicationManager()->GetModuleId());
 

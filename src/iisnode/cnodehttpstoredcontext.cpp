@@ -1,6 +1,6 @@
 #include "precomp.h"
 
-CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, IHttpContext* context)
+CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication, CNodeEventProvider* eventProvider, IHttpContext* context)
 	: nodeApplication(nodeApplication), context(context), process(NULL), buffer(NULL), bufferSize(0), dataSize(0), parsingOffset(0),
 	chunkLength(0), chunkTransmitted(0), isChunked(FALSE), pipe(INVALID_HANDLE_VALUE), result(S_OK), isLastChunk(FALSE),
 	requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
@@ -18,7 +18,7 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
 	CoCreateGuid(&this->activityId);
 	
 	this->asyncContext.data = this;
-	this->eventProvider = nodeApplication->GetApplicationManager()->GetEventProvider();
+	this->eventProvider = eventProvider;
 }
 
 CNodeHttpStoredContext::~CNodeHttpStoredContext()
@@ -378,7 +378,7 @@ HRESULT CNodeHttpStoredContext::SetupUpgrade()
 	// both contexts are used concurrently in a full duplex, asynchronous fashion. 
 	// The last context to complete pumping closes the IIS request. 
 
-	ErrorIf(NULL == (this->upgradeContext = new CNodeHttpStoredContext(this->GetNodeApplication(), this->GetHttpContext())), 
+	ErrorIf(NULL == (this->upgradeContext = new CNodeHttpStoredContext(this->GetNodeApplication(), this->eventProvider, this->GetHttpContext())), 
 		ERROR_NOT_ENOUGH_MEMORY);	
 	this->upgradeContext->bufferSize = CModuleConfiguration::GetInitialRequestBufferSize(this->context);
 	ErrorIf(NULL == (this->upgradeContext->buffer = this->context->AllocateRequestMemory(this->upgradeContext->bufferSize)),
