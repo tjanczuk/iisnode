@@ -384,7 +384,6 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <None Include="..\config\iisnode_schema_x64.xml">
       <SubType>Designer</SubType>
     </None>
-    <None Include="..\config\iisnode_schema_x64_wow.xml" />
     <None Include="..\samples\configuration\hello.js" />
     <None Include="..\samples\configuration\iisnode.yml" />
     <None Include="..\samples\configuration\readme.htm">

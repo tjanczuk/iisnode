@@ -24,17 +24,6 @@
     </DirectoryRef>
   </Fragment>
   <Fragment>
-    <DirectoryRef Id="inetsrvdirwow">
-        <Directory Id="dirC3B05243102F810BD3959CD3BA949E89" Name="config">
-          <Directory Id="dirC3B05243102F810BD3959CD3BA949E90" Name="schema">
-            <Component Win64="yes" Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" Guid="*">
-              <File Id="fil98FE22082D3964939C1CB4060FC2A0C7" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode_schema_x64_wow.xml" Name="iisnode_schema.xml"/>
-            </Component>
-          </Directory>
-      </Directory>
-    </DirectoryRef>
-  </Fragment>
-  <Fragment>
     <DirectoryRef Id="iisnoderootdirwow">
       <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68235A8CA281C6" Guid="*">
         <File Id="fil7FAEA07CDAF0588E758688EFA85F0A6B" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode.dll" />
@@ -71,7 +60,6 @@
     <ComponentGroup Id="allfileswow">
       <ComponentRef Id="cmp1C33C88432AB7530411D254B8656120B"/>
       <ComponentRef Id="cmp1C33C88432AC7530411D254B8656120B" />
-      <ComponentRef Id="cmpBFBC3A88B5FB1B48E1CB3DBC62C46CAD" />
       <?if $(var.Configuration) = Debug ?>      
         <ComponentRef Id="cmpE429AFB5AD377FF35803A538B9BE37A8" />
       <?endif?>

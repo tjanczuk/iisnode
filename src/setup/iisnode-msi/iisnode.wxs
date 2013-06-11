@@ -62,15 +62,8 @@
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
       <ComponentGroupRef Id="allfiles" />
-      <Condition Level="0">WOW</Condition>
-    </Feature>
-
-    <?if $(var.isWin64) = "yes" ?>
-    <Feature Id="iisnode4iiswow" Title="Hosting node.js applications in IIS 7.x in WOW mode" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS in WOW mode">
       <ComponentGroupRef Id="allfileswow" />
-      <Condition Level="0">NOT WOW</Condition>
     </Feature>
-    <?endif?>
 
     <?if $(var.ProjectName) = iisnode-msi-full ?>
     <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\License.rtf" />
@@ -104,12 +97,7 @@
 
       <!-- install/rollback/uninstall iisnode module -->
 
-      <?if $(var.isWin64) = "yes" ?>
-      <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">(REMOVE&lt;>"ALL") AND (NOT WOW)</Custom>      
-      <Custom Action="AddIisnodeModuleRegistrationWow" After="RemoveIisnodeModuleRegistration">(REMOVE&lt;>"ALL") AND WOW</Custom>
-      <?else?>
       <Custom Action="AddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
-      <?endif?>
       <Custom Action="RollbackAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE&lt;>"ALL"</Custom>
       <Custom Action="UndoAddIisnodeModuleRegistration" After="RemoveIisnodeModuleRegistration">REMOVE="ALL"</Custom>
 

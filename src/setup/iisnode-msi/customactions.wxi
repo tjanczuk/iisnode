@@ -54,13 +54,7 @@
 
     <?if $(var.isWin64) = "yes" ?>
     <CustomAction Id="AddIisnodeModuleRegistration"
-                  ExeCommand="[System64Folder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdir]iisnode.dll&quot; /preCondition:bitness64 /commit:apphost"
-                  Directory="TARGETDIR"
-                  Execute="deferred"
-                  Return="check"
-                  Impersonate="no"/>
-    <CustomAction Id="AddIisnodeModuleRegistrationWow"
-                  ExeCommand="[System64Folder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;[iisnoderootdirwow]iisnode.dll&quot; /preCondition:bitness32 /commit:apphost"
+                  ExeCommand="[System64Folder]inetsrv\appcmd.exe install module /name:iisnode /image:&quot;%programfiles%\iisnode\iisnode.dll&quot; /commit:apphost"
                   Directory="TARGETDIR"
                   Execute="deferred"
                   Return="check"

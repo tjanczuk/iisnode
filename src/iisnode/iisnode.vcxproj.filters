@@ -675,9 +675,6 @@
     <None Include="..\..\test\functional\www\124_node_config_override\iisnode.yml">
       <Filter>Tests\functional\www\124_node_config_override</Filter>
     </None>
-    <None Include="..\config\iisnode_schema_x64_wow.xml">
-      <Filter>Config</Filter>
-    </None>
     <None Include="..\scripts\interceptor.js">
       <Filter>Scripts</Filter>
     </None>
