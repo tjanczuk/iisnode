@@ -62,7 +62,9 @@
 
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
       <ComponentGroupRef Id="allfiles" />
+      <?if $(var.isWin64) = "yes" ?>
       <ComponentGroupRef Id="allfileswow" />
+      <?endif?>
     </Feature>
 
     <?if $(var.ProjectName) = iisnode-msi-full ?>
