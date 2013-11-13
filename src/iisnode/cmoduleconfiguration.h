@@ -49,12 +49,10 @@ private:
 	static HTTP_MODULE_ID moduleId;
 	static HRESULT GetConfigSection(IHttpContext* context, IAppHostElement** section, OLECHAR* configElement = L"system.webServer/iisnode");
 	static HRESULT GetString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value);
-	static HRESULT GetEnvExpandedString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value);
 	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value, BOOL defaultValue);
 	static HRESULT GetDWORD(char* str, DWORD* value);
 	static HRESULT GetBOOL(char* str, BOOL* value);
-	static HRESULT GetString(char* str, LPWSTR* value);
-	static HRESULT GetEnvExpandedString(char* str, LPWSTR* value);
+	static HRESULT GetString(char* str, LPWSTR* value, BOOL expandEnvironmentStrings = FALSE);
 	static HRESULT GetDWORD(IAppHostElement* section, LPCWSTR propertyName, DWORD* value);	
 	static HRESULT ApplyConfigOverrideKeyValue(IHttpContext* context, CModuleConfiguration* config, char* keyStart, char* keyEnd, char* valueStart, char* valueEnd);
 	static HRESULT ApplyYamlConfigOverrides(IHttpContext* context, CModuleConfiguration* config);
