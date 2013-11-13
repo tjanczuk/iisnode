@@ -479,6 +479,56 @@ Error:
     return hr;
 }
 
+HRESULT CModuleConfiguration::GetEnvExpandedString(IAppHostElement* section, LPCWSTR propertyName, LPWSTR* value)
+{
+	HRESULT hr = S_OK;
+	BSTR sysPropertyName = NULL;
+	BSTR sysPropertyValue = NULL;
+	IAppHostProperty* prop = NULL;
+	WCHAR variableValueBuffer[1024];
+	WCHAR* variableValue = NULL;
+
+	CheckNull(value);
+	*value = NULL;
+
+	CheckError(CModuleConfiguration::GetEnvVariable(propertyName, variableValueBuffer, 1024, &variableValue));
+	if (variableValue)
+	{
+		ErrorIf(NULL == (*value = new WCHAR[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(0 == ExpandEnvironmentStringsW(variableValue, *value, MAX_PATH), GetLastError());
+	}
+	else
+	{
+		ErrorIf(NULL == (sysPropertyName = SysAllocString(propertyName)), ERROR_NOT_ENOUGH_MEMORY);
+		CheckError(section->GetPropertyByName(sysPropertyName, &prop));
+		CheckError(prop->get_StringValue(&sysPropertyValue));
+		ErrorIf(NULL == (*value = new WCHAR[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(0 == ExpandEnvironmentStringsW(sysPropertyValue, *value, MAX_PATH), GetLastError());
+	}
+
+Error:
+
+	if ( sysPropertyName )
+	{
+		SysFreeString(sysPropertyName);
+		sysPropertyName = NULL;
+	}
+
+	if ( sysPropertyValue )
+	{
+		SysFreeString(sysPropertyValue);
+		sysPropertyValue = NULL;
+	}
+
+	if (prop)
+	{
+		prop->Release();
+		prop = NULL;
+	}
+
+	return hr;
+}
+
 HRESULT CModuleConfiguration::GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value, BOOL defaultValue)
 {
 	HRESULT hr = S_OK;
@@ -654,6 +704,40 @@ Error:
 	return hr;
 }
 
+HRESULT CModuleConfiguration::GetEnvExpandedString(char* str, LPWSTR* value)
+{
+	HRESULT hr;
+	int wcharSize;
+	LPWSTR pszStr = NULL;
+
+	if (*value)
+	{
+		delete [] *value;
+		*value = NULL;
+	}
+
+	if (!str)
+	{
+		str = "";
+	}
+
+	ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
+	ErrorIf(NULL == (pszStr = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, pszStr, wcharSize), GetLastError());
+	ErrorIf(NULL == (*value = new WCHAR[MAX_PATH]), ERROR_NOT_ENOUGH_MEMORY);
+	ErrorIf(0 == ExpandEnvironmentStringsW(pszStr, *value, MAX_PATH), GetLastError());
+
+	hr = S_OK;	// fall through to cleanup in the Error section
+
+Error:
+	if(pszStr != NULL)
+	{
+		delete[] pszStr;
+	}
+
+	return hr;
+}
+
 HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context, CModuleConfiguration* config, char* keyStart, char* keyEnd, char* valueStart, char* valueEnd)
 {
 	HRESULT hr;
@@ -774,7 +858,7 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "nodeProcessCommandLine"))
 	{
-		CheckError(GetString(valueStart, &config->nodeProcessCommandLine));
+		CheckError(GetEnvExpandedString(valueStart, &config->nodeProcessCommandLine));
 	}
 	else if (0 == strcmpi(keyStart, "interceptor"))
 	{
@@ -1130,7 +1214,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetBOOL(section, L"enableXFF", &c->enableXFF, FALSE));
 		CheckError(GetString(section, L"promoteServerVars", &c->promoteServerVarsRaw));
 		CheckError(GetString(section, L"configOverrides", &c->configOverrides));
-		CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
+		CheckError(GetEnvExpandedString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
 		CheckError(GetString(section, L"interceptor", &c->interceptor));
 
 		// debuggerPathSegment

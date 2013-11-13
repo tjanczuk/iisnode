@@ -42,6 +42,7 @@ private:
 	static unsigned int WINAPI Worker(void* arg);
 	BOOL ScanDirectory(WatchedDirectory* directory, BOOL unc);
 	HRESULT WatchFile(PCWSTR directoryName, DWORD directoryNameLength, BOOL unc, PCWSTR startSubdirectoryName, PCWSTR startFileName, PCWSTR endFileName, BOOL wildcard);
+	BOOL DirectoryExists(LPCWSTR directoryPath);
 	static HRESULT GetWatchedFileTimestamp(WatchedFile* file, FILETIME* timestamp);
 
 public:

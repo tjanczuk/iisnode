@@ -491,7 +491,17 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 		if (NULL == (url = request->GetHeader("X-Original-URL", &urlLength)))
 		{
 			HTTP_REQUEST* raw = request->GetRawHttpRequest();
-			context->SetTargetUrl(raw->pRawUrl, raw->RawUrlLength);
+			
+			// Fix for https://github.com/tjanczuk/iisnode/issues/296
+			PSTR path = NULL;
+			int pathSizeA = 0;
+			int cchAbsPathLength = (raw->CookedUrl.AbsPathLength + raw->CookedUrl.QueryStringLength) >> 1;
+			ErrorIf(0 == (pathSizeA = WideCharToMultiByte(CP_ACP, 0, raw->CookedUrl.pAbsPath, cchAbsPathLength, NULL, 0, NULL, NULL)), E_FAIL);
+			ErrorIf(NULL == (path = (TCHAR*)context->GetHttpContext()->AllocateRequestMemory(pathSizeA + 1)), ERROR_NOT_ENOUGH_MEMORY);
+			ErrorIf(pathSizeA != WideCharToMultiByte(CP_ACP, 0, raw->CookedUrl.pAbsPath, cchAbsPathLength, path, pathSizeA, NULL, NULL), E_FAIL);
+			path[pathSizeA] = 0;
+
+			context->SetTargetUrl(path, pathSizeA);
 		}
 		else
 		{
