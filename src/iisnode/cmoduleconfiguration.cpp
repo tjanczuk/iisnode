@@ -629,10 +629,11 @@ HRESULT CModuleConfiguration::GetBOOL(char* str, BOOL* value)
 	return S_OK;
 }
 
-HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value)
+HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value, BOOL expandEnvironmentStrings)
 {
 	HRESULT hr;
 	int wcharSize, bytesConverted;
+	LPWSTR pszStr = NULL;
 
 	if (*value)
 	{
@@ -645,12 +646,31 @@ HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value)
 		str = "";
 	}
 
-	ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
-	ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
-	ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, *value, wcharSize), GetLastError());
+	if(expandEnvironmentStrings == FALSE)
+	{
+		ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
+		ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, *value, wcharSize), GetLastError());
+	}
+	else
+	{
+		ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
+		ErrorIf(NULL == (pszStr = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, pszStr, wcharSize), GetLastError());
+		ErrorIf(0 == (wcharSize = ExpandEnvironmentStringsW(pszStr, NULL, 0)), GetLastError());
+		ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(wcharSize != ExpandEnvironmentStringsW(pszStr, *value, wcharSize), GetLastError());
+	}
 
-	return S_OK;
+	hr = S_OK; // fall through to clean up section.
+
 Error:
+
+	if(pszStr != NULL)
+	{
+		delete[] pszStr;
+	}
+
 	return hr;
 }
 
@@ -774,7 +794,7 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "nodeProcessCommandLine"))
 	{
-		CheckError(GetString(valueStart, &config->nodeProcessCommandLine));
+		CheckError(GetString(valueStart, &config->nodeProcessCommandLine, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "interceptor"))
 	{

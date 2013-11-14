@@ -52,7 +52,7 @@ private:
 	static HRESULT GetBOOL(IAppHostElement* section, LPCWSTR propertyName, BOOL* value, BOOL defaultValue);
 	static HRESULT GetDWORD(char* str, DWORD* value);
 	static HRESULT GetBOOL(char* str, BOOL* value);
-	static HRESULT GetString(char* str, LPWSTR* value);	
+	static HRESULT GetString(char* str, LPWSTR* value, BOOL expandEnvironmentStrings = FALSE);
 	static HRESULT GetDWORD(IAppHostElement* section, LPCWSTR propertyName, DWORD* value);	
 	static HRESULT ApplyConfigOverrideKeyValue(IHttpContext* context, CModuleConfiguration* config, char* keyStart, char* keyEnd, char* valueStart, char* valueEnd);
 	static HRESULT ApplyYamlConfigOverrides(IHttpContext* context, CModuleConfiguration* config);

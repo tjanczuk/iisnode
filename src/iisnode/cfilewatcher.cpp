@@ -26,7 +26,11 @@ CFileWatcher::~CFileWatcher()
 	while (NULL != this->directories)
 	{
 		WatchedDirectory* currentDirectory = this->directories;
-		CloseHandle(currentDirectory->watchHandle);
+		if(currentDirectory->watchHandle != NULL)
+		{
+			CloseHandle(currentDirectory->watchHandle);
+			currentDirectory->watchHandle = NULL;
+		}
 		delete [] currentDirectory->directoryName;
 		while (NULL != currentDirectory->files)
 		{
@@ -385,6 +389,7 @@ Error:
 		if (NULL != newDirectory->watchHandle)
 		{
 			CloseHandle(newDirectory->watchHandle);
+			newDirectory->watchHandle = NULL;
 		}
 
 		delete newDirectory;
@@ -437,7 +442,11 @@ HRESULT CFileWatcher::RemoveWatch(CNodeApplication* application)
 					if (!directory->files)
 					{
 						delete [] directory->directoryName;
-						CloseHandle(directory->watchHandle);
+						if(directory->watchHandle != NULL)
+						{
+							CloseHandle(directory->watchHandle);
+							directory->watchHandle = NULL;
+						}
 
 						if (previousDirectory)
 						{
@@ -507,7 +516,7 @@ unsigned int CFileWatcher::Worker(void* arg)
 			while (current && current != directory)
 				current = current->next;
 
-			if (current)
+			if (current  && current->watchHandle != NULL)
 			{
 				watcher->ScanDirectory(current, FALSE);
 
@@ -541,8 +550,46 @@ unsigned int CFileWatcher::Worker(void* arg)
 			WatchedDirectory* current = watcher->directories;
 			while (current)
 			{
-				if (watcher->ScanDirectory(current, TRUE))
-					break;
+				//
+				// watched directory exists, check if handle is valid, if not, create one.
+				// watchHandle will be NULL if the watched directory was deleted before.
+				//
+				if(watcher->DirectoryExists(current->directoryName))
+				{
+					if(current->watchHandle == NULL)
+					{
+						current->watchHandle = CreateFileW(
+							current->directoryName,           
+							FILE_LIST_DIRECTORY,    
+							FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+							NULL, 
+							OPEN_EXISTING,         
+							FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+							NULL);
+					}
+
+					//
+					// scan the directory for file changes
+					//
+					if (watcher->ScanDirectory(current, TRUE))
+					{
+						//
+						// found a change that will recycle the application.
+						//
+						break;
+					}
+				}
+				else
+				{
+					//
+					// directory being watched was deleted, close the handle.
+					//
+					if(current->watchHandle != NULL)
+					{
+						CloseHandle(current->watchHandle);
+						current->watchHandle = NULL;
+					}
+				}
 				current = current->next;
 			}
 
@@ -551,6 +598,16 @@ unsigned int CFileWatcher::Worker(void* arg)
 	}
 
 	return 0;
+}
+
+BOOL CFileWatcher::DirectoryExists(LPCWSTR directoryPath)
+{
+    DWORD dwFileAttributes;
+
+    dwFileAttributes = GetFileAttributesW(directoryPath);
+
+    return ((dwFileAttributes != INVALID_FILE_ATTRIBUTES) && 
+        (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 BOOL CFileWatcher::ScanDirectory(WatchedDirectory* directory, BOOL unc)
