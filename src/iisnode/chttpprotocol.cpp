@@ -167,7 +167,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 	{
 		PSOCKADDR addr = request->GetRemoteAddress();
 		DWORD addrSize = addr->sa_family == AF_INET ? sizeof SOCKADDR_IN : sizeof SOCKADDR_IN6;
-		ErrorIf(0 != WSAAddressToString(addr, addrSize, NULL, remoteHost, &remoteHostSize), GetLastError());
+		ErrorIf(0 != GetNameInfo(addr, addrSize, remoteHost, remoteHostSize, NULL, 0, NI_NUMERICHOST), GetLastError());
 
 		// Determine the incoming request protocol scheme
 		PCSTR varValue, varScheme = schemeHttp;
@@ -197,7 +197,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 			// augment existing X-Forwarded-For header
 
 			CheckError(CHttpProtocol::Append(context, ", ", 2, result, &bufferLength, &offset));
-			CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, remoteHost, 0, result, &bufferLength, &offset));
 
 			addXFF = FALSE;
 		}
@@ -210,7 +210,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 		// add a new X-Forwarded-For header
 
 		CheckError(CHttpProtocol::Append(context, "X-Forwarded-For: ", 17, result, &bufferLength, &offset));
-		CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, remoteHost, 0, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
 	}
 
