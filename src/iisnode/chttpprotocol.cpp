@@ -46,6 +46,9 @@ PCSTR CHttpProtocol::httpRequestHeaders[] = {
 	"User-Agent"
 };
 
+static const PCSTR schemeHttp = "http";
+static const PCSTR schemeHttps = "https";
+
 HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD contentLength, void** buffer, DWORD* bufferLength, DWORD* offset)
 {
 	HRESULT hr;
@@ -165,6 +168,22 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 		PSOCKADDR addr = request->GetRemoteAddress();
 		DWORD addrSize = addr->sa_family == AF_INET ? sizeof SOCKADDR_IN : sizeof SOCKADDR_IN6;
 		ErrorIf(0 != WSAAddressToString(addr, addrSize, NULL, remoteHost, &remoteHostSize), GetLastError());
+
+		// Determine the incoming request protocol scheme
+		PCSTR varValue, varScheme = schemeHttp;
+		DWORD varValueLength;
+		if (S_OK == context->GetServerVariable("HTTPS", &varValue, &varValueLength))
+		{
+			if (0 == strcmpi("on", varValue))
+			{
+				varScheme = schemeHttps;
+			}
+		}
+
+		// Add the X-Forwarded-Proto header (default is http)
+		CheckError(CHttpProtocol::Append(context, "X-Forwarded-Proto: ", 19, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, varScheme, 0, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));	
 	}
 
 	for (int i = 0; i < raw->Headers.UnknownHeaderCount; i++)
