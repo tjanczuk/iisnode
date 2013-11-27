@@ -769,11 +769,11 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "logDirectory"))
 	{
-		CheckError(GetString(valueStart, &config->logDirectory));
+		CheckError(GetString(valueStart, &config->logDirectory, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "node_env"))
 	{
-		CheckError(GetString(valueStart, &config->node_env));
+		CheckError(GetString(valueStart, &config->node_env, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "debugPortRange"))
 	{
@@ -781,7 +781,7 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "watchedFiles"))
 	{
-		CheckError(GetString(valueStart, &config->watchedFiles));
+		CheckError(GetString(valueStart, &config->watchedFiles, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "promoteServerVars"))
 	{
@@ -798,7 +798,7 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "interceptor"))
 	{
-		CheckError(GetString(valueStart, &config->interceptor));
+		CheckError(GetString(valueStart, &config->interceptor, TRUE));
 	}
 
 	return S_OK;
