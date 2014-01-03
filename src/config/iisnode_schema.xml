@@ -44,6 +44,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="logDirectory" type="string" expanded="true" defaultValue="iisnode"/>
     <attribute name="debuggingEnabled" type="bool" defaultValue="true"/>
     <attribute name="debugHeaderEnabled" type="bool" defaultValue="false"/>
+    <attribute name="debuggerVirtualDir" type="string" defaultValue="" />
     <attribute name="debuggerPathSegment" type="string" expanded="true" defaultValue="debug"/>
     <attribute name="debuggerPortRange" type="string" expanded="true" defaultValue="5058-6058"/>
     <attribute name="maxLogFileSizeInKB" type="uint" defaultValue="128"/>

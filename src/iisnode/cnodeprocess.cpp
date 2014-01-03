@@ -304,24 +304,32 @@ unsigned int WINAPI CNodeProcess::ProcessWatcher(void* arg)
 	while (!process->isClosing && process->process)
 	{
 		waitResult = WaitForSingleObjectEx(process->process, INFINITE, TRUE);
-		if (GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
+		if (process->process)
 		{
-			if (isDebugger)
-			{
-				log->Log(L"iisnode detected termination of node.exe debugger process", WINEVENT_LEVEL_ERROR);
-			}
-			else
-			{
-				log->Log(L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_ERROR);
-			}
+            if(GetExitCodeProcess(process->process, &exitCode) && STILL_ACTIVE != exitCode)
+            {
+			    if (isDebugger)
+			    {
+				    log->Log(L"iisnode detected termination of node.exe debugger process", WINEVENT_LEVEL_ERROR);
+			    }
+			    else
+			    {
+				    log->Log(L"iisnode detected termination of node.exe process", WINEVENT_LEVEL_ERROR);
+			    }
 
-			if (!process->isClosing)
-			{
-				process->OnProcessExited();
-			}
+			    if (!process->isClosing)
+			    {
+				    process->OnProcessExited();
+			    }
 
-			return exitCode;
+			    return exitCode;
+            }
 		}
+        else
+        {
+            // process handle was closed and set to NULL by ~CNodeProcess
+            return ERROR_INVALID_HANDLE;
+        }
 	}
 
 	return S_OK;

@@ -558,9 +558,54 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
 
         // ensure debugger application files are available on disk
 
-        DWORD debuggerPathSize = wcslen(physicalPath) + CModuleConfiguration::GetDebuggerPathSegmentLength(context) + 512;
-        ErrorIf(NULL == (debuggerPath = (PWSTR)context->AllocateRequestMemory(sizeof WCHAR * debuggerPathSize)), ERROR_NOT_ENOUGH_MEMORY);
-        swprintf(debuggerPath, L"%s.%s\\", physicalPath, CModuleConfiguration::GetDebuggerPathSegment(context));
+        LPWSTR debuggerVirtualDir = CModuleConfiguration::GetDebuggerVirtualDir(context);
+        ErrorIf(debuggerVirtualDir == NULL, ERROR_INVALID_DATA);
+        DWORD debuggerVirtualDirLength = CModuleConfiguration::GetDebuggerVirtualDirLength(context);
+
+        DWORD debuggerPathSize = 0;
+
+        if(debuggerVirtualDirLength == 0)
+        {
+            // default location for debugger related files is under site root dir.
+            debuggerPathSize = wcslen(physicalPath) + CModuleConfiguration::GetDebuggerPathSegmentLength(context) + 512;
+            ErrorIf(NULL == (debuggerPath = (PWSTR)context->AllocateRequestMemory(sizeof WCHAR * debuggerPathSize)), ERROR_NOT_ENOUGH_MEMORY);
+            swprintf(debuggerPath, L"%s.%s\\", physicalPath, CModuleConfiguration::GetDebuggerPathSegment(context));
+        }
+        else
+        {
+            LPWSTR debuggerVirtualDirPhysicalPath = CModuleConfiguration::GetDebuggerVirtualDirPhysicalPath(context);
+            // create debugger files in the virtual directory's physical path.
+            DWORD debuggerVirtualDirPhysicalPathLength = wcslen(debuggerVirtualDirPhysicalPath);
+
+            debuggerPathSize = debuggerVirtualDirPhysicalPathLength + wcslen(physicalPath) + CModuleConfiguration::GetDebuggerPathSegmentLength(context) + 512;
+            ErrorIf(NULL == (debuggerPath = (PWSTR)context->AllocateRequestMemory(sizeof WCHAR * debuggerPathSize)), ERROR_NOT_ENOUGH_MEMORY);
+
+            LPWSTR debuggerPhysicalPathSegment = CModuleConfiguration::GetDebuggerPhysicalPathSegment(context);
+            DWORD debuggerPhysicalPathSegmentLen = CModuleConfiguration::GetDebuggerPhysicalPathSegmentLength(context);
+
+            PCWSTR appName = physicalPath + physicalPathLength - 1;
+	        while (appName > physicalPath && *appName != L'\\')
+		        appName--;
+	        appName++;
+
+            if( debuggerVirtualDirPhysicalPath[ debuggerVirtualDirPhysicalPathLength - 1 ] == L'\\')
+            {
+                // debuggerPhysicalPathSegment always starts with a '\', 
+                // so if debuggerVirtualDirPhysicalPath ends with a '\',
+                // skip the first slash when appending these 2 together below.
+                debuggerPhysicalPathSegment  = debuggerPhysicalPathSegment + 1;
+            }
+
+            swprintf(debuggerPath, 
+                     L"%s%s%s.%s\\",
+                     debuggerVirtualDirPhysicalPath,
+                     debuggerPhysicalPathSegment,
+                     appName,
+                     CModuleConfiguration::GetDebuggerPathSegment(context));
+
+            CheckError(EnsureDirectoryStructureExists(debuggerVirtualDirPhysicalPath, debuggerPath));
+        }
+
         CheckError(this->EnsureDebuggerFilesInstalled(debuggerPath, debuggerPathSize));
 
         // kill any existing instance of the application to debug and the debugger
@@ -634,6 +679,71 @@ Error:
     return hr;
 }
 
+HRESULT CNodeApplicationManager::EnsureDirectoryStructureExists( LPCWSTR pszSkipPrefix, LPWSTR pszDirectoryPath )
+{
+    HRESULT hr = S_OK;
+    LPWSTR pszSkippedDirectory = pszDirectoryPath;
+
+    _ASSERT( pszDirectoryPath != NULL );
+
+    if(pszSkipPrefix != NULL)
+    {
+        wcsstr( pszDirectoryPath, pszSkipPrefix );        
+        pszSkippedDirectory = pszSkippedDirectory + wcslen( pszSkipPrefix );
+    }
+
+    LPWSTR  slash = wcschr( pszSkippedDirectory, L'\\' );
+    DWORD   dwResult = 0;
+    LPWSTR  previousSlash = NULL;
+
+    while( slash != NULL )
+    {
+        pszSkippedDirectory = slash + 1; // move to next slash
+        *slash = L'\0';
+        if(!DirectoryExists(pszDirectoryPath))
+        {
+            if(!CreateDirectoryW( pszDirectoryPath, NULL ))
+            {
+                // directory creation failed, continue to create if ERROR_ALREADY_EXISTS
+                if(dwResult != ERROR_ALREADY_EXISTS)
+                {
+                    CheckError(HRESULT_FROM_WIN32(GetLastError()));
+                }
+            }
+        }
+        // temporarily replace \ with - so wcschr can find the next slash.
+        *slash = L'-';
+        previousSlash = slash;
+        slash = wcschr( pszSkippedDirectory, L'\\' );      
+        *previousSlash = L'\\';
+    }
+
+    if(!DirectoryExists(pszDirectoryPath))
+    {
+        if(!CreateDirectoryW( pszDirectoryPath, NULL ))
+        {
+            // directory creation failed, continue to create if ERROR_ALREADY_EXISTS
+            if(dwResult != ERROR_ALREADY_EXISTS)
+            {
+                CheckError(HRESULT_FROM_WIN32(GetLastError()));
+            }
+        }
+    }
+    hr = S_OK;
+Error:
+    return hr;
+}
+
+BOOL CNodeApplicationManager::DirectoryExists(LPCWSTR directoryPath)
+{
+    DWORD dwFileAttributes;
+
+    dwFileAttributes = GetFileAttributesW(directoryPath);
+
+    return ((dwFileAttributes != INVALID_FILE_ATTRIBUTES) && 
+        (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, BOOL allowCreate, CNodeApplication** application)
 {
     HRESULT hr;
@@ -661,7 +771,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
         }
         else
         {
-            // regular application request, e.g. http://foo.com/bar/hello.js                    
+            // regular application request, e.g. http://foo.com/bar/hello.js
 
             CheckError(this->GetOrCreateNodeApplicationCore(physicalPath, physicalPathLength, context, application));
         }        
@@ -679,8 +789,14 @@ CNodeApplication* CNodeApplicationManager::TryGetExistingNodeApplication(PCWSTR 
     NodeApplicationEntry* current = this->applications;
     while (NULL != current)
     {
-        if (debuggerRequest == current->nodeApplication->IsDebugger()
+        if (debuggerRequest == FALSE && debuggerRequest == current->nodeApplication->IsDebugger()
             && 0 == wcsncmp(physicalPath, current->nodeApplication->GetScriptName(), physicalPathLength))
+        {
+            application = current->nodeApplication;
+            break;
+        }
+        else if(debuggerRequest == TRUE && debuggerRequest == current->nodeApplication->IsDebugger()
+            && 0 == wcsncmp(physicalPath, current->nodeApplication->GetPeerApplication()->GetScriptName(), physicalPathLength))
         {
             application = current->nodeApplication;
             break;

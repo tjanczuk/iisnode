@@ -21,12 +21,19 @@ private:
 	LPWSTR logDirectory;
 	LPWSTR debuggerPathSegment;
 	DWORD debuggerPathSegmentLength;
+    LPWSTR debuggerPhysicalPathSegment;
+	DWORD debuggerPhysicalPathSegmentLength;
+    LPWSTR debuggerVDirPathSegment;
+    DWORD debuggerVDirPathSegmentLength;
 	DWORD maxLogFileSizeInKB;
 	DWORD maxTotalLogFileSizeInKB;
 	DWORD maxLogFiles;
 	BOOL loggingEnabled;
 	BOOL debuggingEnabled;
 	BOOL debugHeaderEnabled;
+    LPWSTR debuggerVirtualDir;    
+    DWORD debuggerVirtualDirLength;
+    LPWSTR debuggerVirtualDirPhysicalPath;
 	LPWSTR debugPortRange;
 	DWORD debugPortStart;
 	DWORD debugPortEnd;
@@ -60,6 +67,19 @@ private:
 	static HRESULT ApplyDefaults(CModuleConfiguration* c);
 	static HRESULT EnsureCurrent(IHttpContext* context, CModuleConfiguration* config);
 	static HRESULT GetEnvVariable(LPCWSTR propertyName, LPWSTR buffer, DWORD bufferSize, LPWSTR* result);
+    static HRESULT GenerateDebuggerConfig(IHttpContext* context, CModuleConfiguration *config);
+    static HRESULT GetDebuggerVirtualDirPhysicalPathFromConfig(
+        DWORD siteId,
+        LPCWSTR applicationPath,
+        LPCWSTR virtualDirPath,
+        LPWSTR *ppPhysicalPath
+    );
+    static HRESULT GetDebuggerPhysicalPathSegmentHelper(
+        LPCWSTR scriptPath,
+        DWORD   dwScriptPathLen,
+        LPWSTR *ppszDebuggerPath,
+        DWORD  *pdwDebuggerPathSize
+    );
 
 	CModuleConfiguration();
 	~CModuleConfiguration();
@@ -84,12 +104,19 @@ public:
 	static LPWSTR GetLogDirectory(IHttpContext* ctx);
 	static LPWSTR GetDebuggerPathSegment(IHttpContext* ctx);
 	static DWORD GetDebuggerPathSegmentLength(IHttpContext* ctx);
+    static LPWSTR GetDebuggerPhysicalPathSegment(IHttpContext* ctx);
+    static DWORD GetDebuggerPhysicalPathSegmentLength(IHttpContext* ctx);
+    static LPWSTR GetDebuggerVDirPathSegment(IHttpContext* ctx);
+    static DWORD GetDebuggerVDirPathSegmentLength(IHttpContext* ctx);
 	static DWORD GetMaxLogFileSizeInKB(IHttpContext* ctx);
 	static DWORD GetMaxTotalLogFileSizeInKB(IHttpContext* ctx);
 	static DWORD GetMaxLogFiles(IHttpContext* ctx);
 	static BOOL GetLoggingEnabled(IHttpContext* ctx);
 	static BOOL GetDebuggingEnabled(IHttpContext* ctx);
 	static BOOL GetDebugHeaderEnabled(IHttpContext* ctx);
+    static LPWSTR GetDebuggerVirtualDir(IHttpContext* ctx);
+    static DWORD GetDebuggerVirtualDirLength(IHttpContext* ctx);
+    static LPWSTR GetDebuggerVirtualDirPhysicalPath(IHttpContext* ctx);
 	static HRESULT GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end);
 	static LPWSTR GetNodeEnv(IHttpContext* ctx);
 	static BOOL GetDevErrorsEnabled(IHttpContext* ctx);
