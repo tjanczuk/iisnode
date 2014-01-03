@@ -573,9 +573,13 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
         }
         else
         {
-            LPWSTR debuggerVirtualDirPhysicalPath = CModuleConfiguration::GetDebuggerVirtualDirPhysicalPath(context);
             // create debugger files in the virtual directory's physical path.
+
+            LPWSTR debuggerVirtualDirPhysicalPath = CModuleConfiguration::GetDebuggerVirtualDirPhysicalPath(context);
+            ErrorIf(debuggerVirtualDirPhysicalPath == NULL, HRESULT_FROM_WIN32(ERROR_DIRECTORY));
+            
             DWORD debuggerVirtualDirPhysicalPathLength = wcslen(debuggerVirtualDirPhysicalPath);
+            ErrorIf(debuggerVirtualDirPhysicalPathLength == 0, HRESULT_FROM_WIN32(ERROR_DIRECTORY));
 
             debuggerPathSize = debuggerVirtualDirPhysicalPathLength + wcslen(physicalPath) + CModuleConfiguration::GetDebuggerPathSegmentLength(context) + 512;
             ErrorIf(NULL == (debuggerPath = (PWSTR)context->AllocateRequestMemory(sizeof WCHAR * debuggerPathSize)), ERROR_NOT_ENOUGH_MEMORY);

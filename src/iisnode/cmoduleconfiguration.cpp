@@ -1450,6 +1450,8 @@ HRESULT CModuleConfiguration::GenerateDebuggerConfig(IHttpContext* context, CMod
     {
         config->debuggerVirtualDirPhysicalPath = new WCHAR[MAX_PATH]; // will be deallocated by destructor.
         ErrorIf(config->debuggerVirtualDirPhysicalPath == NULL, E_OUTOFMEMORY);
+        config->debuggerVirtualDirPhysicalPath[0] = L'\0';
+
         CheckError(GetDebuggerVirtualDirPhysicalPathFromConfig(context->GetSite()->GetSiteId(),
             L"/",
             config->debuggerVirtualDir,
