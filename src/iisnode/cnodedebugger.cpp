@@ -102,6 +102,10 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 	//
 	// /foo/app.js/debug/socket.io/...?abc=def -> /socket.io/...?abc=def
 	// /foo/app.js/debug/bar/baz.jpg           -> /foo/app.js.debug/node_modules/node-inspector/front-end/bar/baz.jpg
+
+    // if debuggerVirtualDir is specified, request will be rewritten to reflect the actual location of the debugger files 
+    // which will be under VDirPhysicalPath\SHA256(scriptPath)\app.js.debug
+    // /foo/app.js/debug/bar/baz.jpg   -> /VDir/SHA256(app.js physical path)/app.js.debug/node_modules/node-inspector/front-end/bar/baz.jpg
 	
 	// Determine the minimal absolute url path that maps to the same physical path as the translated script; 
 	// that minimal absolute url path will be the prefix of the full rewritten url path.
@@ -189,10 +193,10 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 
     if(debuggerRequest == FALSE && vDirLength > 0)
     {
-        finalPath = new WCHAR[vDirLength + CModuleConfiguration::GetDebuggerVDirPathSegmentLength(context) + wcslen(newPath) + 2];
+        finalPath = new WCHAR[vDirLength + CModuleConfiguration::GetDebuggerFilesPathSegmentLength(context) + wcslen(newPath) + 10];
         ErrorIf(NULL == finalPath, E_OUTOFMEMORY);
         newPath = wcsstr(newPath, appName);
-        wsprintfW(finalPath, L"/%s%s%s", vDir, CModuleConfiguration::GetDebuggerVDirPathSegment(context), newPath);
+        wsprintfW(finalPath, L"/%s/%s/%s", vDir, CModuleConfiguration::GetDebuggerFilesPathSegment(context), newPath);
 
 	    int pathSizeW = wcslen(finalPath);
 

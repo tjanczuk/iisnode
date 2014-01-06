@@ -584,8 +584,8 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
             debuggerPathSize = debuggerVirtualDirPhysicalPathLength + wcslen(physicalPath) + CModuleConfiguration::GetDebuggerPathSegmentLength(context) + 512;
             ErrorIf(NULL == (debuggerPath = (PWSTR)context->AllocateRequestMemory(sizeof WCHAR * debuggerPathSize)), ERROR_NOT_ENOUGH_MEMORY);
 
-            LPWSTR debuggerPhysicalPathSegment = CModuleConfiguration::GetDebuggerPhysicalPathSegment(context);
-            DWORD debuggerPhysicalPathSegmentLen = CModuleConfiguration::GetDebuggerPhysicalPathSegmentLength(context);
+            LPWSTR debuggerFilesPathSegment = CModuleConfiguration::GetDebuggerFilesPathSegment(context);
+            DWORD debuggerFilesPathSegmentLen = CModuleConfiguration::GetDebuggerFilesPathSegmentLength(context);
 
             PCWSTR appName = physicalPath + physicalPathLength - 1;
 	        while (appName > physicalPath && *appName != L'\\')
@@ -593,21 +593,28 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
 	        appName++;
 
             if( debuggerVirtualDirPhysicalPath[ debuggerVirtualDirPhysicalPathLength - 1 ] == L'\\')
-            {
-                // debuggerPhysicalPathSegment always starts with a '\', 
-                // so if debuggerVirtualDirPhysicalPath ends with a '\',
-                // skip the first slash when appending these 2 together below.
-                debuggerPhysicalPathSegment  = debuggerPhysicalPathSegment + 1;
-            }
-
-            swprintf(debuggerPath, 
-                     L"%s%s%s.%s\\",
+            {                            
+                swprintf(debuggerPath, 
+                     L"%s%s\\%s.%s\\",
                      debuggerVirtualDirPhysicalPath,
-                     debuggerPhysicalPathSegment,
+                     debuggerFilesPathSegment,
                      appName,
                      CModuleConfiguration::GetDebuggerPathSegment(context));
+            }
+            else
+            {
+                swprintf(debuggerPath, 
+                     L"%s\\%s\\%s.%s\\",
+                     debuggerVirtualDirPhysicalPath,
+                     debuggerFilesPathSegment,
+                     appName,
+                     CModuleConfiguration::GetDebuggerPathSegment(context));
+            }
 
             CheckError(EnsureDirectoryStructureExists(debuggerVirtualDirPhysicalPath, debuggerPath));
+
+            // here debuggerPath would look like "VDirPhysicalPath\sha256Hash(scriptPath)\script.js.debug\"
+            // which is where EnsureDebuggerFilesInstalled will install all debugger files.
         }
 
         CheckError(this->EnsureDebuggerFilesInstalled(debuggerPath, debuggerPathSize));
@@ -718,7 +725,7 @@ HRESULT CNodeApplicationManager::EnsureDirectoryStructureExists( LPCWSTR pszSkip
         // temporarily replace \ with - so wcschr can find the next slash.
         *slash = L'-';
         previousSlash = slash;
-        slash = wcschr( pszSkippedDirectory, L'\\' );      
+        slash = wcschr( pszSkippedDirectory, L'\\' );
         *previousSlash = L'\\';
     }
 

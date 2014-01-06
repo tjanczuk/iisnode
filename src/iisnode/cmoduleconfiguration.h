@@ -21,10 +21,8 @@ private:
 	LPWSTR logDirectory;
 	LPWSTR debuggerPathSegment;
 	DWORD debuggerPathSegmentLength;
-    LPWSTR debuggerPhysicalPathSegment;
-	DWORD debuggerPhysicalPathSegmentLength;
-    LPWSTR debuggerVDirPathSegment;
-    DWORD debuggerVDirPathSegmentLength;
+    LPWSTR debuggerFilesPathSegment;
+    DWORD debuggerFilesPathSegmentLength;
 	DWORD maxLogFileSizeInKB;
 	DWORD maxTotalLogFileSizeInKB;
 	DWORD maxLogFiles;
@@ -74,11 +72,11 @@ private:
         LPCWSTR virtualDirPath,
         LPWSTR *ppPhysicalPath
     );
-    static HRESULT GetDebuggerPhysicalPathSegmentHelper(
-        LPCWSTR scriptPath,
+    static HRESULT GetDebuggerFilesPathSegmentHelper(
+        LPCWSTR pszScriptPath,
         DWORD   dwScriptPathLen,
-        LPWSTR *ppszDebuggerPath,
-        DWORD  *pdwDebuggerPathSize
+        LPWSTR *ppszDebuggerFilesPathSegment,
+        DWORD  *pdwDebuggerFilesPathSegmentSize
     );
 
 	CModuleConfiguration();
@@ -104,10 +102,8 @@ public:
 	static LPWSTR GetLogDirectory(IHttpContext* ctx);
 	static LPWSTR GetDebuggerPathSegment(IHttpContext* ctx);
 	static DWORD GetDebuggerPathSegmentLength(IHttpContext* ctx);
-    static LPWSTR GetDebuggerPhysicalPathSegment(IHttpContext* ctx);
-    static DWORD GetDebuggerPhysicalPathSegmentLength(IHttpContext* ctx);
-    static LPWSTR GetDebuggerVDirPathSegment(IHttpContext* ctx);
-    static DWORD GetDebuggerVDirPathSegmentLength(IHttpContext* ctx);
+    static LPWSTR GetDebuggerFilesPathSegment(IHttpContext* ctx);
+    static DWORD GetDebuggerFilesPathSegmentLength(IHttpContext* ctx);
 	static DWORD GetMaxLogFileSizeInKB(IHttpContext* ctx);
 	static DWORD GetMaxTotalLogFileSizeInKB(IHttpContext* ctx);
 	static DWORD GetMaxLogFiles(IHttpContext* ctx);

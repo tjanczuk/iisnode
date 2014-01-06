@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <wincrypt.h>
 
 IHttpServer* CModuleConfiguration::server = NULL;
 
@@ -6,14 +7,15 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 BOOL CModuleConfiguration::invalid = FALSE;
 
+#define EXTENDED_MAX_PATH 32768
+#define MAX_HASH_CHAR 32
+
 CModuleConfiguration::CModuleConfiguration()
     : nodeProcessCommandLine(NULL), 
       logDirectory(NULL), 
       debuggerPathSegment(NULL), 
-      debuggerPhysicalPathSegment(NULL),
-      debuggerPhysicalPathSegmentLength(0),
-      debuggerVDirPathSegment(NULL),
-      debuggerVDirPathSegmentLength(0),
+      debuggerFilesPathSegment(NULL),
+      debuggerFilesPathSegmentLength(0),
       debugPortRange(NULL), 
       debugPortStart(0), 
       debugPortEnd(0), 
@@ -58,22 +60,16 @@ CModuleConfiguration::~CModuleConfiguration()
         this->debuggerVirtualDir = NULL;
     }
 
-    if(NULL != this->debuggerPhysicalPathSegment)
+    if(NULL != this->debuggerFilesPathSegment)
     {
-        delete [] this->debuggerPhysicalPathSegment;
-        this->debuggerPhysicalPathSegment = NULL;
+        delete [] this->debuggerFilesPathSegment;
+        this->debuggerFilesPathSegment = NULL;
     }
     
     if(NULL != this->debuggerVirtualDirPhysicalPath)
     {
         delete [] this->debuggerVirtualDirPhysicalPath;
         this->debuggerVirtualDirPhysicalPath = NULL;
-    }
-
-    if(NULL != this->debuggerVDirPathSegment)
-    {
-        delete [] this->debuggerVDirPathSegment;
-        this->debuggerVDirPathSegment = NULL;
     }
 
 	if (NULL != this->debuggerPathSegment)
@@ -1349,24 +1345,14 @@ LPWSTR CModuleConfiguration::GetDebuggerVirtualDirPhysicalPath(IHttpContext* ctx
     GETCONFIG(debuggerVirtualDirPhysicalPath)
 }
 
-LPWSTR CModuleConfiguration::GetDebuggerPhysicalPathSegment(IHttpContext* ctx)
+LPWSTR CModuleConfiguration::GetDebuggerFilesPathSegment(IHttpContext* ctx)
 {
-    GETCONFIG(debuggerPhysicalPathSegment)
+    GETCONFIG(debuggerFilesPathSegment)
 }
 
-DWORD CModuleConfiguration::GetDebuggerPhysicalPathSegmentLength(IHttpContext* ctx)
+DWORD CModuleConfiguration::GetDebuggerFilesPathSegmentLength(IHttpContext* ctx)
 {
-    GETCONFIG(debuggerPhysicalPathSegmentLength)
-}
-
-LPWSTR CModuleConfiguration::GetDebuggerVDirPathSegment(IHttpContext* ctx)
-{
-    GETCONFIG(debuggerVDirPathSegment)
-}
-
-DWORD CModuleConfiguration::GetDebuggerVDirPathSegmentLength(IHttpContext* ctx)
-{
-    GETCONFIG(debuggerVDirPathSegmentLength)
+    GETCONFIG(debuggerFilesPathSegmentLength)
 }
 
 DWORD CModuleConfiguration::GetMaxTotalLogFileSizeInKB(IHttpContext* ctx)
@@ -1448,7 +1434,7 @@ HRESULT CModuleConfiguration::GenerateDebuggerConfig(IHttpContext* context, CMod
         config->debuggerVirtualDir != NULL &&
         wcslen(config->debuggerVirtualDir) > 0 )
     {
-        config->debuggerVirtualDirPhysicalPath = new WCHAR[MAX_PATH]; // will be deallocated by destructor.
+        config->debuggerVirtualDirPhysicalPath = new WCHAR[EXTENDED_MAX_PATH]; // will be deallocated by destructor.
         ErrorIf(config->debuggerVirtualDirPhysicalPath == NULL, E_OUTOFMEMORY);
         config->debuggerVirtualDirPhysicalPath[0] = L'\0';
 
@@ -1459,36 +1445,16 @@ HRESULT CModuleConfiguration::GenerateDebuggerConfig(IHttpContext* context, CMod
 
         DWORD scriptTranslatedLength = 0;
         LPCWSTR scriptTranslated = context->GetScriptTranslated(&scriptTranslatedLength);
-        if(config->debuggerPhysicalPathSegment == NULL)
-        {
-            config->debuggerPhysicalPathSegmentLength = scriptTranslatedLength + 64;
-            config->debuggerPhysicalPathSegment = new WCHAR[ config->debuggerPhysicalPathSegmentLength ];
-            ErrorIf(config->debuggerPhysicalPathSegment == NULL, E_OUTOFMEMORY);
-            CheckError(GetDebuggerPhysicalPathSegmentHelper(scriptTranslated,
-                scriptTranslatedLength,
-                &config->debuggerPhysicalPathSegment,
-                &config->debuggerPhysicalPathSegmentLength));
-        }
 
-        if(config->debuggerVDirPathSegment == NULL)
-        {
-            // max vdir physicalpath length would be 255. allocating ~4 times the space for escape chars.
-            config->debuggerVDirPathSegmentLength = 1024;
-            config->debuggerVDirPathSegment = new WCHAR[config->debuggerVDirPathSegmentLength];     
-            ErrorIf(config->debuggerVDirPathSegment == NULL, E_OUTOFMEMORY);
-
-            WCHAR unescapedUrl[1024];
-            wcsncpy_s(unescapedUrl, 1024, config->debuggerPhysicalPathSegment, config->debuggerPhysicalPathSegmentLength);
-            // convert \ to /
-            LPWSTR tempStr = wcschr(unescapedUrl, L'\\');
-            while(tempStr != NULL)
-            {
-                *tempStr = L'/';
-                tempStr = wcschr(unescapedUrl, L'\\');
-            }
-
-            CheckError(UrlEscapeW(unescapedUrl, config->debuggerVDirPathSegment, &config->debuggerVDirPathSegmentLength, URL_ESCAPE_PERCENT));
-        }
+        // debuggerFilesPathSegment is shaHash(scriptTranslated)
+        config->debuggerFilesPathSegmentLength = MAX_HASH_CHAR + 1; // we only use first 32 char of the sha256 hash.
+        config->debuggerFilesPathSegment = new WCHAR[ config->debuggerFilesPathSegmentLength ];
+        ErrorIf(config->debuggerFilesPathSegment == NULL, E_OUTOFMEMORY);
+        config->debuggerFilesPathSegment[0] = L'\0';
+        CheckError(GetDebuggerFilesPathSegmentHelper(scriptTranslated,
+            scriptTranslatedLength,
+            &config->debuggerFilesPathSegment,
+            &config->debuggerFilesPathSegmentLength));
     }
 Error:
     return hr;
@@ -1539,87 +1505,90 @@ Error:
 }
 
 //
-// Normalizes scriptPath to a relative directory path that will be used to 
-// place the debugger files. 
-// for example, if the script path is c:\inetpub\wwwroot\hello.js
-// normalized path return by this function will be \c\inetpub\wwwroot\
-// This path will be appended to the debuggerVirtualDirPhysicalPath to
-// create an absolute path where the debugger files for hello.js will be placed.
-// Examples:
-// c:\inetpub\wwwroot\hello.js      ==> \c\inetpub\wwwroot\
-// \\?\c$\inetpub\wwwroot\hello.js  ==> \c$\inetpub\wwwroot\
-// \\?\UNC\file\hello.js            ==> \UNC\UNC\file\
-// \\server\file\hello.js           ==> \UNC\server\file\
+// DebuggerFilesPathSegment = SHA-256 hash of the ScriptPath (first 16 bytes)
 //
-HRESULT CModuleConfiguration::GetDebuggerPhysicalPathSegmentHelper(
+HRESULT CModuleConfiguration::GetDebuggerFilesPathSegmentHelper(
     LPCWSTR pszScriptPath,
     DWORD   dwScriptPathLen,
-    LPWSTR *ppszDebuggerPath,
-    DWORD  *pdwDebuggerPathSize
+    LPWSTR *ppszDebuggerFilesPathSegment,
+    DWORD  *pdwDebuggerFilesPathSegmentSize
 )
 {
-    HRESULT hr = S_OK;
-    WCHAR   drive[_MAX_DRIVE] = {0};
-    WCHAR   directory[_MAX_DIR] = {0};
-    WCHAR   filename[_MAX_FNAME] = {0};
-    WCHAR   ext[_MAX_EXT] = {0};
-    BOOL    fUNC = FALSE;
-    WCHAR   pszTempPath[512] = {0};
-    DWORD   dwPathLength = 0;
-    LPWSTR  pszTempPathStart = NULL;
-    LPWSTR  pszColon = NULL;
-    DWORD   dwSkip = 0;
+    HRESULT         hr = S_OK;
+    HCRYPTPROV      hProv = 0;
+    HCRYPTHASH      hHash = 0;
+    CHAR            rgbDigits[] = "0123456789abcdef";
+    BYTE            rgbHash[MAX_HASH_CHAR]; // sha256 ==> 32 bytes.
+    DWORD           cbHash = 0;
+    CHAR            shaHash[MAX_HASH_CHAR + 1]; // we will only use first 16 bytes of the sha256 hash ==> 32 hex chars.
+    DWORD           dwSHALength = 0;
+    CHAR           *pInput = NULL; 
+    DWORD           dwInputSize = 0;
+    DWORD           dwIndex = 0;
 
-    _ASSERT(pszScriptPath != NULL);
-    _ASSERT(ppszDebuggerPath != NULL && *ppszDebuggerPath != NULL);
-    _ASSERT(pdwDebuggerPathSize != NULL);
+    _ASSERT( pszScriptPath != NULL );
+    _ASSERT( pdwDebuggerFilesPathSegmentSize != NULL );
 
-    if (dwScriptPathLen > 8 && 0 == memcmp(pszScriptPath, L"\\\\?\\UNC\\", 8 * sizeof WCHAR))
-	{
-		// normalized UNC path
-        fUNC = TRUE;
-        dwSkip = 4;
-	}
-    else if (dwScriptPathLen > 4 && 0 == memcmp(pszScriptPath, L"\\\\?\\", 4 * sizeof WCHAR))
-	{
-		// local normalized path
-        dwSkip = 4;
-	}
-	else if (dwScriptPathLen > 2 && 0 == memcmp(pszScriptPath, L"\\\\", 2 * sizeof(WCHAR)))
-	{
-		// not normalized UNC path
-        fUNC= TRUE;
-        dwSkip = 2;
-	}
+    ErrorIf( *pdwDebuggerFilesPathSegmentSize <= MAX_HASH_CHAR , HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
 
-    ErrorIf(0 != _wsplitpath_s(pszScriptPath + dwSkip, 
-                               drive, _MAX_DRIVE, 
-                               directory, _MAX_DIR, 
-                               filename, _MAX_FNAME, 
-                               ext, _MAX_EXT), ERROR_INVALID_PARAMETER);
+    // convert WCHAR scriptPath to CHAR.
+    ErrorIf(0 == (dwInputSize = WideCharToMultiByte(CP_ACP, 0, pszScriptPath, dwScriptPathLen, NULL, 0, NULL, NULL)), E_FAIL);
+    ErrorIf(NULL == (pInput = new CHAR[dwInputSize + 1]), E_OUTOFMEMORY);
+    ErrorIf(dwInputSize != WideCharToMultiByte(CP_ACP, 0, pszScriptPath, dwScriptPathLen, pInput, dwInputSize, NULL, NULL), E_FAIL);
+    pInput[dwInputSize] = '\0';
 
-    pszColon = wcschr(drive, L':');
-    if(pszColon != NULL)
+    // Get handle to the crypto provider
+    ErrorIf(!CryptAcquireContext(&hProv,
+                                 NULL,
+                                 NULL,
+                                 PROV_RSA_AES,
+                                 CRYPT_VERIFYCONTEXT), HRESULT_FROM_WIN32(GetLastError()));
+
+    ErrorIf(!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash), HRESULT_FROM_WIN32(GetLastError()));
+
+    ErrorIf(!CryptHashData(hHash, (BYTE*) pInput, strnlen_s(pInput, dwInputSize), 0), HRESULT_FROM_WIN32(GetLastError()));
+
+    cbHash = MAX_HASH_CHAR;
+    ErrorIf(!CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0), HRESULT_FROM_WIN32(GetLastError()));
+
+    dwIndex = 0;
+    // convert first 16 bytes to hexadecimal form.
+    for (DWORD i = 0; i < 16; i++, dwIndex=dwIndex+2)
     {
-        *pszColon = L'\0';
+        shaHash[dwIndex] = rgbDigits[rgbHash[i] >> 4];
+        shaHash[dwIndex+1] = rgbDigits[rgbHash[i] & 0xf];
     }
 
-    pszTempPathStart = pszTempPath;
-    if(fUNC)
-    {
-        wcscpy(pszTempPathStart, L"\\UNC");
-        pszTempPathStart = pszTempPathStart + 4;
-    }
-    wsprintfW(pszTempPathStart, L"\\%s%s", drive, directory);
-    dwPathLength = wcslen(pszTempPath);
+    shaHash[dwIndex] = '\0';
 
-    ErrorIf(dwPathLength > *pdwDebuggerPathSize, HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
-    
-    wcsncpy_s(*ppszDebuggerPath, *pdwDebuggerPathSize, pszTempPath, dwPathLength);
-    *pdwDebuggerPathSize = dwPathLength;
-    
-    hr = S_OK;
+    ErrorIf(0 == (dwSHALength = MultiByteToWideChar(CP_ACP, 0, shaHash, -1, NULL, 0)), GetLastError());
+    ErrorIf(dwSHALength > *pdwDebuggerFilesPathSegmentSize, HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+    ErrorIf(dwSHALength != MultiByteToWideChar(CP_ACP, 0, shaHash, -1, *ppszDebuggerFilesPathSegment, dwSHALength), GetLastError());
+
+    *pdwDebuggerFilesPathSegmentSize = wcslen(*ppszDebuggerFilesPathSegment);
+
+    hr = S_OK; // go ahead and do cleanup.
+
 Error:
+
+    if(pInput != NULL)
+    {
+        delete [] pInput;
+        pInput = NULL;
+    }
+
+    if(hHash != NULL)
+    {
+        CryptDestroyHash(hHash);
+        hHash = NULL;
+    }
+
+    if(hProv != NULL)
+    {
+        CryptReleaseContext(hProv, 0);
+        hProv = NULL;
+    }
+
     return hr;
 }
 
@@ -1710,7 +1679,7 @@ HRESULT CModuleConfiguration::GetDebuggerVirtualDirPhysicalPathFromConfig(
                             CheckError(CUtils::GetElementStringProperty(pvDirElement, 
                                                                         L"physicalPath", 
                                                                         &bstrvDirPhysicalPathValue));
-                            ErrorIf(SysStringLen(bstrvDirPhysicalPathValue) >= MAX_PATH, ERROR_INSUFFICIENT_BUFFER);
+                            ErrorIf(SysStringLen(bstrvDirPhysicalPathValue) >= EXTENDED_MAX_PATH, ERROR_INSUFFICIENT_BUFFER);
                             wcscpy( *ppPhysicalPath, bstrvDirPhysicalPathValue);
                             
                             SysFreeString(bstrvDirPhysicalPathValue);
