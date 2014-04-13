@@ -3,18 +3,18 @@ Hosting node.js applications in IIS on Windows
 
 **Why would I want to do it?**
 
-[Benefits](https://github.com/tjanczuk/iisnode/wiki)  
+[Benefits](https://github.com/tjanczuk/iisnode/wiki)
 
 **Who uses iisnode?**
 
-[windows azure - benefits](http://blogs.msdn.com/b/hanuk/archive/2012/05/05/top-benefits-of-running-node-js-on-windows-azure.aspx)  
-[windows azure - get started with node.js](https://www.windowsazure.com/en-us/develop/nodejs/)  
-[appharbor.com](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)  
-[discountasp.net](http://discountasp.net/press/2012_06_12_free-webmatrix-v2-rc-hosting-with-nodejs.aspx)  
-[arvixe.com](http://arvixe.com)  
-[smarterasp.net](http://www.smarterasp.net/)  
-[gearhost.com](http://gearhost.com/)  
-[webecs.com](http://webecs.com/)  
+[windows azure - benefits](http://blogs.msdn.com/b/hanuk/archive/2012/05/05/top-benefits-of-running-node-js-on-windows-azure.aspx)
+[windows azure - get started with node.js](https://www.windowsazure.com/en-us/develop/nodejs/)
+[appharbor.com](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)
+[discountasp.net](http://discountasp.net/press/2012_06_12_free-webmatrix-v2-rc-hosting-with-nodejs.aspx)
+[arvixe.com](http://arvixe.com)
+[smarterasp.net](http://www.smarterasp.net/)
+[gearhost.com](http://gearhost.com/)
+[webecs.com](http://webecs.com/)
 
 **Prerequisites for using**
 
@@ -27,7 +27,7 @@ Hosting node.js applications in IIS on Windows
 **Installing for IIS 7.x/8.x**
 
 - Install iisnode for IIS 7.x/8.x: [x86](http://go.microsoft.com/?linkid=9784330) or [x64](http://go.microsoft.com/?linkid=9784331) - choose bitness matching your system
-- To set up samples, from the administrative command prompt call `%programfiles%\iisnode\setupsamples.bat`  
+- To set up samples, from the administrative command prompt call `%programfiles%\iisnode\setupsamples.bat`
 - Go to `http://localhost/node`
 
 **Installing for IIS Express/WebMatrix**
@@ -38,20 +38,20 @@ Hosting node.js applications in IIS on Windows
 
 **Howtos**
 
-[the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)  
-[the basics (Pусский перевод)](http://softdroid.net/hosting-nodejs-applications-ru)  
-[**NEW: websockets**] (http://tomasz.janczuk.org/2012/11/how-to-use-websockets-with-nodejs-apps.html)  
-[using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)  
-[using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)  
-[using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)  
-[site templates for WebMatrix](https://github.com/SteveSanderson/Node.js-Site-Templates-for-WebMatrix)  
-[using with mongodb](http://www.amazedsaint.com/2011/09/creating-10-minute-todo-listing-app-on.html)  
-[diagnosing problems with ETW traces](http://tomasz.janczuk.org/2011/09/using-event-tracing-for-windows-to.html)  
-[using with MVC](http://weblogs.asp.net/jgalloway/archive/2011/10/26/using-node-js-in-an-asp-net-mvc-application-with-iisnode.aspx)  
-[portuguese: node.js no windows: instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)  
-[integrated debugging](http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html)  
-[pub/sub server using faye](http://weblogs.asp.net/cibrax/archive/2011/12/12/transform-your-iis-into-a-real-time-pub-sub-engine-with-faye-node.aspx)  
-[appharbor uses iisnode](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)  
+[the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)
+[the basics (Pусский перевод)](http://softdroid.net/hosting-nodejs-applications-ru)
+[**NEW: websockets**] (http://tomasz.janczuk.org/2012/11/how-to-use-websockets-with-nodejs-apps.html)
+[using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)
+[using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)
+[using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)
+[site templates for WebMatrix](https://github.com/SteveSanderson/Node.js-Site-Templates-for-WebMatrix)
+[using with mongodb](http://www.amazedsaint.com/2011/09/creating-10-minute-todo-listing-app-on.html)
+[diagnosing problems with ETW traces](http://tomasz.janczuk.org/2011/09/using-event-tracing-for-windows-to.html)
+[using with MVC](http://weblogs.asp.net/jgalloway/archive/2011/10/26/using-node-js-in-an-asp-net-mvc-application-with-iisnode.aspx)
+[portuguese: node.js no windows: instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)
+[integrated debugging](http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html)
+[pub/sub server using faye](http://weblogs.asp.net/cibrax/archive/2011/12/12/transform-your-iis-into-a-real-time-pub-sub-engine-with-faye-node.aspx)
+[appharbor uses iisnode](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)
 
 **Prerequisites for building**
 
@@ -62,15 +62,15 @@ Hosting node.js applications in IIS on Windows
 
 **Building**
 
-Build commands should be issued from the build environment set up with `"%programfiles(x86)\Microsoft Visual Studio 11.0\Common7\Tools\VsDevCmd.bat"`, assuming default installation location of Visual Studio 2012 on x64 platform.
+Build commands should be issued from the build environment set up with `"%programfiles(x86)%\Microsoft Visual Studio 11.0\Common7\Tools\VsDevCmd.bat"`, assuming default installation location of Visual Studio 2012 on x64 platform.
 
-For x86 build: 
+For x86 build:
 
 ```
 msbuild /p:Platform=Win32 src\iisnode\iisnode.sln
 ```
 
-For x64 build: 
+For x64 build:
 
 ```
 msbuild /p:Platform=x64 src\iisnode\iisnode.sln
@@ -80,7 +80,7 @@ msbuild /p:Platform=x64 src\iisnode\iisnode.sln
 
 - For IIS 7.x/8.0: `build\debug\{x64|x86}\iisnode-full.msi`
 - For IIS Express 7.x: `build\debug\x86\iisnode-express.msi`
-    
+
 **Running tests**
 
 - Install for IIS 7.x/8.x (see previous sections)
@@ -89,6 +89,6 @@ msbuild /p:Platform=x64 src\iisnode\iisnode.sln
 
 **Resources & documentation**
 
-[Releases](https://github.com/tjanczuk/iisnode/wiki/iisnode-releases)  
-[Wiki](https://github.com/tjanczuk/iisnode/wiki)  
-[Blog](http://tomasz.janczuk.org)  
+[Releases](https://github.com/tjanczuk/iisnode/wiki/iisnode-releases)
+[Wiki](https://github.com/tjanczuk/iisnode/wiki)
+[Blog](http://tomasz.janczuk.org)
