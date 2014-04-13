@@ -219,9 +219,19 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 			async->RunSynchronousContinuations();
 		}
 
-		ctx->DecreasePendingAsyncOperationCount();
+		long value = ctx->DecreasePendingAsyncOperationCount();
 
 		REQUEST_NOTIFICATION_STATUS result = ctx->GetRequestNotificationStatus();
+
+        if(ctx->GetIsUpgrade() && value == 0)
+        {
+            //
+            // when the pending async count reaches 0,
+            // need to return RQ_NOTIFICATION_CONTINUE 
+            // to indicate websocket connection close.
+            //
+            result = RQ_NOTIFICATION_CONTINUE;
+        }
 
 		switch (result) 
 		{
