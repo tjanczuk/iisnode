@@ -8,7 +8,7 @@ Hosting node.js applications in IIS on Windows
 **Who uses iisnode?**
 
 - [Microsoft azure - benefits](http://blogs.msdn.com/b/hanuk/archive/2012/05/05/top-benefits-of-running-node-js-on-windows-azure.aspx)
-- [Microsoft azure - get started with node.js](https://www.windowsazure.com/en-us/develop/nodejs/)
+- [Microsoft azure - get started with node.js](http://azure.microsoft.com/en-us/develop/nodejs/)
 - [appharbor.com](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)
 - [discountasp.net](http://discountasp.net/press/2012_06_12_free-webmatrix-v2-rc-hosting-with-nodejs.aspx)
 - [arvixe.com](http://arvixe.com)
