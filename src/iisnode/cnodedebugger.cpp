@@ -94,6 +94,7 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 	IHttpContext* context = ctx->GetHttpContext();
 	IHttpRequest* request = context->GetRequest();
 	HTTP_REQUEST* rawRequest = request->GetRawHttpRequest();
+    BOOL debuggerRequest = FALSE;
 
 	// Debugger requests for static content are to be dispatched to a static file handler via a child IIS context.
 	// Debugger requests for the debugging protocol will be processed by the node-inspector app.
@@ -101,6 +102,10 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 	//
 	// /foo/app.js/debug/socket.io/...?abc=def -> /socket.io/...?abc=def
 	// /foo/app.js/debug/bar/baz.jpg           -> /foo/app.js.debug/node_modules/node-inspector/front-end/bar/baz.jpg
+
+    // if debuggerVirtualDir is specified, request will be rewritten to reflect the actual location of the debugger files 
+    // which will be under VDirPhysicalPath\SHA256(scriptPath)\app.js.debug
+    // /foo/app.js/debug/bar/baz.jpg   -> /VDir/SHA256(app.js physical path)/app.js.debug/node_modules/node-inspector/front-end/bar/baz.jpg
 	
 	// Determine the minimal absolute url path that maps to the same physical path as the translated script; 
 	// that minimal absolute url path will be the prefix of the full rewritten url path.
@@ -149,11 +154,11 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 		// this is a debugger request
 		wcscpy(newPath, rawRequest->CookedUrl.pAbsPath + indexFound + urlFragmentLength); // this includes query string if present
 		*requireChildContext = FALSE;
+        debuggerRequest = TRUE;
 	}
 	else
 	{
 		// this is static content request
-
 		wcscpy(newPath, rawRequest->CookedUrl.pAbsPath);
 		// replace the segment separator in 'app.js/debug' with a dot to get to 'app.js.debug'
 		newPath[indexFound + wcslen(appName) + 1] = L'.'; 
@@ -179,17 +184,47 @@ HRESULT CNodeDebugger::DispatchDebuggingRequest(CNodeHttpStoredContext* ctx, BOO
 
 	// convert to PSTR
 
+    LPWSTR vDir = CModuleConfiguration::GetDebuggerVirtualDir(context);
+    DWORD vDirLength = CModuleConfiguration::GetDebuggerVirtualDirLength(context);
+
 	PSTR path;
 	int pathSizeA;
-	int pathSizeW = wcslen(newPath);
-	ErrorIf(0 == (pathSizeA = WideCharToMultiByte(CP_ACP, 0, newPath, pathSizeW, NULL, 0, NULL, NULL)), E_FAIL);
-	ErrorIf(NULL == (path = (TCHAR*)context->AllocateRequestMemory(pathSizeA + 1)), ERROR_NOT_ENOUGH_MEMORY);
-	ErrorIf(pathSizeA != WideCharToMultiByte(CP_ACP, 0, newPath, pathSizeW, path, pathSizeA, NULL, NULL), E_FAIL);
-	path[pathSizeA] = 0;
+    LPWSTR finalPath = NULL;
+
+    if(debuggerRequest == FALSE && vDirLength > 0)
+    {
+        finalPath = new WCHAR[vDirLength + CModuleConfiguration::GetDebuggerFilesPathSegmentLength(context) + wcslen(newPath) + 10];
+        ErrorIf(NULL == finalPath, E_OUTOFMEMORY);
+        newPath = wcsstr(newPath, appName);
+        wsprintfW(finalPath, L"/%s/%s/%s", vDir, CModuleConfiguration::GetDebuggerFilesPathSegment(context), newPath);
+
+	    int pathSizeW = wcslen(finalPath);
+
+        ErrorIf(0 == (pathSizeA = WideCharToMultiByte(CP_ACP, 0, finalPath, pathSizeW, NULL, 0, NULL, NULL)), E_FAIL);
+	    ErrorIf(NULL == (path = (TCHAR*)context->AllocateRequestMemory(pathSizeA + 1)), E_OUTOFMEMORY);
+	    ErrorIf(pathSizeA != WideCharToMultiByte(CP_ACP, 0, finalPath, pathSizeW, path, pathSizeA, NULL, NULL), E_FAIL);
+	    path[pathSizeA] = 0;
+    }
+    else
+    {
+        int pathSizeW = wcslen(newPath);
+	    ErrorIf(0 == (pathSizeA = WideCharToMultiByte(CP_ACP, 0, newPath, pathSizeW, NULL, 0, NULL, NULL)), E_FAIL);
+	    ErrorIf(NULL == (path = (TCHAR*)context->AllocateRequestMemory(pathSizeA + 1)), E_OUTOFMEMORY);
+	    ErrorIf(pathSizeA != WideCharToMultiByte(CP_ACP, 0, newPath, pathSizeW, path, pathSizeA, NULL, NULL), E_FAIL);
+	    path[pathSizeA] = 0;
+    }
+
 	ctx->SetTargetUrl(path, pathSizeA);
 
-	return S_OK;
+	hr = S_OK; // go do cleanup
 Error:
+
+    if( finalPath != NULL )
+    {
+        delete[] finalPath;
+        finalPath = NULL;
+    }
+
 	return hr;
 }
 

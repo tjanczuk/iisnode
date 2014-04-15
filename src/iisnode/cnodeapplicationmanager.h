@@ -38,6 +38,8 @@ private:
 	HMODULE inspector;
 	LONG totalRequests;
 
+    BOOL DirectoryExists(LPCWSTR directoryPath);
+    HRESULT EnsureDirectoryStructureExists( LPCWSTR pszSkipPrefix, LPWSTR pszDirectoryPath );
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
 	HRESULT EnsureDebuggedApplicationKilled(IHttpContext* context, CNodeHttpStoredContext** ctx);	
 	HRESULT GetOrCreateNodeApplication(IHttpContext* context, NodeDebugCommand debugCommand, BOOL allowCreate, CNodeApplication** application);

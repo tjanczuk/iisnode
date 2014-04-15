@@ -1,4 +1,5 @@
 #include "precomp.h"
+#include <wincrypt.h>
 
 IHttpServer* CModuleConfiguration::server = NULL;
 
@@ -6,11 +7,30 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 
 BOOL CModuleConfiguration::invalid = FALSE;
 
+#define EXTENDED_MAX_PATH 32768
+#define MAX_HASH_CHAR 32
+
 CModuleConfiguration::CModuleConfiguration()
-	: nodeProcessCommandLine(NULL), logDirectory(NULL), debuggerPathSegment(NULL), 
-	debugPortRange(NULL), debugPortStart(0), debugPortEnd(0), node_env(NULL), watchedFiles(NULL),
-	enableXFF(FALSE), promoteServerVars(NULL), promoteServerVarsRaw(NULL), configOverridesFileName(NULL),
-	configOverrides(NULL), interceptor(NULL), debugHeaderEnabled(FALSE)
+    : nodeProcessCommandLine(NULL), 
+      logDirectory(NULL), 
+      debuggerPathSegment(NULL), 
+      debuggerFilesPathSegment(NULL),
+      debuggerFilesPathSegmentLength(0),
+      debugPortRange(NULL), 
+      debugPortStart(0), 
+      debugPortEnd(0), 
+      node_env(NULL), 
+      watchedFiles(NULL),
+	  enableXFF(FALSE), 
+      promoteServerVars(NULL), 
+      promoteServerVarsRaw(NULL), 
+      configOverridesFileName(NULL),
+	  configOverrides(NULL), 
+      interceptor(NULL), 
+      debugHeaderEnabled(FALSE), 
+      debuggerVirtualDir(NULL),
+      debuggerVirtualDirLength(0),
+      debuggerVirtualDirPhysicalPath(NULL)
 {
 	InitializeSRWLock(&this->srwlock);
 }
@@ -33,6 +53,24 @@ CModuleConfiguration::~CModuleConfiguration()
 		delete [] this->logDirectory;
 		this->logDirectory = NULL;
 	}
+
+    if(NULL != this->debuggerVirtualDir)
+    {
+        delete [] this->debuggerVirtualDir;
+        this->debuggerVirtualDir = NULL;
+    }
+
+    if(NULL != this->debuggerFilesPathSegment)
+    {
+        delete [] this->debuggerFilesPathSegment;
+        this->debuggerFilesPathSegment = NULL;
+    }
+    
+    if(NULL != this->debuggerVirtualDirPhysicalPath)
+    {
+        delete [] this->debuggerVirtualDirPhysicalPath;
+        this->debuggerVirtualDirPhysicalPath = NULL;
+    }
 
 	if (NULL != this->debuggerPathSegment)
 	{
@@ -629,10 +667,11 @@ HRESULT CModuleConfiguration::GetBOOL(char* str, BOOL* value)
 	return S_OK;
 }
 
-HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value)
+HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value, BOOL expandEnvironmentStrings)
 {
 	HRESULT hr;
 	int wcharSize, bytesConverted;
+	LPWSTR pszStr = NULL;
 
 	if (*value)
 	{
@@ -645,12 +684,31 @@ HRESULT CModuleConfiguration::GetString(char* str, LPWSTR* value)
 		str = "";
 	}
 
-	ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
-	ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
-	ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, *value, wcharSize), GetLastError());
+	if(expandEnvironmentStrings == FALSE)
+	{
+		ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
+		ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, *value, wcharSize), GetLastError());
+	}
+	else
+	{
+		ErrorIf(0 == (wcharSize = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0)), GetLastError());
+		ErrorIf(NULL == (pszStr = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(wcharSize != MultiByteToWideChar(CP_ACP, 0, str, -1, pszStr, wcharSize), GetLastError());
+		ErrorIf(0 == (wcharSize = ExpandEnvironmentStringsW(pszStr, NULL, 0)), GetLastError());
+		ErrorIf(NULL == (*value = new WCHAR[wcharSize]), ERROR_NOT_ENOUGH_MEMORY);
+		ErrorIf(wcharSize != ExpandEnvironmentStringsW(pszStr, *value, wcharSize), GetLastError());
+	}
 
-	return S_OK;
+	hr = S_OK; // fall through to clean up section.
+
 Error:
+
+	if(pszStr != NULL)
+	{
+		delete[] pszStr;
+	}
+
 	return hr;
 }
 
@@ -743,17 +801,22 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	{
 		CheckError(GetBOOL(valueStart, &config->debugHeaderEnabled));
 	}
+    else if (0 == strcmpi(keyStart, "debuggerVirtualDir"))
+	{
+		CheckError(GetString(valueStart, &config->debuggerVirtualDir));
+        config->debuggerVirtualDirLength = wcslen(config->debuggerVirtualDir);
+	}
 	else if (0 == strcmpi(keyStart, "enableXFF"))
 	{
 		CheckError(GetBOOL(valueStart, &config->enableXFF));
 	}
 	else if (0 == strcmpi(keyStart, "logDirectory"))
 	{
-		CheckError(GetString(valueStart, &config->logDirectory));
+		CheckError(GetString(valueStart, &config->logDirectory, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "node_env"))
 	{
-		CheckError(GetString(valueStart, &config->node_env));
+		CheckError(GetString(valueStart, &config->node_env, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "debugPortRange"))
 	{
@@ -761,7 +824,7 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "watchedFiles"))
 	{
-		CheckError(GetString(valueStart, &config->watchedFiles));
+		CheckError(GetString(valueStart, &config->watchedFiles, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "promoteServerVars"))
 	{
@@ -774,11 +837,11 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	}
 	else if (0 == strcmpi(keyStart, "nodeProcessCommandLine"))
 	{
-		CheckError(GetString(valueStart, &config->nodeProcessCommandLine));
+		CheckError(GetString(valueStart, &config->nodeProcessCommandLine, TRUE));
 	}
 	else if (0 == strcmpi(keyStart, "interceptor"))
 	{
-		CheckError(GetString(valueStart, &config->interceptor));
+		CheckError(GetString(valueStart, &config->interceptor, TRUE));
 	}
 
 	return S_OK;
@@ -835,6 +898,7 @@ HRESULT CModuleConfiguration::ApplyYamlConfigOverrides(IHttpContext* context, CM
 
 			// if file does not exist, clean up and return success (i.e. no config overrides specified)
 			ErrorIf(ERROR_FILE_NOT_FOUND == hr, S_OK);
+            ErrorIf(ERROR_PATH_NOT_FOUND == hr, S_OK);
 			
 			// if other error occurred, return the error
 			ErrorIf(TRUE, hr);
@@ -1074,6 +1138,7 @@ HRESULT CModuleConfiguration::EnsureCurrent(IHttpContext* context, CModuleConfig
 		if (CModuleConfiguration::invalid)
 		{
 			CheckError(CModuleConfiguration::ApplyYamlConfigOverrides(context, config));
+            CheckError(CModuleConfiguration::GenerateDebuggerConfig(context, config));
 			CheckError(CModuleConfiguration::TokenizePromoteServerVars(config));
 			CheckError(CModuleConfiguration::ApplyDefaults(config));
 			CModuleConfiguration::invalid = FALSE;
@@ -1124,6 +1189,8 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetString(section, L"logDirectory", &c->logDirectory));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled, TRUE));
 		CheckError(GetBOOL(section, L"debugHeaderEnabled", &c->debugHeaderEnabled, FALSE));
+        CheckError(GetString(section, L"debuggerVirtualDir", &c->debuggerVirtualDir));  
+        c->debuggerVirtualDirLength = wcslen(c->debuggerVirtualDir);
 		CheckError(GetString(section, L"node_env", &c->node_env));
 		CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
 		CheckError(GetString(section, L"watchedFiles", &c->watchedFiles));
@@ -1141,6 +1208,9 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		// apply config setting overrides from the optional YAML configuration file
 
 		CheckError(CModuleConfiguration::ApplyYamlConfigOverrides(context, c));
+
+        // generate debugger related config based on debuggerVirtualDir value.
+        CheckError(CModuleConfiguration::GenerateDebuggerConfig(context, c));
 
 		// tokenize promoteServerVars
 
@@ -1260,6 +1330,31 @@ DWORD CModuleConfiguration::GetDebuggerPathSegmentLength(IHttpContext* ctx)
 	GETCONFIG(debuggerPathSegmentLength)
 }
 
+LPWSTR CModuleConfiguration::GetDebuggerVirtualDir(IHttpContext* ctx)
+{
+    GETCONFIG(debuggerVirtualDir)
+}
+
+DWORD CModuleConfiguration::GetDebuggerVirtualDirLength(IHttpContext* ctx)
+{
+    GETCONFIG(debuggerVirtualDirLength)
+}
+
+LPWSTR CModuleConfiguration::GetDebuggerVirtualDirPhysicalPath(IHttpContext* ctx)
+{
+    GETCONFIG(debuggerVirtualDirPhysicalPath)
+}
+
+LPWSTR CModuleConfiguration::GetDebuggerFilesPathSegment(IHttpContext* ctx)
+{
+    GETCONFIG(debuggerFilesPathSegment)
+}
+
+DWORD CModuleConfiguration::GetDebuggerFilesPathSegmentLength(IHttpContext* ctx)
+{
+    GETCONFIG(debuggerFilesPathSegmentLength)
+}
+
 DWORD CModuleConfiguration::GetMaxTotalLogFileSizeInKB(IHttpContext* ctx)
 {
 	GETCONFIG(maxTotalLogFileSizeInKB)
@@ -1331,6 +1426,40 @@ LPWSTR CModuleConfiguration::GetConfigOverrides(IHttpContext* ctx)
 	GETCONFIG(configOverrides)
 }
 
+HRESULT CModuleConfiguration::GenerateDebuggerConfig(IHttpContext* context, CModuleConfiguration *config)
+{
+    HRESULT hr = S_OK;
+    if( config->debuggerVirtualDirPhysicalPath == NULL &&
+        config->debuggingEnabled &&
+        config->debuggerVirtualDir != NULL &&
+        wcslen(config->debuggerVirtualDir) > 0 )
+    {
+        config->debuggerVirtualDirPhysicalPath = new WCHAR[EXTENDED_MAX_PATH]; // will be deallocated by destructor.
+        ErrorIf(config->debuggerVirtualDirPhysicalPath == NULL, E_OUTOFMEMORY);
+        config->debuggerVirtualDirPhysicalPath[0] = L'\0';
+
+        CheckError(GetDebuggerVirtualDirPhysicalPathFromConfig(context->GetSite()->GetSiteId(),
+            L"/",
+            config->debuggerVirtualDir,
+            &config->debuggerVirtualDirPhysicalPath));
+
+        DWORD scriptTranslatedLength = 0;
+        LPCWSTR scriptTranslated = context->GetScriptTranslated(&scriptTranslatedLength);
+
+        // debuggerFilesPathSegment is shaHash(scriptTranslated)
+        config->debuggerFilesPathSegmentLength = MAX_HASH_CHAR + 1; // we only use first 32 char of the sha256 hash.
+        config->debuggerFilesPathSegment = new WCHAR[ config->debuggerFilesPathSegmentLength ];
+        ErrorIf(config->debuggerFilesPathSegment == NULL, E_OUTOFMEMORY);
+        config->debuggerFilesPathSegment[0] = L'\0';
+        CheckError(GetDebuggerFilesPathSegmentHelper(scriptTranslated,
+            scriptTranslatedLength,
+            &config->debuggerFilesPathSegment,
+            &config->debuggerFilesPathSegmentLength));
+    }
+Error:
+    return hr;
+}
+
 HRESULT CModuleConfiguration::GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end)
 {
 	HRESULT hr;
@@ -1373,6 +1502,280 @@ Error:
 	}
 
 	return hr;
+}
+
+//
+// DebuggerFilesPathSegment = SHA-256 hash of the ScriptPath (first 16 bytes)
+//
+HRESULT CModuleConfiguration::GetDebuggerFilesPathSegmentHelper(
+    LPCWSTR pszScriptPath,
+    DWORD   dwScriptPathLen,
+    LPWSTR *ppszDebuggerFilesPathSegment,
+    DWORD  *pdwDebuggerFilesPathSegmentSize
+)
+{
+    HRESULT         hr = S_OK;
+    HCRYPTPROV      hProv = 0;
+    HCRYPTHASH      hHash = 0;
+    CHAR            rgbDigits[] = "0123456789abcdef";
+    BYTE            rgbHash[MAX_HASH_CHAR]; // sha256 ==> 32 bytes.
+    DWORD           cbHash = 0;
+    CHAR            shaHash[MAX_HASH_CHAR + 1]; // we will only use first 16 bytes of the sha256 hash ==> 32 hex chars.
+    DWORD           dwSHALength = 0;
+    CHAR           *pInput = NULL; 
+    DWORD           dwInputSize = 0;
+    DWORD           dwIndex = 0;
+
+    _ASSERT( pszScriptPath != NULL );
+    _ASSERT( pdwDebuggerFilesPathSegmentSize != NULL );
+
+    ErrorIf( *pdwDebuggerFilesPathSegmentSize <= MAX_HASH_CHAR , HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+
+    // convert WCHAR scriptPath to CHAR.
+    ErrorIf(0 == (dwInputSize = WideCharToMultiByte(CP_ACP, 0, pszScriptPath, dwScriptPathLen, NULL, 0, NULL, NULL)), E_FAIL);
+    ErrorIf(NULL == (pInput = new CHAR[dwInputSize + 1]), E_OUTOFMEMORY);
+    ErrorIf(dwInputSize != WideCharToMultiByte(CP_ACP, 0, pszScriptPath, dwScriptPathLen, pInput, dwInputSize, NULL, NULL), E_FAIL);
+    pInput[dwInputSize] = '\0';
+
+    // Get handle to the crypto provider
+    ErrorIf(!CryptAcquireContext(&hProv,
+                                 NULL,
+                                 NULL,
+                                 PROV_RSA_AES,
+                                 CRYPT_VERIFYCONTEXT), HRESULT_FROM_WIN32(GetLastError()));
+
+    ErrorIf(!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash), HRESULT_FROM_WIN32(GetLastError()));
+
+    ErrorIf(!CryptHashData(hHash, (BYTE*) pInput, strnlen_s(pInput, dwInputSize), 0), HRESULT_FROM_WIN32(GetLastError()));
+
+    cbHash = MAX_HASH_CHAR;
+    ErrorIf(!CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0), HRESULT_FROM_WIN32(GetLastError()));
+
+    dwIndex = 0;
+    // convert first 16 bytes to hexadecimal form.
+    for (DWORD i = 0; i < 16; i++, dwIndex=dwIndex+2)
+    {
+        shaHash[dwIndex] = rgbDigits[rgbHash[i] >> 4];
+        shaHash[dwIndex+1] = rgbDigits[rgbHash[i] & 0xf];
+    }
+
+    shaHash[dwIndex] = '\0';
+
+    ErrorIf(0 == (dwSHALength = MultiByteToWideChar(CP_ACP, 0, shaHash, -1, NULL, 0)), GetLastError());
+    ErrorIf(dwSHALength > *pdwDebuggerFilesPathSegmentSize, HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+    ErrorIf(dwSHALength != MultiByteToWideChar(CP_ACP, 0, shaHash, -1, *ppszDebuggerFilesPathSegment, dwSHALength), GetLastError());
+
+    *pdwDebuggerFilesPathSegmentSize = wcslen(*ppszDebuggerFilesPathSegment);
+
+    hr = S_OK; // go ahead and do cleanup.
+
+Error:
+
+    if(pInput != NULL)
+    {
+        delete [] pInput;
+        pInput = NULL;
+    }
+
+    if(hHash != NULL)
+    {
+        CryptDestroyHash(hHash);
+        hHash = NULL;
+    }
+
+    if(hProv != NULL)
+    {
+        CryptReleaseContext(hProv, 0);
+        hProv = NULL;
+    }
+
+    return hr;
+}
+
+HRESULT CModuleConfiguration::GetDebuggerVirtualDirPhysicalPathFromConfig(
+    DWORD   dwSiteId,
+    LPCWSTR pApplicationPath,
+    LPCWSTR pVirtualDirPath,
+    LPWSTR *ppPhysicalPath
+)
+{
+    HRESULT                     hr = S_OK;    
+    IAppHostElement            *pSitesSection = NULL;
+    IAppHostElementCollection  *pSiteCollection = NULL;
+    IAppHostElement            *pSiteElement = NULL;
+    IAppHostElementCollection  *pAppsCollection = NULL;
+    IAppHostElement            *pAppElement = NULL;
+    IAppHostElementCollection  *pVirtualDirCollection = NULL;
+    IAppHostElement            *pvDirElement = NULL;
+    IAppHostProperty           *pAppPathProp = NULL;
+    DWORD                       dwSiteIdFromConfig = 0;
+    BSTR                        bstrAppPathValue = NULL;
+    BSTR                        bstrvDirPathValue = NULL;
+    BSTR                        bstrvDirPhysicalPathValue = NULL;
+    ENUM_INDEX                  siteIndex;
+    ENUM_INDEX                  appIndex;
+    ENUM_INDEX                  virtualDirIndex;
+        
+    CheckError(CUtils::GetAdminElement(server->GetAdminManager(), 
+                                       L"MACHINE/WEBROOT/APPHOST", 
+                                       L"system.applicationHost/sites", 
+                                       &pSitesSection));
+
+    CheckError(pSitesSection->get_Collection(&pSiteCollection));
+
+    for( hr = CUtils::FindFirstElement(pSiteCollection, &siteIndex, &pSiteElement) ;
+         SUCCEEDED(hr) ;
+         hr = CUtils::FindNextElement(pSiteCollection, &siteIndex, &pSiteElement) )
+    {
+        if(hr == S_FALSE)
+        {
+            hr = S_OK;
+            break;
+        }
+
+        CheckError(CUtils::GetElementDWORDProperty(pSiteElement, L"id", &dwSiteIdFromConfig));
+
+        if( dwSiteIdFromConfig == dwSiteId )
+        {
+            // found current site.
+
+            // get list of apps in this site.
+            CheckError(pSiteElement->get_Collection(&pAppsCollection));
+
+            for( hr = CUtils::FindFirstElement(pAppsCollection, &appIndex, &pAppElement) ;
+                 SUCCEEDED(hr) ;
+                 hr = CUtils::FindNextElement(pAppsCollection, &appIndex, &pAppElement) )
+            {
+                if(hr == S_FALSE)
+                {
+                    hr = S_OK;
+                    break;
+                }
+                
+                CheckError(CUtils::GetElementStringProperty(pAppElement, L"path", &bstrAppPathValue));
+
+                if(wcsicmp(bstrAppPathValue, pApplicationPath) == 0)
+                {
+                    CheckError(pAppElement->get_Collection(&pVirtualDirCollection));
+
+                    for( hr = CUtils::FindFirstElement(pVirtualDirCollection, &virtualDirIndex, &pvDirElement) ;
+                         SUCCEEDED(hr) ;
+                         hr = CUtils::FindNextElement(pVirtualDirCollection, &virtualDirIndex, &pvDirElement) )
+                    {
+                        if(hr == S_FALSE)
+                        {
+                            hr = S_OK;
+                            break;
+                        }
+                    
+                        CheckError(CUtils::GetElementStringProperty(pvDirElement, 
+                                                                    L"path", 
+                                                                    &bstrvDirPathValue));
+
+                        // compare without starting slash.
+                        if(wcscmp( bstrvDirPathValue + 1, pVirtualDirPath) == 0)
+                        {
+                            // found the VDIR, get physical path
+                            CheckError(CUtils::GetElementStringProperty(pvDirElement, 
+                                                                        L"physicalPath", 
+                                                                        &bstrvDirPhysicalPathValue));
+                            ErrorIf(SysStringLen(bstrvDirPhysicalPathValue) >= EXTENDED_MAX_PATH, ERROR_INSUFFICIENT_BUFFER);
+                            wcscpy( *ppPhysicalPath, bstrvDirPhysicalPathValue);
+                            
+                            SysFreeString(bstrvDirPhysicalPathValue);
+                            bstrvDirPhysicalPathValue = NULL;
+
+                            break;
+                        }
+
+                        SysFreeString(bstrvDirPathValue);
+                        bstrvDirPathValue = NULL;
+
+                        pvDirElement->Release();
+                        pvDirElement = NULL;
+                    }
+
+                    break;
+                }                
+
+                SysFreeString(bstrAppPathValue);
+                bstrAppPathValue = NULL;
+
+                pAppElement->Release();
+                pAppElement = NULL;
+            }
+
+            break;
+        }
+
+        pSiteElement->Release();
+        pSiteElement = NULL;
+    }
+
+    hr = S_OK; // go do cleanup.
+Error:
+
+    if(pSitesSection != NULL)
+    {
+        pSitesSection->Release();
+        pSitesSection = NULL;
+    }
+
+    if(pSiteCollection != NULL)
+    {
+        pSiteCollection->Release();
+        pSiteCollection = NULL;
+    }
+    
+    if(pSiteElement != NULL)
+    {
+        pSiteElement->Release();
+        pSiteElement = NULL;
+    }
+
+    if(pAppsCollection != NULL)
+    {
+        pAppsCollection->Release();
+        pAppsCollection = NULL;
+    }
+
+    if(pAppElement != NULL)
+    {
+        pAppElement->Release();
+        pAppElement = NULL;
+    }
+
+    if(pVirtualDirCollection != NULL)
+    {
+        pVirtualDirCollection->Release();
+        pVirtualDirCollection = NULL;
+    }
+
+    if(pvDirElement != NULL)
+    {
+        pvDirElement->Release();
+        pvDirElement = NULL;
+    }
+
+    if(bstrAppPathValue != NULL)
+    {
+        SysFreeString(bstrAppPathValue);
+        bstrAppPathValue = NULL;
+    }
+
+    if(bstrvDirPathValue != NULL)
+    {
+        SysFreeString(bstrvDirPathValue);
+        bstrvDirPathValue = NULL;
+    }
+
+    if(bstrvDirPhysicalPathValue != NULL)
+    {
+        SysFreeString(bstrvDirPhysicalPathValue);
+        bstrvDirPhysicalPathValue = NULL;
+    }
+
+    return hr;
 }
 
 HRESULT CModuleConfiguration::GetPromoteServerVars(IHttpContext* ctx, char*** vars, int* count)
