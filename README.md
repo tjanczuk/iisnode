@@ -41,6 +41,11 @@ Hosting node.js applications in IIS on Windows
 - Open WebMatrix, choose “Site from folder”, enter %localappdata%\iisnode\www, start the site, and play with the iisnode samples, or
 - Use node.js templates to get started quickly with an Express application or a skeleton Hello World
 
+**Installing for IIS Express 8 on Windows x64**
+This can be a head-scratcher since IIS Express 8 gives you both 32-bit and 64-bit versions (http://www.iis.net/learn/extensions/introduction-to-iis-express/iis-80-express-readme). You can either:
+- Install the full x64 version, then in Visual Studio go to Tools > Options > Projects and Solutions > Web Projects > Use the 64 bit version of IIS Express. This way you have a single install for both IIS and IIS Express.
+- Separately install iisnode express version (https://github.com/azure/iisnode/wiki/iisnode-releases).
+
 **Howtos**
 
 [the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)
