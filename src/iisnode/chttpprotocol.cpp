@@ -46,6 +46,9 @@ PCSTR CHttpProtocol::httpRequestHeaders[] = {
 	"User-Agent"
 };
 
+const PCSTR CHttpProtocol::schemeHttp = "http";
+const PCSTR CHttpProtocol::schemeHttps = "https";
+
 HRESULT CHttpProtocol::Append(IHttpContext* context, const char* content, DWORD contentLength, void** buffer, DWORD* bufferLength, DWORD* offset)
 {
 	HRESULT hr;
@@ -93,7 +96,7 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 	USHORT originalUrlLength;
 	DWORD remoteHostSize = INET6_ADDRSTRLEN + 1;
 	char remoteHost[INET6_ADDRSTRLEN + 1];
-	BOOL addXFF;
+	BOOL addXFF, addXFP;
 	char** serverVars;
 	int serverVarCount;
 
@@ -160,11 +163,11 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 
 	// Unknown headers
 
-	if (TRUE == (addXFF = CModuleConfiguration::GetEnableXFF(context)))
+	if (TRUE == (addXFF = addXFP = CModuleConfiguration::GetEnableXFF(context)))
 	{
 		PSOCKADDR addr = request->GetRemoteAddress();
 		DWORD addrSize = addr->sa_family == AF_INET ? sizeof SOCKADDR_IN : sizeof SOCKADDR_IN6;
-		ErrorIf(0 != WSAAddressToString(addr, addrSize, NULL, remoteHost, &remoteHostSize), GetLastError());
+		ErrorIf(0 != GetNameInfo(addr, addrSize, remoteHost, remoteHostSize, NULL, 0, NI_NUMERICHOST), GetLastError());
 	}
 
 	for (int i = 0; i < raw->Headers.UnknownHeaderCount; i++)
@@ -173,14 +176,19 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 		CheckError(CHttpProtocol::Append(context, ": ", 2, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, raw->Headers.pUnknownHeaders[i].pRawValue, raw->Headers.pUnknownHeaders[i].RawValueLength, result, &bufferLength, &offset));
 
-		if (addXFF && 15 == raw->Headers.pUnknownHeaders[i].NameLength && 0 == strcmpi("X-Forwarded-For", raw->Headers.pUnknownHeaders[i].pName))
+		if (addXFF && 15 == raw->Headers.pUnknownHeaders[i].NameLength && 0 == _stricmp("X-Forwarded-For", raw->Headers.pUnknownHeaders[i].pName))
 		{
 			// augment existing X-Forwarded-For header
 
 			CheckError(CHttpProtocol::Append(context, ", ", 2, result, &bufferLength, &offset));
-			CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
+			CheckError(CHttpProtocol::Append(context, remoteHost, 0, result, &bufferLength, &offset));
 
 			addXFF = FALSE;
+		}
+		else if (addXFP && 17 == raw->Headers.pUnknownHeaders[i].NameLength && 0 == _stricmp("X-Forwarded-Proto", raw->Headers.pUnknownHeaders[i].pName))
+		{
+			// Already exists in incoming headers; don't add a second one
+			addXFP = FALSE;
 		}
 
 		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
@@ -191,8 +199,27 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 		// add a new X-Forwarded-For header
 
 		CheckError(CHttpProtocol::Append(context, "X-Forwarded-For: ", 17, result, &bufferLength, &offset));
-		CheckError(CHttpProtocol::Append(context, remoteHost, remoteHostSize - 1, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, remoteHost, 0, result, &bufferLength, &offset));
 		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));		
+	}
+
+	if (addXFP)
+	{
+		// Determine the incoming request protocol scheme
+		PCSTR varValue, varScheme = schemeHttp;
+		DWORD varValueLength;
+		if (S_OK == context->GetServerVariable("HTTPS", &varValue, &varValueLength))
+		{
+			if (0 == _stricmp("on", varValue))
+			{
+				varScheme = schemeHttps;
+			}
+		}
+
+		// Add the X-Forwarded-Proto header (default is http)
+		CheckError(CHttpProtocol::Append(context, "X-Forwarded-Proto: ", 19, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, varScheme, 0, result, &bufferLength, &offset));
+		CheckError(CHttpProtocol::Append(context, "\r\n", 2, result, &bufferLength, &offset));	
 	}
 
 	// promote server variables

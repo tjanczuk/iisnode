@@ -7,6 +7,9 @@ class CHttpProtocol
 {
 private:
 
+	static const PCSTR schemeHttp;
+	static const PCSTR schemeHttps;
+
 	static PCSTR httpRequestHeaders[HttpHeaderRequestMaximum];
 	static HRESULT Append(IHttpContext* context, const char* content, DWORD contentLength, void** buffer, DWORD* bufferLength, DWORD* offset);
 
