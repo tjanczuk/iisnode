@@ -58,6 +58,7 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	PWSTR scriptTranslated = NULL;
 	DWORD currentDirectorySize = 0;
 	CNodeApplication* app = this->GetProcessManager()->GetApplication();
+    PCH pSignalPipeName = NULL;
 
 	RtlZeroMemory(&processInformation, sizeof processInformation);
 	RtlZeroMemory(&startupInfo, sizeof startupInfo);
@@ -117,12 +118,23 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	wcscat(fullCommandLine, scriptName);
 	wcscat(fullCommandLine, L"\"");
 
+    if(CModuleConfiguration::GetRecycleSignalEnabled(context))
+    {
+        LPCWSTR pszSignalPipeName = app->GetApplicationManager()->GetSignalPipeName();
+        DWORD dwSignalPipeNameLen = wcslen(pszSignalPipeName);
+
+        ErrorIf(NULL == (pSignalPipeName = new CHAR[dwSignalPipeNameLen+1]), E_OUTOFMEMORY);
+        ErrorIf(dwSignalPipeNameLen != WideCharToMultiByte(CP_ACP, 0, pszSignalPipeName, dwSignalPipeNameLen, pSignalPipeName, dwSignalPipeNameLen, NULL, NULL), E_FAIL);
+        pSignalPipeName[dwSignalPipeNameLen] = '\0';
+    }
+
 	// create the environment block for the node.js process 	
 
 	CheckError(CModuleConfiguration::CreateNodeEnvironment(
 		context, 
 		app->IsDebugger() ? app->GetDebugPort() : 0, 
 		this->namedPipe, 
+        CModuleConfiguration::GetRecycleSignalEnabled(context) ? pSignalPipeName : NULL,
 		&newEnvironment));
 
 	// establish the current directory for node.exe process to be the same as the location of the application *.js file
@@ -206,7 +218,12 @@ HRESULT CNodeProcess::Initialize(IHttpContext* context)
 	delete [] fullCommandLine;
 	fullCommandLine = NULL;
 	CloseHandle(processInformation.hThread);
-	processInformation.hThread = NULL;	
+	processInformation.hThread = NULL;
+    if(pSignalPipeName != NULL)
+    {
+        delete[] pSignalPipeName;
+        pSignalPipeName = NULL;
+    }
 
 	if (this->GetProcessManager()->GetApplication()->IsDebugger())
 	{
@@ -238,6 +255,12 @@ Error:
 		delete [] currentDirectory;
 		currentDirectory = NULL;
 	}
+
+    if(pSignalPipeName)
+    {
+        delete[] pSignalPipeName;
+        pSignalPipeName = NULL;
+    }
 
 	if (suuid != NULL)
 	{

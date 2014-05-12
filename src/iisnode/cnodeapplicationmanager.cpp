@@ -1,9 +1,11 @@
 #include "precomp.h"
+#include <sddl.h>
 
 CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId)
     : server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
     breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL),
-    currentDebugPort(0), inspector(NULL), totalRequests(0)
+    currentDebugPort(0), inspector(NULL), totalRequests(0), controlSignalHandlerThread(NULL), 
+    signalPipe(NULL), signalPipeName(NULL), pPipeSecAttr(NULL)
 {
     InitializeSRWLock(&this->srwlock);
 }
@@ -37,11 +39,64 @@ LONG CNodeApplicationManager::GetTotalRequests()
 	return this->totalRequests;
 }
 
+LPCWSTR CNodeApplicationManager::GetSignalPipeName()
+{
+    return this->signalPipeName;
+}
+
+HANDLE CNodeApplicationManager::GetSignalPipe()
+{
+    return this->signalPipe;
+}
+
+unsigned int CNodeApplicationManager::ControlSignalHandler(void* arg)
+{
+    CNodeApplicationManager*    nodeApplicationManager = (CNodeApplicationManager*)arg;
+    BYTE                        buffer[MAX_BUFFER_SIZE] = {0};
+    DWORD                       bytesRead = 0;
+
+    _ASSERT(nodeApplicationManager != NULL);
+    
+    //
+    // wait for a client to connect -- does not support multiple clients yet.
+    //
+    if(ConnectNamedPipe(nodeApplicationManager->GetSignalPipe(), NULL) == 0)
+    {
+        // failed
+        nodeApplicationManager->GetEventProvider()->Log(L"iisnode control signal pipe client connection failed", WINEVENT_LEVEL_ERROR);
+        goto Finished;
+    }
+
+    //
+    // Read message from pipe.
+    //
+    if(ReadFile(nodeApplicationManager->GetSignalPipe(), buffer, MAX_BUFFER_SIZE, &bytesRead, NULL))
+    {
+        if(strnicmp((char*)buffer, "recycle", MAX_BUFFER_SIZE) == 0)
+        {
+            nodeApplicationManager->GetHttpServer()->RecycleProcess(L"Node.exe signalled recycle");
+        }
+    }
+
+Finished:
+    return 0;
+}
+
+PSECURITY_ATTRIBUTES 
+CNodeApplicationManager::GetPipeSecurityAttributes(
+    VOID
+)
+{
+    return this->pPipeSecAttr;
+}
+
 HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
 {
     HRESULT hr;
     BOOL isInJob, createJob;
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
+    UUID uuid;
+    RPC_WSTR suuid = NULL;
 
     ErrorIf(NULL == (this->eventProvider = new CNodeEventProvider()), ERROR_NOT_ENOUGH_MEMORY);
     CheckError(this->eventProvider->Initialize());
@@ -50,6 +105,8 @@ HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
     CheckError(this->asyncManager->Initialize(context));
     ErrorIf(NULL == (this->fileWatcher = new CFileWatcher()), ERROR_NOT_ENOUGH_MEMORY);
     CheckError(this->fileWatcher->Initialize(context));
+
+    CheckError(CUtils::CreatePipeSecurity(&this->pPipeSecAttr));
 
     // determine whether node processes should be created in a new job object
     // or whether current job object is adequate; the goal is to kill node processes when
@@ -93,6 +150,48 @@ HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
             HRESULT_FROM_WIN32(GetLastError()));
     }
 
+    if(CModuleConfiguration::GetRecycleSignalEnabled(context))
+    {
+        //
+        // generate unique pipe name
+        //
+
+        ErrorIf(RPC_S_OK != UuidCreate(&uuid), ERROR_CAN_NOT_COMPLETE);
+        ErrorIf(RPC_S_OK != UuidToStringW(&uuid, &suuid), ERROR_NOT_ENOUGH_MEMORY);
+        ErrorIf((this->signalPipeName = new WCHAR[1024]) == NULL, ERROR_NOT_ENOUGH_MEMORY);
+        wcscpy(this->signalPipeName, L"\\\\.\\pipe\\");
+        wcscpy(this->signalPipeName + 9, (WCHAR*)suuid);
+        RpcStringFreeW(&suuid);
+        suuid = NULL;
+
+        this->signalPipe = CreateNamedPipeW( this->signalPipeName,
+                                       PIPE_ACCESS_INBOUND,
+                                       PIPE_TYPE_MESSAGE | PIPE_WAIT,
+                                       1,
+                                       MAX_BUFFER_SIZE,
+                                       MAX_BUFFER_SIZE,
+                                       0,
+                                       GetPipeSecurityAttributes() );
+
+        ErrorIf( this->signalPipe == INVALID_HANDLE_VALUE, 
+                 HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE) );
+
+        //
+        // start pipe reader thread.
+        //
+
+        this->controlSignalHandlerThread = (HANDLE) _beginthreadex( NULL, 
+                                                              0, 
+                                                              CNodeApplicationManager::ControlSignalHandler, 
+                                                              this, 
+                                                              0, 
+                                                              NULL);
+
+        ErrorIf((HANDLE)-1L == this->controlSignalHandlerThread, ERROR_NOT_ENOUGH_MEMORY);
+
+        this->GetEventProvider()->Log(L"iisnode initialized control pipe", WINEVENT_LEVEL_INFO);
+    }
+
     this->initialized = TRUE;
 
     this->GetEventProvider()->Log(L"iisnode initialized the application manager", WINEVENT_LEVEL_INFO);
@@ -101,6 +200,12 @@ HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
 Error:
 
     this->GetEventProvider()->Log(L"iisnode failed to initialize the application manager", WINEVENT_LEVEL_ERROR);
+
+    if(suuid != NULL)
+    {
+        RpcStringFreeW(&suuid);
+        suuid = NULL;
+    }
 
     if (NULL != this->asyncManager)
     {
@@ -131,6 +236,30 @@ CNodeApplicationManager::~CNodeApplicationManager()
         NodeApplicationEntry* current = this->applications;
         this->applications = this->applications->next;
         delete current;
+    }
+
+    if(NULL != this->controlSignalHandlerThread)
+    {
+        CloseHandle(this->controlSignalHandlerThread);
+        this->controlSignalHandlerThread = NULL;
+    }
+
+    if(NULL != this->signalPipe)
+    {
+        CloseHandle(this->signalPipe);
+        this->signalPipe = NULL;
+    }
+
+    if(NULL != this->pPipeSecAttr)
+    {
+        CUtils::FreePipeSecurity(this->pPipeSecAttr);
+        this->pPipeSecAttr = NULL;
+    }
+
+    if(NULL != this->signalPipeName)
+    {
+        delete[] this->signalPipeName;
+        this->signalPipeName = NULL;
     }
 
     if (NULL != this->asyncManager)

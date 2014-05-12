@@ -29,6 +29,7 @@ private:
 	BOOL loggingEnabled;
 	BOOL debuggingEnabled;
 	BOOL debugHeaderEnabled;
+    BOOL recycleSignalEnabled;
     LPWSTR debuggerVirtualDir;    
     DWORD debuggerVirtualDirLength;
     LPWSTR debuggerVirtualDirPhysicalPath;
@@ -113,6 +114,7 @@ public:
     static LPWSTR GetDebuggerVirtualDir(IHttpContext* ctx);
     static DWORD GetDebuggerVirtualDirLength(IHttpContext* ctx);
     static LPWSTR GetDebuggerVirtualDirPhysicalPath(IHttpContext* ctx);
+    static BOOL GetRecycleSignalEnabled(IHttpContext* ctx);
 	static HRESULT GetDebugPortRange(IHttpContext* ctx, DWORD* start, DWORD* end);
 	static LPWSTR GetNodeEnv(IHttpContext* ctx);
 	static BOOL GetDevErrorsEnabled(IHttpContext* ctx);
@@ -124,7 +126,7 @@ public:
 	static HRESULT GetPromoteServerVars(IHttpContext* ctx, char*** vars, int* count);
 	static LPWSTR GetConfigOverrides(IHttpContext* ctx);
 
-	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env);
+	static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH signalPipeName, PCH* env);
 
 	static void Invalidate();
 

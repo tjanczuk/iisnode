@@ -30,7 +30,8 @@ CModuleConfiguration::CModuleConfiguration()
       debugHeaderEnabled(FALSE), 
       debuggerVirtualDir(NULL),
       debuggerVirtualDirLength(0),
-      debuggerVirtualDirPhysicalPath(NULL)
+      debuggerVirtualDirPhysicalPath(NULL),
+      recycleSignalEnabled(FALSE)
 {
 	InitializeSRWLock(&this->srwlock);
 }
@@ -143,7 +144,7 @@ Error:
 	return hr;
 }
 
-HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH* env)
+HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH signalPipeName, PCH* env)
 {
 	HRESULT hr;
 	LPCH currentEnvironment = NULL;
@@ -189,6 +190,12 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 	tmpIndex += strlen(namedPipe) + 6;
 	sprintf(tmpIndex, "IISNODE_VERSION=%s", IISNODE_VERSION);
 	tmpIndex += strlen(IISNODE_VERSION) + 17;
+
+    if(CModuleConfiguration::GetRecycleSignalEnabled(ctx) && signalPipeName != NULL)
+    {
+        sprintf(tmpIndex, "IISNODE_CONTROL_PIPE=%s", signalPipeName);
+        tmpIndex += strlen(signalPipeName) + 22;
+    }
 
 	// set DEBUGPORT environment variable if requested (used by node-inspector)
 
@@ -801,6 +808,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
 	{
 		CheckError(GetBOOL(valueStart, &config->debugHeaderEnabled));
 	}
+    else if(0 == strcmpi(keyStart, "recycleSignalEnabled"))
+    {
+        CheckError(GetBOOL(valueStart, &config->recycleSignalEnabled));
+    }
     else if (0 == strcmpi(keyStart, "debuggerVirtualDir"))
 	{
 		CheckError(GetString(valueStart, &config->debuggerVirtualDir));
@@ -1189,6 +1200,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 		CheckError(GetString(section, L"logDirectory", &c->logDirectory));
 		CheckError(GetBOOL(section, L"debuggingEnabled", &c->debuggingEnabled, TRUE));
 		CheckError(GetBOOL(section, L"debugHeaderEnabled", &c->debugHeaderEnabled, FALSE));
+        CheckError(GetBOOL(section, L"recycleSignalEnabled", &c->recycleSignalEnabled, FALSE));
         CheckError(GetString(section, L"debuggerVirtualDir", &c->debuggerVirtualDir));  
         c->debuggerVirtualDirLength = wcslen(c->debuggerVirtualDir);
 		CheckError(GetString(section, L"node_env", &c->node_env));
@@ -1385,6 +1397,10 @@ BOOL CModuleConfiguration::GetDebugHeaderEnabled(IHttpContext* ctx)
 	GETCONFIG(debugHeaderEnabled)
 }
 
+BOOL CModuleConfiguration::GetRecycleSignalEnabled(IHttpContext* ctx)
+{
+    GETCONFIG(recycleSignalEnabled)
+}
 
 LPWSTR CModuleConfiguration::GetNodeEnv(IHttpContext* ctx)
 {

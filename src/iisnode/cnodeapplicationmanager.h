@@ -8,6 +8,8 @@ class CNodeEventProvider;
 class CNodeHttpStoredContext;
 enum NodeDebugCommand;
 
+#define MAX_BUFFER_SIZE 64
+
 class CNodeApplicationManager
 {
 private:
@@ -38,6 +40,14 @@ private:
 	HMODULE inspector;
 	LONG totalRequests;
 
+    HANDLE signalPipe;
+    HANDLE controlSignalHandlerThread;
+    LPWSTR signalPipeName;
+    PSECURITY_ATTRIBUTES pPipeSecAttr;
+
+    HANDLE GetSignalPipe();
+    HRESULT SetupPipeSecurityAttributes();
+
     BOOL DirectoryExists(LPCWSTR directoryPath);
     HRESULT EnsureDirectoryStructureExists( LPCWSTR pszSkipPrefix, LPWSTR pszDirectoryPath );
 	HRESULT DebugRedirect(IHttpContext* context, CNodeHttpStoredContext** ctx);
@@ -55,6 +65,8 @@ private:
 	HRESULT EnsureDebugeeReady(IHttpContext* context, DWORD debugPort);
 	HRESULT InitializeCore(IHttpContext* context);
 
+    static unsigned int WINAPI ControlSignalHandler(void* arg);
+
 public:
 
 	CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId); 
@@ -67,6 +79,8 @@ public:
 	CFileWatcher* GetFileWatcher();
 	HANDLE GetJobObject();
 	BOOL GetBreakAwayFromJobObject();
+    LPCWSTR GetSignalPipeName();
+    PSECURITY_ATTRIBUTES GetPipeSecurityAttributes();
 
 	static void OnScriptModified(CNodeApplicationManager* manager, CNodeApplication* application);
 
