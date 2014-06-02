@@ -25,11 +25,293 @@ struct ENUM_INDEX
     ULONG Count;
 };
 
+#include <sddl.h>
+#include <AccCtrl.h>
+#include <Aclapi.h>
+
 class CUtils
 {
 public:
     ~CUtils()
     {
+    }
+
+    static
+    VOID
+    CUtils::FreeTokenUserSID(
+        TOKEN_USER ** ppTokenUser
+        )
+    {
+        _ASSERT( ppTokenUser );
+        if ( ppTokenUser == NULL ) 
+        {
+            return;
+        }
+
+        if ( *ppTokenUser != NULL )
+        {
+            delete [] *ppTokenUser;
+            *ppTokenUser = NULL;
+        }
+    }
+
+    static
+    DWORD
+    CUtils::GetTokenUserSID(
+        HANDLE hToken,
+        TOKEN_USER ** ppTokenUser
+        )
+    {
+        DWORD dwRet = NO_ERROR;
+        TOKEN_USER * ptokenUser = NULL;
+    
+        BOOL fRet = FALSE;
+        DWORD dwSize = 0;
+
+        _ASSERT(hToken != NULL);
+        _ASSERT(ppTokenUser != NULL);
+
+        if ( hToken == NULL ||
+             ppTokenUser == NULL )
+        {
+            return ERROR_INVALID_PARAMETER;
+        }
+
+        *ppTokenUser = NULL;
+    
+        fRet = GetTokenInformation(hToken,
+                                   TokenUser,
+                                   NULL,
+                                   0,
+                                   &dwSize);
+        if (FALSE == fRet)
+        {
+            if (ERROR_INSUFFICIENT_BUFFER != GetLastError())
+            {
+                dwRet = GetLastError();
+                goto exit;
+            }
+        }
+
+        ptokenUser = (TOKEN_USER*)new BYTE[dwSize];
+        if (NULL == ptokenUser)
+        {
+            dwRet = ERROR_NOT_ENOUGH_MEMORY;
+            goto exit;
+        }
+    
+        fRet = GetTokenInformation(hToken,
+                                TokenUser,
+                                ptokenUser,
+                                dwSize,
+                                &dwSize);
+        if (FALSE == fRet)
+        {
+            dwRet = GetLastError();
+            goto exit;
+        }
+
+        *ppTokenUser = ptokenUser;
+        ptokenUser = NULL;
+        dwRet = NO_ERROR;
+
+    exit:
+
+        // Free the local token owner variable if
+        // it is still set.  In this case it is set
+        // because there was an error, otherwise it
+        // will have all ready been changed to NULL.
+        if ( ptokenUser != NULL )
+        {
+            _ASSERT( dwRet != NO_ERROR );
+
+            FreeTokenUserSID( &ptokenUser );
+        }
+
+        return dwRet;
+    }
+
+    static
+    HRESULT
+    CUtils::CreatePipeSecurity(
+        __out PSECURITY_ATTRIBUTES *ppSa
+    )
+    /*++
+
+    Routine Description:
+
+        The CreatePipeSecurity function creates and initializes a new
+        SECURITY_ATTRIBUTES structure to allow Local System full
+        access to the pipe.
+
+    Arguments:
+
+        ppSa - output a pointer to a SECURITY_ATTRIBUTES structure that
+               allows Local System full access to the pipe.
+               The structure must be freed by calling FreePipeSecurity.
+
+    Return Value:
+
+        HRESULT
+
+    --*/
+    {
+        HRESULT              hr                     = S_OK;
+        DWORD                dwError                = ERROR_SUCCESS;
+
+        PSECURITY_DESCRIPTOR pSd                    = NULL;
+        PSECURITY_ATTRIBUTES pSa                    = NULL;
+
+        LPWSTR               lpwszCurrentUserSid    = NULL;
+
+        HANDLE               hProcessToken          = NULL;
+        TOKEN_USER *         pTokenUser             = NULL;
+
+        WCHAR                pszSDDL[256];
+
+        //
+        // Get Current User SID
+        //
+
+        if(! OpenProcessToken(GetCurrentProcess(), GENERIC_READ, &hProcessToken) )
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        //
+        // Get Token for the current user.
+        // Free the token user with the FreeTokenUserSid API when done.
+        //
+
+        dwError = GetTokenUserSID(hProcessToken, &pTokenUser);
+        if ( dwError != ERROR_SUCCESS )
+        {
+            hr = HRESULT_FROM_WIN32(dwError);
+            goto Finished;
+        }
+
+        //
+        // Convert the SID to string
+        //
+
+        if (!ConvertSidToStringSidW(pTokenUser->User.Sid, &lpwszCurrentUserSid))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        //
+        // Construct the SDDL :
+        // Dacl : Protected
+        // GA (Generic Access) for Local System,
+        // GA for Current User Sid
+        //
+        wcscpy(pszSDDL, L"D:P(A;OICI;GA;;;SY)(A;OICI;GA;;;");
+        wcscat(pszSDDL, lpwszCurrentUserSid);
+        wcscat(pszSDDL, L")");
+
+        //
+        // Create the Security Descriptor from string SDDL
+        //
+
+        if ( !ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                pszSDDL,
+                SDDL_REVISION_1,
+                &pSd,
+                NULL) )
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        //
+        // Allocate the memory of SECURITY_ATTRIBUTES.
+        //
+
+        pSa = (PSECURITY_ATTRIBUTES) LocalAlloc( LPTR, sizeof(*pSa) );
+        if (pSa == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        pSa->nLength = sizeof(*pSa);
+        pSa->lpSecurityDescriptor = pSd;
+        pSa->bInheritHandle = FALSE;
+
+        *ppSa = pSa;
+
+        pSa = NULL;
+        pSd = NULL;
+
+    Finished:
+
+        if ( lpwszCurrentUserSid )
+        {
+            LocalFree( lpwszCurrentUserSid );
+            lpwszCurrentUserSid = NULL;
+        }
+
+        if ( hProcessToken )
+        {
+            CloseHandle(hProcessToken);
+            hProcessToken = NULL;
+        }
+
+        if ( pTokenUser )
+        {
+            FreeTokenUserSID( &pTokenUser );
+            pTokenUser = NULL;
+        }
+
+        if (pSd)
+        {
+            LocalFree(pSd);
+            pSd = NULL;
+        }
+
+        if (pSa)
+        {
+            LocalFree(pSa);
+            pSa = NULL;
+        }
+
+        return hr;
+    }
+
+    static
+    void
+    CUtils::FreePipeSecurity(
+        __in PSECURITY_ATTRIBUTES pSa
+    )
+    /*++
+
+    Routine Description:
+
+        The FreePipeSecurity function frees a SECURITY_ATTRIBUTES
+        structure that was created by the CreatePipeSecurity function.
+
+    Arguments:
+
+        pSa - pointer to a SECURITY_ATTRIBUTES structure that was created by
+              the CreatePipeSecurity function.
+
+    Return Value:
+
+        VOID
+
+    --*/
+    {
+        if (pSa)
+        {
+            if (pSa->lpSecurityDescriptor)
+            {
+                LocalFree(pSa->lpSecurityDescriptor);
+            }
+
+            LocalFree(pSa);
+        }
     }
 
     static 

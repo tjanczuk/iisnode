@@ -12,6 +12,7 @@ HRESULT __stdcall RegisterModule(
     HRESULT hr;
     HMODULE hNtDll;
     CNodeHttpModuleFactory* pFactory = NULL;
+    CNodeGlobalModule* pGlobalModule = NULL;
 
     ErrorIf(pModuleInfo == NULL || pHttpServer == NULL, HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
 
@@ -26,6 +27,10 @@ HRESULT __stdcall RegisterModule(
 
     CheckError(pModuleInfo->SetRequestNotifications(pFactory, RQ_EXECUTE_REQUEST_HANDLER | RQ_SEND_RESPONSE, 0));
     
+    ErrorIf(NULL == (pGlobalModule = new CNodeGlobalModule(pFactory->GetNodeApplicationManager())), E_OUTOFMEMORY);
+
+    CheckError(pModuleInfo->SetGlobalNotifications( pGlobalModule, GL_CONFIGURATION_CHANGE ));
+
     return S_OK;
 
 Error:
@@ -33,7 +38,12 @@ Error:
     if ( pFactory != NULL )
     {
         delete pFactory;
-    }   
+    }
+
+    if( pGlobalModule != NULL )
+    {
+        delete pGlobalModule;
+    }
 
     return hr;
 }

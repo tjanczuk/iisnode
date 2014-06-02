@@ -37,6 +37,9 @@
       <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68245A8CA28CCC" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BCCC">
         <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCC" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode-inspector.dll" />
       </Component>
+      <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68245A8CA28CCD" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BCCD">
+        <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCD" KeyPath="yes" Source="$(var.wowsourcedir)\iisnode-inspector-0.7.3.dll" />
+      </Component>
       <?endif?>
       <Component Win64="yes" Id="cmpFBE5B7358DB7A39ACDC0E2F9C1F1CAED" Guid="*">
       <?if $(var.ProjectName) = iisnode-msi-full ?>
@@ -68,6 +71,7 @@
       <ComponentRef Id="cmp1B33C88432AC7530411D254B8656120B" />
       <?if $(var.ProjectName) = iisnode-msi-full ?>
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28CCC" />
+      <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28CCD" />
       <?endif?>
     </ComponentGroup>
   </Fragment>

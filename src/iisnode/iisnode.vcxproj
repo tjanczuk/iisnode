@@ -226,6 +226,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <ClCompile Include="cnodeapplicationmanager.cpp" />
     <ClCompile Include="cnodedebugger.cpp" />
     <ClCompile Include="cnodeeventprovider.cpp" />
+    <ClCompile Include="cnodeglobalmodule.cpp" />
     <ClCompile Include="cnodehttpmodulefactory.cpp" />
     <ClCompile Include="cnodehttpstoredcontext.cpp" />
     <ClCompile Include="cnodeprocess.cpp" />
@@ -434,6 +435,7 @@ copy /y $(ProjectDir)\..\config\* $(ProjectDir)\..\..\build\$(Configuration)\$(P
     <ClInclude Include="cnodeapplication.h" />
     <ClInclude Include="cnodeapplicationmanager.h" />
     <ClInclude Include="cnodedebugger.h" />
+    <ClInclude Include="cnodeglobalmodule.h" />
     <ClInclude Include="cnodehttpmodule.h" />
     <ClInclude Include="cnodehttpmodulefactory.h" />
     <ClInclude Include="cnodehttpstoredcontext.h" />
