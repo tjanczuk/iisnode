@@ -64,6 +64,9 @@
       <Component Win64="yes" Id="cmpF6505586D2A7DD2F0C68245A8CA28BBB" Guid="B59AD501-3EBD-43AA-A6ED-12E55670BBBB">
         <File Id="fil7FAEA07CDAF0588E758688EFA95F0BBB" KeyPath="yes" Source="$(var.sourcedir)\iisnode-inspector.dll" />
       </Component>
+      <Component Id="cmpF6505586D2A7DD2F0C68245A8CA28BBC" Guid="7D275AF9-576A-453E-BC29-7C2674CF98B8">
+        <File Id="fil7FAEA07CDAF0588E758688EFA95F0BBC" KeyPath="yes" Source="$(var.sourcedir)\iisnode-inspector-0.7.3.dll" />
+      </Component>
       <Component Win64="yes" Id="cmp1B33C88432AC7530411D254B86561208" Guid="7289761F-64EA-4015-A56D-918198EA7AE3">
         <File Id="fil3B86A7DAD58B7C191C98A67D26D2C427" KeyPath="yes" Source="$(var.sourcedir)\README.md" />
       </Component>
@@ -434,6 +437,7 @@
       <ComponentRef Id="cmp9F3A0FADEE166143F3633103BBA2782D" />
       <ComponentRef Id="cmp1B33C88432AC7530411D254B86561209" />
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28BBB" />
+      <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28BBC" />
       <?endif?>
     </ComponentGroup>
   </Fragment>

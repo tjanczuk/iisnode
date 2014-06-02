@@ -33,6 +33,10 @@
         <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCC" KeyPath="no" Source="$(var.sourcedir)\iisnode-inspector.dll" />
         <Condition>NOT CORE_ONLY</Condition>
       </Component>
+      <Component Id="cmpF6505586D2A7DD2F0C68245A8CA28CCD" Guid="3C9736F1-A6C9-4987-A278-70F457EDAFE7">
+        <File Id="fil7FAEA07CDAF0588E758688EFA95F0CCD" KeyPath="no" Source="$(var.sourcedir)\iisnode-inspector-0.7.3.dll" />
+        <Condition>NOT CORE_ONLY</Condition>
+      </Component>
       <Component Id="cmpF6505586D2A7DD2F0C68235A8CA281C5" Guid="059AD501-3EBD-43AA-A6ED-12E55660B0CE">
         <File Id="fil7FAEA07CDAF0588E758688EFA85F0A6A" KeyPath="no" Source="$(var.sourcedir)\iisnode.dll" />
         <?if $(var.Configuration) = Debug ?>
@@ -223,6 +227,7 @@
       <ComponentRef Id="cmp6ED31FD9AD562B4EC571FD844C7A8988" />
       <ComponentRef Id="cmp2206B4ED3BFE29BD483211C73F9303A2" />
       <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28CCC" />
+      <ComponentRef Id="cmpF6505586D2A7DD2F0C68245A8CA28CCD" />
     </ComponentGroup>
   </Fragment>
 </Include>

@@ -13,22 +13,22 @@ CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODUL
 HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 {
     HRESULT hr = S_OK;
-	CModuleConfiguration *config;
+    CModuleConfiguration *config;
 
-	if (S_OK != (hr = CModuleConfiguration::GetConfig(context, &config)))
-	{
-		hr = IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_OVERRIDE == hr ? hr : IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION;
-	}
-	else if (!this->initialized)
+    if (S_OK != (hr = CModuleConfiguration::GetConfig(context, &config)))
     {
-		ENTER_SRW_EXCLUSIVE(this->srwlock)
+        hr = IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION_OVERRIDE == hr ? hr : IISNODE_ERROR_UNABLE_TO_READ_CONFIGURATION;
+    }
+    else if (!this->initialized)
+    {
+        ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-		if (!this->initialized)
-		{
-			hr = this->InitializeCore(context);
-		}
+        if (!this->initialized)
+        {
+            hr = this->InitializeCore(context);
+        }
 
-		LEAVE_SRW_EXCLUSIVE(this->srwlock)
+        LEAVE_SRW_EXCLUSIVE(this->srwlock)
     }
 
     return hr;
@@ -36,7 +36,7 @@ HRESULT CNodeApplicationManager::Initialize(IHttpContext* context)
 
 LONG CNodeApplicationManager::GetTotalRequests()
 {
-	return this->totalRequests;
+    return this->totalRequests;
 }
 
 LPCWSTR CNodeApplicationManager::GetSignalPipeName()
@@ -311,48 +311,48 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
     CheckNull(ctx);
     *ctx = NULL;
 
-	InterlockedIncrement(&this->totalRequests);
+    InterlockedIncrement(&this->totalRequests);
 
     CheckError(CNodeDebugger::GetDebugCommand(context, this->GetEventProvider(), &debugCommand));
 
-	switch (debugCommand) 
-	{
-	default:
+    switch (debugCommand) 
+    {
+    default:
 
         ENTER_SRW_SHARED(this->srwlock)
 
         CheckError(this->GetOrCreateNodeApplication(context, debugCommand, FALSE, &application));
-		if (application && !application->GetNeedsRecycling())
-		{
-			// this is the sweetspot code path: application already exists, shared read lock is sufficient
+        if (application && !application->GetNeedsRecycling())
+        {
+            // this is the sweetspot code path: application already exists, shared read lock is sufficient
 
-			CheckError(application->Dispatch(context, pProvider, ctx));
-		}
+            CheckError(application->Dispatch(context, pProvider, ctx));
+        }
 
         LEAVE_SRW_SHARED(this->srwlock)
 
-		if (!application || application->GetNeedsRecycling())
-		{
-			// this is the initialization code path for activating request:
-			// application must be created which requires an exclusive lock
+        if (!application || application->GetNeedsRecycling())
+        {
+            // this is the initialization code path for activating request:
+            // application must be created which requires an exclusive lock
 
-			ENTER_SRW_EXCLUSIVE(this->srwlock)
+            ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-			CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
-			if (application->GetNeedsRecycling())
-			{
-				this->RecycleApplicationAssumeLock(application);
-				CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
-			}
+            CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
+            if (application->GetNeedsRecycling())
+            {
+                this->RecycleApplicationAssumeLock(application);
+                CheckError(this->GetOrCreateNodeApplication(context, debugCommand, TRUE, &application));
+            }
 
-			CheckError(application->Dispatch(context, pProvider, ctx));
+            CheckError(application->Dispatch(context, pProvider, ctx));
 
-			LEAVE_SRW_EXCLUSIVE(this->srwlock)
-		}
+            LEAVE_SRW_EXCLUSIVE(this->srwlock)
+        }
 
-		break;
+        break;
 
-	case ND_KILL:
+    case ND_KILL:
 
         ENTER_SRW_EXCLUSIVE(this->srwlock)
 
@@ -360,16 +360,16 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
 
         LEAVE_SRW_EXCLUSIVE(this->srwlock)
 
-		break;
+        break;
 
-	case ND_REDIRECT:
+    case ND_REDIRECT:
 
         // redirection from e.g. app.js/debug to app.js/debug/
 
         CheckError(this->DebugRedirect(context, ctx));
 
-		break;
-	};
+        break;
+    };
 
     return S_OK;
 Error:
@@ -426,50 +426,77 @@ Error:
     return hr;
 }
 
+HRESULT CNodeApplicationManager::RecycleApplicationOnConfigChange(PCWSTR pszConfigPath)
+{
+    HRESULT hr = ERROR_NOT_FOUND;
+
+    ENTER_SRW_EXCLUSIVE(this->srwlock)
+
+    NodeApplicationEntry* current = this->applications;
+    while (current)
+    {
+        //
+        // recycle apps if any config along its configPath hierarchy changes.
+        //
+
+        if (wcsstr(current->nodeApplication->GetConfigPath(), pszConfigPath) != NULL)
+        {
+            current->nodeApplication->SetNeedsRecycling();
+            hr = S_OK;
+        }
+
+        current = current->next;
+    }
+
+    LEAVE_SRW_EXCLUSIVE(this->srwlock)
+
+    return hr;
+}
+
 HRESULT CNodeApplicationManager::RecycleApplication(CNodeApplication* app)
 {
-	return this->RecycleApplication(app, TRUE);
+    return this->RecycleApplication(app, TRUE);
 }
 
 HRESULT CNodeApplicationManager::RecycleApplication(CNodeApplication* app, BOOL requiresLock)
 {
-	HRESULT hr;
+    HRESULT hr;
 
-	if (requiresLock)
-	{
-		ENTER_SRW_EXCLUSIVE(this->srwlock)
+    if (requiresLock)
+    {
+        ENTER_SRW_EXCLUSIVE(this->srwlock)
 
-		hr = this->RecycleApplicationAssumeLock(app);
+        hr = this->RecycleApplicationAssumeLock(app);
 
-		LEAVE_SRW_EXCLUSIVE(this->srwlock)
-	}
-	else
-	{
-		hr = this->RecycleApplicationAssumeLock(app);
-	}
+        LEAVE_SRW_EXCLUSIVE(this->srwlock)
+    }
+    else
+    {
+        hr = this->RecycleApplicationAssumeLock(app);
+    }
 
-	return hr;
+    return hr;
 }
 
 // this method is always called under exclusive this->srwlock
 HRESULT CNodeApplicationManager::RecycleApplicationAssumeLock(CNodeApplication* app)
 {
-	// ensure the application still exists to avoid race condition with other recycling code paths
+    // ensure the application still exists to avoid race condition with other recycling code paths
 
-	NodeApplicationEntry* current = this->applications;
-	while (current)
-	{
-		if (current->nodeApplication == app)
-		{
-			this->RecycleApplicationCore(app->GetPeerApplication());
-			this->RecycleApplicationCore(app);
-			break;
-		}
+    NodeApplicationEntry* current = this->applications;
+    while (current)
+    {
+        if (current->nodeApplication == app)
+        {
+            this->RecycleApplicationCore(app->GetPeerApplication());
+            this->RecycleApplicationCore(app);
+            break;
+        }
 
-		current = current->next;
-	}
+        current = current->next;
+    }
 
-	return S_OK;
+    return S_OK;
 }
 
 void CNodeApplicationManager::OnScriptModified(CNodeApplicationManager* manager, CNodeApplication* application)
@@ -547,26 +574,49 @@ Error:
     return hr;
 }
 
-HRESULT CNodeApplicationManager::EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize)
+HRESULT CNodeApplicationManager::EnsureDebuggerFilesInstalled(PWSTR physicalPath, DWORD physicalPathSize, LPWSTR debuggerExtensionDll)
 {
     HRESULT hr;
     HMODULE iisnode;
     DebuggerFileEnumeratorParams params = { S_OK, physicalPath, wcslen(physicalPath), physicalPathSize };
+    BOOL fLoadModule = FALSE;
 
     // Process all resources of DEBUGGERFILE type (256) defined in resource.rc and save to disk if necessary
-    
-    if (NULL == this->inspector)
+    ErrorIf(debuggerExtensionDll == NULL, ERROR_INVALID_PARAMETER);
+    ErrorIf(wcslen(debuggerExtensionDll) >= MAX_PATH, ERROR_INVALID_PARAMETER);
+
+    if(wcsicmp(this->debuggerExtensionDll, debuggerExtensionDll) != 0)
+    {
+        fLoadModule = TRUE;
+    }
+
+    if (NULL == this->inspector || fLoadModule)
     {
         // try loading iisnode-inspector.dll from the same location where iisnode.dll is located
 
-        char path[MAX_PATH];
+        if(this->inspector != NULL)
+        {
+            FreeLibrary(this->inspector);
+            this->inspector = NULL;
+        }
+
+        WCHAR path[MAX_PATH];
         DWORD size;
-        ErrorIf(NULL == (iisnode = GetModuleHandle("iisnode.dll")), GetLastError());
-        ErrorIf(0 == (size = GetModuleFileName(iisnode, path, MAX_PATH)), GetLastError());
+        ErrorIf(NULL == (iisnode = GetModuleHandleW(L"iisnode.dll")), GetLastError());
+        ErrorIf(0 == (size = GetModuleFileNameW(iisnode, path, MAX_PATH)), GetLastError());
         ErrorIf(size == MAX_PATH || S_OK != GetLastError(), E_FAIL);
-        ErrorIf((size + 10) >= MAX_PATH, E_FAIL);
-        strcpy(path + size - 4, "-inspector.dll");
-        ErrorIf(NULL == (this->inspector = LoadLibraryEx(path, NULL, LOAD_LIBRARY_AS_DATAFILE)), IISNODE_ERROR_INSPECTOR_NOT_FOUND);
+
+        //
+        // path points to d:\program files\iisnode\iisnode.dll for example.
+        // need to replace iisnode.dll with the debuggerExtensionDll which is why
+        // path + size - 11 (11 is length of iisnode.dll)
+        //
+
+        ErrorIf((size + wcslen(debuggerExtensionDll) - 11) >= MAX_PATH, E_FAIL);
+        wcscpy(path + size - 11, debuggerExtensionDll);
+        ErrorIf(NULL == (this->inspector = LoadLibraryExW(path, NULL, LOAD_LIBRARY_AS_DATAFILE)), IISNODE_ERROR_INSPECTOR_NOT_FOUND);
+
+        wcscpy(this->debuggerExtensionDll, debuggerExtensionDll);
     }
 
     ErrorIf(!EnumResourceNames(this->inspector, "DEBUGGERFILE", CNodeApplicationManager::EnsureDebuggerFile, (LONG_PTR)&params), GetLastError());
@@ -577,6 +627,12 @@ HRESULT CNodeApplicationManager::EnsureDebuggerFilesInstalled(PWSTR physicalPath
 
     return S_OK;
 Error:
+
+    if(this->inspector != NULL)
+    {
+        FreeLibrary(this->inspector);
+        this->inspector = NULL;
+    }
 
     this->GetEventProvider()->Log(
         L"iisnode failed to unpack debugger files", WINEVENT_LEVEL_ERROR);
@@ -597,8 +653,22 @@ BOOL CALLBACK CNodeApplicationManager::EnsureDebuggerFile(HMODULE hModule, LPCTS
     DWORD bytesWritten;
     size_t converted;
     DWORD lastDirectoryEnd, currentDirectoryEnd;
+    DWORD dwResourceIndex = 0;
+    CHAR  buffer[MAX_PATH];
 
     ErrorIf(NULL == lpszName, ERROR_INVALID_PARAMETER);
+
+    //
+    // resource file ID cannot start with a number so the format of the ID is F<Index>.
+    // lpszName is of the format F<Index>, so just skip the first character and convert the <Index> to number
+    //
+    
+    ErrorIf(strlen(lpszName) <= 1, ERROR_INVALID_PARAMETER);
+    ErrorIf(*lpszName != 'F', ERROR_INVALID_PARAMETER);
+
+    dwResourceIndex = atoi(lpszName + 1);
+
+    ErrorIf(LoadStringA(hModule, dwResourceIndex, buffer, MAX_PATH) == 0, GetLastError());
 
     // append file name to the base directory name
 
@@ -606,7 +676,7 @@ BOOL CALLBACK CNodeApplicationManager::EnsureDebuggerFile(HMODULE hModule, LPCTS
         &converted, 
         params->physicalFile + params->physicalFileLength, 
         params->physicalFileSize - params->physicalFileLength - 1, 
-        lpszName, 
+        buffer, 
         _TRUNCATE));
 
     // ensure the directory structure is created
@@ -618,6 +688,7 @@ BOOL CALLBACK CNodeApplicationManager::EnsureDebuggerFile(HMODULE hModule, LPCTS
     currentDirectoryEnd = params->physicalFileLength - 1;
     do {
         params->physicalFile[currentDirectoryEnd] = L'\0';
+
         if (!CreateDirectoryW(params->physicalFile, NULL))
         {
             hr = GetLastError();
@@ -632,9 +703,8 @@ BOOL CALLBACK CNodeApplicationManager::EnsureDebuggerFile(HMODULE hModule, LPCTS
     } 
     while (currentDirectoryEnd <= lastDirectoryEnd);
 
-    // check if the file already exists and create it if it does not
-
-    file = CreateFileW(params->physicalFile, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    // check if the file already exists and create it if it does not, if its present, overwrite it.
+    file = CreateFileW(params->physicalFile, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     
     if (INVALID_HANDLE_VALUE == file)
     {
@@ -717,9 +787,9 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
             DWORD debuggerFilesPathSegmentLen = CModuleConfiguration::GetDebuggerFilesPathSegmentLength(context);
 
             PCWSTR appName = physicalPath + physicalPathLength - 1;
-	        while (appName > physicalPath && *appName != L'\\')
-		        appName--;
-	        appName++;
+            while (appName > physicalPath && *appName != L'\\')
+                appName--;
+            appName++;
 
             if( debuggerVirtualDirPhysicalPath[ debuggerVirtualDirPhysicalPathLength - 1 ] == L'\\')
             {                            
@@ -746,7 +816,7 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
             // which is where EnsureDebuggerFilesInstalled will install all debugger files.
         }
 
-        CheckError(this->EnsureDebuggerFilesInstalled(debuggerPath, debuggerPathSize));
+        CheckError(this->EnsureDebuggerFilesInstalled(debuggerPath, debuggerPathSize, CModuleConfiguration::GetDebuggerExtensionDll(context)));
 
         // kill any existing instance of the application to debug and the debugger
 
@@ -899,7 +969,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplication(IHttpContext* contex
 
     if (NULL == *application && allowCreate)
     {
-		// this code path executes under exclusive this->srwlock
+        // this code path executes under exclusive this->srwlock
 
         ErrorIf(INVALID_FILE_ATTRIBUTES == GetFileAttributesW(physicalPath), GetLastError());        
 

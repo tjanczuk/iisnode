@@ -43,6 +43,7 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="gracefulShutdownTimeout" type="uint" defaultValue="60000"/>
     <attribute name="logDirectory" type="string" expanded="true" defaultValue="iisnode"/>
     <attribute name="debuggingEnabled" type="bool" defaultValue="true"/>
+    <attribute name="debuggerExtensionDll" type="string" defaultValue="iisnode-inspector-0.7.3.dll"/>
     <attribute name="debugHeaderEnabled" type="bool" defaultValue="false"/>
     <attribute name="debuggerVirtualDir" type="string" defaultValue="" />
     <attribute name="debuggerPathSegment" type="string" expanded="true" defaultValue="debug"/>

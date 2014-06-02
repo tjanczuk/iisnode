@@ -30,6 +30,7 @@
 #include "casyncmanager.h"
 #include "cmoduleconfiguration.h"
 #include "cnodehttpmodule.h"
+#include "cnodeglobalmodule.h"
 #include "cnodehttpmodulefactory.h"
 #include "cactiverequestpool.h"
 #include "chttpprotocol.h"

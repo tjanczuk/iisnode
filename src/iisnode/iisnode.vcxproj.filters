@@ -230,6 +230,9 @@
     <ClCompile Include="cconnectionpool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cnodeglobalmodule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h">
@@ -290,6 +293,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cconnectionpool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cnodeglobalmodule.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
