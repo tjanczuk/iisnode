@@ -38,20 +38,20 @@ Hosting node.js applications in IIS on Windows
 
 **Howtos**
 
-[the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)
-[the basics (Pусский перевод)](http://softdroid.net/hosting-nodejs-applications-ru)
-[**NEW: websockets**] (http://tomasz.janczuk.org/2012/11/how-to-use-websockets-with-nodejs-apps.html)
-[using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)
-[using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)
-[using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)
-[site templates for WebMatrix](https://github.com/SteveSanderson/Node.js-Site-Templates-for-WebMatrix)
-[using with mongodb](http://www.amazedsaint.com/2011/09/creating-10-minute-todo-listing-app-on.html)
-[diagnosing problems with ETW traces](http://tomasz.janczuk.org/2011/09/using-event-tracing-for-windows-to.html)
-[using with MVC](http://weblogs.asp.net/jgalloway/archive/2011/10/26/using-node-js-in-an-asp-net-mvc-application-with-iisnode.aspx)
-[portuguese: node.js no windows: instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)
-[integrated debugging](http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html)
-[pub/sub server using faye](http://weblogs.asp.net/cibrax/archive/2011/12/12/transform-your-iis-into-a-real-time-pub-sub-engine-with-faye-node.aspx)
-[appharbor uses iisnode](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)
+- [the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)
+- [the basics (Pусский перевод)](http://softdroid.net/hosting-nodejs-applications-ru)
+- [**NEW: websockets**] (http://tomasz.janczuk.org/2012/11/how-to-use-websockets-with-nodejs-apps.html)
+- [using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)
+- [using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)
+- [using with WebMatrix and IIS Express](http://tomasz.janczuk.org/2011/08/developing-nodejs-applications-in.html)
+- [site templates for WebMatrix](https://github.com/SteveSanderson/Node.js-Site-Templates-for-WebMatrix)
+- [using with mongodb](http://www.amazedsaint.com/2011/09/creating-10-minute-todo-listing-app-on.html)
+- [diagnosing problems with ETW traces](http://tomasz.janczuk.org/2011/09/using-event-tracing-for-windows-to.html)
+- [using with MVC](http://weblogs.asp.net/jgalloway/archive/2011/10/26/using-node-js-in-an-asp-net-mvc-application-with-iisnode.aspx)
+- [portuguese: node.js no windows: instalando o iisnode](http://vivina.com.br/nodejs-windows-parte-2)
+- [integrated debugging](http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html)
+- [pub/sub server using faye](http://weblogs.asp.net/cibrax/archive/2011/12/12/transform-your-iis-into-a-real-time-pub-sub-engine-with-faye-node.aspx)
+- [appharbor uses iisnode](http://blog.appharbor.com/2012/01/19/announcing-node-js-support)
 
 **Prerequisites for building**
 
