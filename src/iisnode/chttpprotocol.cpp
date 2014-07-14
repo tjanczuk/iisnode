@@ -168,6 +168,9 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 		PSOCKADDR addr = request->GetRemoteAddress();
 		DWORD addrSize = addr->sa_family == AF_INET ? sizeof SOCKADDR_IN : sizeof SOCKADDR_IN6;
 		ErrorIf(0 != GetNameInfo(addr, addrSize, remoteHost, remoteHostSize, NULL, 0, NI_NUMERICHOST), GetLastError());
+
+		// Set remoteHostSize to the size of remoteHost
+		remoteHostSize = strlen(remoteHost);
 	}
 
 	for (int i = 0; i < raw->Headers.UnknownHeaderCount; i++)
@@ -178,10 +181,14 @@ HRESULT CHttpProtocol::SerializeRequestHeaders(CNodeHttpStoredContext* ctx, void
 
 		if (addXFF && 15 == raw->Headers.pUnknownHeaders[i].NameLength && 0 == _stricmp("X-Forwarded-For", raw->Headers.pUnknownHeaders[i].pName))
 		{
-			// augment existing X-Forwarded-For header
-
-			CheckError(CHttpProtocol::Append(context, ", ", 2, result, &bufferLength, &offset));
-			CheckError(CHttpProtocol::Append(context, remoteHost, 0, result, &bufferLength, &offset));
+			// augment existing X-Forwarded-For header, but only if the last item isn't the same IP as what we are adding
+			// (fixes https://github.com/tjanczuk/iisnode/issues/340)			 
+			if (raw->Headers.pUnknownHeaders[i].RawValueLength < remoteHostSize ||
+				0 != _stricmp(remoteHost, (raw->Headers.pUnknownHeaders[i].pRawValue + (raw->Headers.pUnknownHeaders[i].RawValueLength - remoteHostSize))))
+			{
+				CheckError(CHttpProtocol::Append(context, ", ", 2, result, &bufferLength, &offset));
+				CheckError(CHttpProtocol::Append(context, remoteHost, 0, result, &bufferLength, &offset));
+			}
 
 			addXFF = FALSE;
 		}
