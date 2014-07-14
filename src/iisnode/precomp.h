@@ -27,6 +27,7 @@
 #include "utils.h"
 #include "cconnectionpool.h"
 #include "cnodeeventprovider.h"
+#include "cnodeconstants.h"
 #include "casyncmanager.h"
 #include "cmoduleconfiguration.h"
 #include "cnodehttpmodule.h"
