@@ -13,7 +13,7 @@ private:
 	static HRESULT EnsureBuffer(CNodeHttpStoredContext* context);
 	static HRESULT FinalizeResponseCore(CNodeHttpStoredContext * context, REQUEST_NOTIFICATION_STATUS status, HRESULT error, CNodeEventProvider* log, PCWSTR etw, UCHAR level);
 	static BOOL IsLocalCall(IHttpContext* ctx);
-	static BOOL SendDevError(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
+	static BOOL SendDevError(CNodeHttpStoredContext* context, USHORT status, USHORT subStatus, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
 	static HRESULT AddDebugHeader(CNodeHttpStoredContext* context);
 
 	// processing stages
@@ -52,9 +52,9 @@ public:
 	static HRESULT InitiateRequest(CNodeHttpStoredContext* context);
 	static BOOL SendIisnodeError(IHttpContext* httpCtx, HRESULT hr);
 	static BOOL SendIisnodeError(CNodeHttpStoredContext* ctx, HRESULT hr);
-	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
+	static HRESULT SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, USHORT subStatus, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
 	static HRESULT SendSyncResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache, PCSTR htmlBody);
-	static void SendEmptyResponse(IHttpContext* httpCtx, USHORT status, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
+	static void SendEmptyResponse(IHttpContext* httpCtx, USHORT status, USHORT subStatus, PCTSTR reason, HRESULT hresult, BOOL disableCache = FALSE);
 	static HRESULT SendDebugRedirect(CNodeHttpStoredContext* context, CNodeEventProvider* log);
 
 };

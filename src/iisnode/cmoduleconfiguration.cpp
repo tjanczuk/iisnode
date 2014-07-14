@@ -8,7 +8,7 @@ HTTP_MODULE_ID CModuleConfiguration::moduleId = NULL;
 BOOL CModuleConfiguration::invalid = FALSE;
 
 #define EXTENDED_MAX_PATH 32768
-#define MAX_HASH_CHAR 32
+#define MAX_HASH_CHAR 8
 
 CModuleConfiguration::CModuleConfiguration()
     : nodeProcessCommandLine(NULL), 
@@ -1551,9 +1551,9 @@ HRESULT CModuleConfiguration::GetDebuggerFilesPathSegmentHelper(
     HCRYPTPROV      hProv = 0;
     HCRYPTHASH      hHash = 0;
     CHAR            rgbDigits[] = "0123456789abcdef";
-    BYTE            rgbHash[MAX_HASH_CHAR]; // sha256 ==> 32 bytes.
+    BYTE            rgbHash[32]; // sha256 ==> 32 bytes.
     DWORD           cbHash = 0;
-    CHAR            shaHash[MAX_HASH_CHAR + 1]; // we will only use first 16 bytes of the sha256 hash ==> 32 hex chars.
+    CHAR            shaHash[MAX_HASH_CHAR + 1]; // we will only use first MAX_HASH_CHAR bytes of the sha256 hash ==> 32 hex chars.
     DWORD           dwSHALength = 0;
     CHAR           *pInput = NULL; 
     DWORD           dwInputSize = 0;
@@ -1581,12 +1581,13 @@ HRESULT CModuleConfiguration::GetDebuggerFilesPathSegmentHelper(
 
     ErrorIf(!CryptHashData(hHash, (BYTE*) pInput, strnlen_s(pInput, dwInputSize), 0), HRESULT_FROM_WIN32(GetLastError()));
 
-    cbHash = MAX_HASH_CHAR;
+    // sha256 ==> 32 bytes.
+    cbHash = 32;
     ErrorIf(!CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0), HRESULT_FROM_WIN32(GetLastError()));
 
     dwIndex = 0;
-    // convert first 16 bytes to hexadecimal form.
-    for (DWORD i = 0; i < 16; i++, dwIndex=dwIndex+2)
+    // convert first (MAX_HASH_CHAR / 2) bytes to hexadecimal form.
+    for (DWORD i = 0; i < (MAX_HASH_CHAR / 2); i++, dwIndex=dwIndex+2)
     {
         shaHash[dwIndex] = rgbDigits[rgbHash[i] >> 4];
         shaHash[dwIndex+1] = rgbDigits[rgbHash[i] & 0xf];
