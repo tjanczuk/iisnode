@@ -10,38 +10,41 @@ class CNodeApplication
 {
 private:
 
-	PWSTR scriptName;
-	CNodeApplicationManager* applicationManager;
-	CNodeProcessManager* processManager;
-	CNodeApplication* peerApplication;
-	BOOL isDebugger;
-	NodeDebugCommand debugCommand;
-	DWORD debugPort;
-	BOOL needsRecycling;
+    PWSTR scriptName;
+    PWSTR configPath;
+    CNodeApplicationManager* applicationManager;
+    CNodeProcessManager* processManager;
+    CNodeApplication* peerApplication;
+    BOOL isDebugger;
+    NodeDebugCommand debugCommand;
+    DWORD debugPort;
+    BOOL needsRecycling;
 
-	void Cleanup();	
+    void Cleanup();	
 
 public:
 
-	CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort);	
-	~CNodeApplication();
+    CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort);	
+    ~CNodeApplication();
 
-	HRESULT Initialize(PCWSTR scriptName, IHttpContext* context);
-	PCWSTR GetScriptName();
-	CNodeApplicationManager* GetApplicationManager();
-	HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
-	CNodeApplication* GetPeerApplication();
-	void SetPeerApplication(CNodeApplication* peerApplication);
-	BOOL IsDebugger();
-	BOOL IsDebuggee();
-	BOOL IsDebugMode();
-	NodeDebugCommand GetDebugCommand();
-	HRESULT Recycle();
-	DWORD GetDebugPort();
-	DWORD GetActiveRequestCount();
-	DWORD GetProcessCount();
-	void SetNeedsRecycling();
-	BOOL GetNeedsRecycling();
+    HRESULT Initialize(PCWSTR scriptName, IHttpContext* context);
+    PCWSTR GetScriptName();
+    PCWSTR GetConfigPath();
+    HRESULT SetConfigPath(IHttpContext* context);
+    CNodeApplicationManager* GetApplicationManager();
+    HRESULT Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx);
+    CNodeApplication* GetPeerApplication();
+    void SetPeerApplication(CNodeApplication* peerApplication);
+    BOOL IsDebugger();
+    BOOL IsDebuggee();
+    BOOL IsDebugMode();
+    NodeDebugCommand GetDebugCommand();
+    HRESULT Recycle();
+    DWORD GetDebugPort();
+    DWORD GetActiveRequestCount();
+    DWORD GetProcessCount();
+    void SetNeedsRecycling();
+    BOOL GetNeedsRecycling();
 };
 
 #endif

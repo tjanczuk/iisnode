@@ -3,15 +3,16 @@
 
 class CNodeHttpModuleFactory : public IHttpModuleFactory
 {
-	CNodeApplicationManager* applicationManager;
+    CNodeApplicationManager* applicationManager;
 
 
 public:
 
-	CNodeHttpModuleFactory(); 
-	~CNodeHttpModuleFactory();
-	HRESULT Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId);
+    CNodeHttpModuleFactory(); 
+    ~CNodeHttpModuleFactory();
+    HRESULT Initialize(IHttpServer* server, HTTP_MODULE_ID moduleId);
     HRESULT GetHttpModule(OUT CHttpModule **ppModule, IN IModuleAllocator *);
+    CNodeApplicationManager* GetNodeApplicationManager();
     void Terminate();
 };
 
