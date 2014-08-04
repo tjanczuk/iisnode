@@ -57,12 +57,12 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context)
         this->GetApplicationManager(), 
         this));
 
-    this->GetApplicationManager()->GetEventProvider()->Log(L"iisnode initialized a new node.js application", WINEVENT_LEVEL_INFO);
+    this->GetApplicationManager()->GetEventProvider()->Log(context, L"iisnode initialized a new node.js application", WINEVENT_LEVEL_INFO);
 
     return S_OK;
 Error:
 
-    this->GetApplicationManager()->GetEventProvider()->Log(L"iisnode failed to initialize a new node.js application", WINEVENT_LEVEL_ERROR);
+    this->GetApplicationManager()->GetEventProvider()->Log(context, L"iisnode failed to initialize a new node.js application", WINEVENT_LEVEL_ERROR);
 
     this->Cleanup();
 
