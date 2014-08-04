@@ -5,7 +5,7 @@ CNodeApplicationManager::CNodeApplicationManager(IHttpServer* server, HTTP_MODUL
     : server(server), moduleId(moduleId), applications(NULL), asyncManager(NULL), jobObject(NULL), 
     breakAwayFromJobObject(FALSE), fileWatcher(NULL), initialized(FALSE), eventProvider(NULL),
     currentDebugPort(0), inspector(NULL), totalRequests(0), controlSignalHandlerThread(NULL), 
-    signalPipe(NULL), signalPipeName(NULL), pPipeSecAttr(NULL)
+    signalPipe(NULL), signalPipeName(NULL), pPipeSecAttr(NULL), _fSignalPipeInitialized( FALSE )
 {
     InitializeSRWLock(&this->srwlock);
 }
@@ -90,13 +90,95 @@ CNodeApplicationManager::GetPipeSecurityAttributes(
     return this->pPipeSecAttr;
 }
 
+HRESULT CNodeApplicationManager::InitializeControlPipe()
+{
+    HRESULT hr = S_OK;
+    UUID uuid;
+    RPC_WSTR suuid = NULL;
+
+    if( _fSignalPipeInitialized )
+    {
+        return hr;
+    }
+
+    //
+    // generate unique pipe name
+    //
+
+    ErrorIf(RPC_S_OK != UuidCreate(&uuid), ERROR_CAN_NOT_COMPLETE);
+    ErrorIf(RPC_S_OK != UuidToStringW(&uuid, &suuid), ERROR_NOT_ENOUGH_MEMORY);
+    ErrorIf((this->signalPipeName = new WCHAR[1024]) == NULL, ERROR_NOT_ENOUGH_MEMORY);
+    wcscpy(this->signalPipeName, L"\\\\.\\pipe\\");
+    wcscpy(this->signalPipeName + 9, (WCHAR*)suuid);
+    RpcStringFreeW(&suuid);
+    suuid = NULL;
+
+    this->signalPipe = CreateNamedPipeW( this->signalPipeName,
+                                       PIPE_ACCESS_INBOUND,
+                                       PIPE_TYPE_MESSAGE | PIPE_WAIT,
+                                       1,
+                                       MAX_BUFFER_SIZE,
+                                       MAX_BUFFER_SIZE,
+                                       0,
+                                       GetPipeSecurityAttributes() );
+
+    ErrorIf( this->signalPipe == INVALID_HANDLE_VALUE, 
+             HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE) );
+
+    //
+    // start pipe reader thread.
+    //
+
+    this->controlSignalHandlerThread = (HANDLE) _beginthreadex( NULL, 
+                                                          0, 
+                                                          CNodeApplicationManager::ControlSignalHandler, 
+                                                          this, 
+                                                          0, 
+                                                          NULL);
+
+    ErrorIf((HANDLE)-1L == this->controlSignalHandlerThread, ERROR_NOT_ENOUGH_MEMORY);
+
+    this->GetEventProvider()->Log(L"iisnode initialized control pipe", WINEVENT_LEVEL_INFO);
+
+    _fSignalPipeInitialized = TRUE;
+
+Error:
+
+    if(suuid != NULL)
+    {
+        RpcStringFreeW(&suuid);
+        suuid = NULL;
+    }
+
+    if( FAILED( hr ) )
+    {
+        if(NULL != this->controlSignalHandlerThread)
+        {
+            CloseHandle(this->controlSignalHandlerThread);
+            this->controlSignalHandlerThread = NULL;
+        }
+
+        if(NULL != this->signalPipe)
+        {
+            CloseHandle(this->signalPipe);
+            this->signalPipe = NULL;
+        }
+
+        if(NULL != this->signalPipeName)
+        {
+            delete[] this->signalPipeName;
+            this->signalPipeName = NULL;
+        }
+    }
+
+    return hr;
+}
+
 HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
 {
     HRESULT hr;
     BOOL isInJob, createJob;
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
-    UUID uuid;
-    RPC_WSTR suuid = NULL;
 
     ErrorIf(NULL == (this->eventProvider = new CNodeEventProvider()), ERROR_NOT_ENOUGH_MEMORY);
     CheckError(this->eventProvider->Initialize());
@@ -150,62 +232,19 @@ HRESULT CNodeApplicationManager::InitializeCore(IHttpContext* context)
             HRESULT_FROM_WIN32(GetLastError()));
     }
 
-    if(CModuleConfiguration::GetRecycleSignalEnabled(context))
+    if(CModuleConfiguration::GetRecycleSignalEnabled(context) && !_fSignalPipeInitialized)
     {
-        //
-        // generate unique pipe name
-        //
-
-        ErrorIf(RPC_S_OK != UuidCreate(&uuid), ERROR_CAN_NOT_COMPLETE);
-        ErrorIf(RPC_S_OK != UuidToStringW(&uuid, &suuid), ERROR_NOT_ENOUGH_MEMORY);
-        ErrorIf((this->signalPipeName = new WCHAR[1024]) == NULL, ERROR_NOT_ENOUGH_MEMORY);
-        wcscpy(this->signalPipeName, L"\\\\.\\pipe\\");
-        wcscpy(this->signalPipeName + 9, (WCHAR*)suuid);
-        RpcStringFreeW(&suuid);
-        suuid = NULL;
-
-        this->signalPipe = CreateNamedPipeW( this->signalPipeName,
-                                       PIPE_ACCESS_INBOUND,
-                                       PIPE_TYPE_MESSAGE | PIPE_WAIT,
-                                       1,
-                                       MAX_BUFFER_SIZE,
-                                       MAX_BUFFER_SIZE,
-                                       0,
-                                       GetPipeSecurityAttributes() );
-
-        ErrorIf( this->signalPipe == INVALID_HANDLE_VALUE, 
-                 HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE) );
-
-        //
-        // start pipe reader thread.
-        //
-
-        this->controlSignalHandlerThread = (HANDLE) _beginthreadex( NULL, 
-                                                              0, 
-                                                              CNodeApplicationManager::ControlSignalHandler, 
-                                                              this, 
-                                                              0, 
-                                                              NULL);
-
-        ErrorIf((HANDLE)-1L == this->controlSignalHandlerThread, ERROR_NOT_ENOUGH_MEMORY);
-
-        this->GetEventProvider()->Log(L"iisnode initialized control pipe", WINEVENT_LEVEL_INFO);
+        CheckError(InitializeControlPipe());
     }
 
     this->initialized = TRUE;
 
-    this->GetEventProvider()->Log(L"iisnode initialized the application manager", WINEVENT_LEVEL_INFO);
+    this->GetEventProvider()->Log(context, L"iisnode initialized the application manager", WINEVENT_LEVEL_INFO);
 
     return S_OK;
 Error:
 
-    this->GetEventProvider()->Log(L"iisnode failed to initialize the application manager", WINEVENT_LEVEL_ERROR);
-
-    if(suuid != NULL)
-    {
-        RpcStringFreeW(&suuid);
-        suuid = NULL;
-    }
+    this->GetEventProvider()->Log(context, L"iisnode failed to initialize the application manager", WINEVENT_LEVEL_ERROR);
 
     if (NULL != this->asyncManager)
     {
@@ -230,12 +269,38 @@ Error:
 
 CNodeApplicationManager::~CNodeApplicationManager()
 {
+    HANDLE  hPipe = NULL;
+
     while (NULL != this->applications)
     {
         delete this->applications->nodeApplication;
         NodeApplicationEntry* current = this->applications;
         this->applications = this->applications->next;
         delete current;
+    }
+
+    if( _fSignalPipeInitialized )
+    {
+        //
+        // try to connect to the pipe to unblock the thread
+        // waiting on ConnectNamedPipe
+        // We dont need to check any errors on whether the connect
+        // succeeded because we dont care.
+        //
+
+        hPipe = CreateFileW( this->GetSignalPipeName(), 
+                             GENERIC_WRITE,
+                             0,
+                             NULL,
+                             OPEN_EXISTING,
+                             0,
+                             NULL );
+
+        if(hPipe != NULL)
+        {
+            CloseHandle(hPipe);
+            hPipe = NULL;
+        }
     }
 
     if(NULL != this->controlSignalHandlerThread)
@@ -304,7 +369,7 @@ CAsyncManager* CNodeApplicationManager::GetAsyncManager()
 
 HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvider* pProvider, CNodeHttpStoredContext** ctx)
 {
-    HRESULT hr;
+    HRESULT hr = S_OK;
     CNodeApplication* application;
     NodeDebugCommand debugCommand;
 
@@ -318,6 +383,18 @@ HRESULT CNodeApplicationManager::Dispatch(IHttpContext* context, IHttpEventProvi
     switch (debugCommand) 
     {
     default:
+
+        if(CModuleConfiguration::GetRecycleSignalEnabled(context) && !_fSignalPipeInitialized)
+        {
+            ENTER_SRW_EXCLUSIVE(this->srwlock)
+
+            if(CModuleConfiguration::GetRecycleSignalEnabled(context) && !_fSignalPipeInitialized)
+            {
+                CheckError(InitializeControlPipe());
+            }
+
+            LEAVE_SRW_EXCLUSIVE(this->srwlock)
+        }
 
         ENTER_SRW_SHARED(this->srwlock)
 
@@ -554,7 +631,7 @@ HRESULT CNodeApplicationManager::GetOrCreateNodeApplicationCore(PCWSTR physicalP
     }    
     else
     {
-        this->GetEventProvider()->Log(L"iisnode found an existing node.js application to dispatch the http request to", WINEVENT_LEVEL_VERBOSE);
+        this->GetEventProvider()->Log(context, L"iisnode found an existing node.js application to dispatch the http request to", WINEVENT_LEVEL_VERBOSE);
     }
 
     return S_OK;
@@ -569,7 +646,7 @@ Error:
         delete applicationEntry;
     }
     
-    this->GetEventProvider()->Log(L"iisnode failed to create a new node.js application", WINEVENT_LEVEL_ERROR);
+    this->GetEventProvider()->Log(context, L"iisnode failed to create a new node.js application", WINEVENT_LEVEL_ERROR);
 
     return hr;
 }
@@ -860,7 +937,7 @@ HRESULT CNodeApplicationManager::GetOrCreateDebuggedNodeApplicationCore(PCWSTR p
     }    
     else
     {
-        this->GetEventProvider()->Log(L"iisnode found an existing node.js debugger to dispatch the http request to", WINEVENT_LEVEL_VERBOSE);
+        this->GetEventProvider()->Log(context, L"iisnode found an existing node.js debugger to dispatch the http request to", WINEVENT_LEVEL_VERBOSE);
     }
 
     return S_OK;
@@ -884,7 +961,7 @@ Error:
         delete debuggerEntry;
     }
 
-    this->GetEventProvider()->Log(L"iisnode failed to create a new node.js application to debug or the debugger for that application", WINEVENT_LEVEL_ERROR);
+    this->GetEventProvider()->Log(context, L"iisnode failed to create a new node.js application to debug or the debugger for that application", WINEVENT_LEVEL_ERROR);
 
     return hr;
 }

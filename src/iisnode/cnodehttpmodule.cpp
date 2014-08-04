@@ -33,10 +33,10 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
 
     CheckError(this->applicationManager->Initialize(pHttpContext));
 
-    this->applicationManager->GetEventProvider()->Log(L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
+    this->applicationManager->GetEventProvider()->Log(pHttpContext, L"iisnode received a new http request", WINEVENT_LEVEL_INFO);
 
     CheckError(this->applicationManager->Dispatch(pHttpContext, pProvider, &ctx));
-    this->applicationManager->GetEventProvider()->Log(L"iisnode dispatched new http request", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
+    this->applicationManager->GetEventProvider()->Log(pHttpContext, L"iisnode dispatched new http request", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
     ASYNC_CONTEXT* async = ctx->GetAsyncContext();
     async->RunSynchronousContinuations();
 
@@ -53,25 +53,25 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
     switch (result) 
     {
     default:
-        this->applicationManager->GetEventProvider()->Log(
+        this->applicationManager->GetEventProvider()->Log(pHttpContext,
             L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler", 
             WINEVENT_LEVEL_VERBOSE, 
             ctx->GetActivityId());
         break;
     case RQ_NOTIFICATION_CONTINUE:
-        this->applicationManager->GetEventProvider()->Log(
+        this->applicationManager->GetEventProvider()->Log(pHttpContext,
             L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler with RQ_NOTIFICATION_CONTINUE", 
             WINEVENT_LEVEL_VERBOSE, 
             ctx->GetActivityId());
         break;
     case RQ_NOTIFICATION_FINISH_REQUEST:
-        this->applicationManager->GetEventProvider()->Log(
+        this->applicationManager->GetEventProvider()->Log(pHttpContext,
             L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler with RQ_NOTIFICATION_FINISH_REQUEST", 
             WINEVENT_LEVEL_VERBOSE, 
             ctx->GetActivityId());
         break;
     case RQ_NOTIFICATION_PENDING:
-        this->applicationManager->GetEventProvider()->Log(
+        this->applicationManager->GetEventProvider()->Log(pHttpContext,
             L"iisnode leaves CNodeHttpModule::OnExecuteRequestHandler with RQ_NOTIFICATION_PENDING", 
             WINEVENT_LEVEL_VERBOSE, 
             ctx->GetActivityId());
@@ -88,11 +88,11 @@ Error:
     {
         if (ctx)
         {
-            log->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
+            log->Log(pHttpContext,L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO, ctx->GetActivityId());
         }
         else
         {
-            log->Log(L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
+            log->Log(pHttpContext,L"iisnode failed to process a new http request", WINEVENT_LEVEL_INFO);
         }
     }
 
@@ -108,7 +108,7 @@ Error:
     {
         if (log)
         {
-            log->Log(L"iisnode rejected websocket connection request", WINEVENT_LEVEL_INFO);
+            log->Log(pHttpContext, L"iisnode rejected websocket connection request", WINEVENT_LEVEL_INFO);
         }
         CProtocolBridge::SendEmptyResponse(pHttpContext, 501, 0, _T("Not Implemented"), hr);
     }
@@ -205,7 +205,7 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 
         ctx->IncreasePendingAsyncOperationCount();
 
-        this->applicationManager->GetEventProvider()->Log(
+        this->applicationManager->GetEventProvider()->Log(pHttpContext,
             L"iisnode enters CNodeHttpModule::OnAsyncCompletion callback", 
             WINEVENT_LEVEL_VERBOSE, 
             ctx->GetActivityId());
@@ -240,25 +240,25 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
         switch (result) 
         {
         default:
-            this->applicationManager->GetEventProvider()->Log(
+            this->applicationManager->GetEventProvider()->Log(pHttpContext,
                 L"iisnode leaves CNodeHttpModule::OnAsyncCompletion", 
                 WINEVENT_LEVEL_VERBOSE, 
                 ctx->GetActivityId());
             break;
         case RQ_NOTIFICATION_CONTINUE:
-            this->applicationManager->GetEventProvider()->Log(
+            this->applicationManager->GetEventProvider()->Log(pHttpContext,
                 L"iisnode leaves CNodeHttpModule::OnAsyncCompletion with RQ_NOTIFICATION_CONTINUE", 
                 WINEVENT_LEVEL_VERBOSE, 
                 ctx->GetActivityId());
             break;
         case RQ_NOTIFICATION_FINISH_REQUEST:
-            this->applicationManager->GetEventProvider()->Log(
+            this->applicationManager->GetEventProvider()->Log(pHttpContext,
                 L"iisnode leaves CNodeHttpModule::OnAsyncCompletion with RQ_NOTIFICATION_FINISH_REQUEST", 
                 WINEVENT_LEVEL_VERBOSE, 
                 ctx->GetActivityId());
             break;
         case RQ_NOTIFICATION_PENDING:
-            this->applicationManager->GetEventProvider()->Log(
+            this->applicationManager->GetEventProvider()->Log(pHttpContext,
                 L"iisnode leaves CNodeHttpModule::OnAsyncCompletion with RQ_NOTIFICATION_PENDING", 
                 WINEVENT_LEVEL_VERBOSE, 
                 ctx->GetActivityId());

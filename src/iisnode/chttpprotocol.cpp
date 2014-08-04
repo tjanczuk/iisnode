@@ -375,7 +375,7 @@ Error:
 
 	if (ERROR_MORE_DATA != hr)
 	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+        context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log( context->GetHttpContext(),
 			L"iisnode failed to parse response status line", WINEVENT_LEVEL_ERROR, context->GetActivityId());
 	}
 
@@ -470,7 +470,7 @@ Error:
 
 	if (ERROR_MORE_DATA != hr)
 	{
-		context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(
+        context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log( context->GetHttpContext(),
 			L"iisnode failed to parse response body chunk header", WINEVENT_LEVEL_ERROR, context->GetActivityId());
 
 		return hr;
