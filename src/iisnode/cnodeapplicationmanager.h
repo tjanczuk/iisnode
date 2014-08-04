@@ -40,6 +40,7 @@ private:
     HMODULE inspector;
     LONG totalRequests;
 
+    BOOL   _fSignalPipeInitialized;
     HANDLE signalPipe;
     HANDLE controlSignalHandlerThread;
     LPWSTR signalPipeName;
@@ -65,7 +66,7 @@ private:
     HRESULT FindNextDebugPort(IHttpContext* context, DWORD* port);
     HRESULT EnsureDebugeeReady(IHttpContext* context, DWORD debugPort);
     HRESULT InitializeCore(IHttpContext* context);
-
+    HRESULT InitializeControlPipe();
     static unsigned int WINAPI ControlSignalHandler(void* arg);
 
 public:

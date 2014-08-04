@@ -154,7 +154,7 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
     
     if (request)
     {
-        this->GetEventProvider()->Log(L"iisnode failed to accept a request beacuse the application is recycling", WINEVENT_LEVEL_ERROR, request->GetActivityId());
+        this->GetEventProvider()->Log(request->GetHttpContext(), L"iisnode failed to accept a request beacuse the application is recycling", WINEVENT_LEVEL_ERROR, request->GetActivityId());
         CProtocolBridge::SendEmptyResponse(request, 503, CNodeConstants::IISNODE_ERROR_FAILED_ACCEPT_REQUEST_APP_RECYCLE, _T("Service Unavailable"), IISNODE_ERROR_APPLICATION_IS_RECYCLING);
     }
 
@@ -163,7 +163,7 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
     return S_OK;
 Error:
 
-    this->GetEventProvider()->Log(
+    this->GetEventProvider()->Log(request->GetHttpContext(),
         L"iisnode failed to initiate processing of a request", WINEVENT_LEVEL_ERROR);
 
     if (!CProtocolBridge::SendIisnodeError(request, hr))
