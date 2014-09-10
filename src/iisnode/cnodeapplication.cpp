@@ -1,10 +1,50 @@
 #include "precomp.h"
 
+volatile DWORD CNodeApplication::dwInternalAppId = 0;
+
 CNodeApplication::CNodeApplication(CNodeApplicationManager* applicationManager, BOOL isDebugger, NodeDebugCommand debugCommand, DWORD debugPort)
     : applicationManager(applicationManager), scriptName(NULL), processManager(NULL),
     isDebugger(isDebugger), peerApplication(NULL), debugCommand(debugCommand), 
-    debugPort(debugPort), needsRecycling(FALSE), configPath(NULL)
+    debugPort(debugPort), needsRecycling(FALSE), configPath(NULL), pIdleTimer(NULL), 
+    fIdleCallbackInProgress(FALSE), fRequestsProcessedInLastIdleTimeoutPeriod(FALSE), 
+    fEmptyWorkingSetAtStart(FALSE), dwIdlePageOutTimePeriod(0)
 {
+}
+
+VOID
+CALLBACK
+CNodeApplication::IdleTimerCallback(
+    IN PTP_CALLBACK_INSTANCE Instance,
+    IN PVOID Context,
+    IN PTP_TIMER Timer
+    )
+{
+    CNodeApplication* pApplication = (CNodeApplication*) Context;
+    if(pApplication != NULL)
+    {
+        if(!pApplication->fIdleCallbackInProgress)
+        {
+            pApplication->fIdleCallbackInProgress = TRUE;
+
+            if(!pApplication->fRequestsProcessedInLastIdleTimeoutPeriod || !pApplication->fEmptyWorkingSetAtStart)
+            {
+                pApplication->fEmptyWorkingSetAtStart = TRUE;
+                pApplication->EmptyWorkingSet();
+                if( pApplication->fEmptyW3WPWorkingSet )
+                {
+                    SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
+                }
+            }
+
+            pApplication->fRequestsProcessedInLastIdleTimeoutPeriod = FALSE;
+
+            if(pApplication->pIdleTimer != NULL)
+            {
+                pApplication->pIdleTimer->SetTimer(pApplication->dwIdlePageOutTimePeriod, 0);
+            }
+        }
+        pApplication->fIdleCallbackInProgress = FALSE;
+    }
 }
 
 CNodeApplication::~CNodeApplication()
@@ -14,6 +54,13 @@ CNodeApplication::~CNodeApplication()
 
 void CNodeApplication::Cleanup()
 {
+    if(this->pIdleTimer != NULL)
+    {
+        this->pIdleTimer->CancelTimer();
+        delete this->pIdleTimer;
+        this->pIdleTimer = NULL;
+    }
+
     this->GetApplicationManager()->GetFileWatcher()->RemoveWatch(this);
 
     if (NULL != this->scriptName)
@@ -40,6 +87,26 @@ HRESULT CNodeApplication::Initialize(PCWSTR scriptName, IHttpContext* context)
     HRESULT hr;
 
     CheckNull(scriptName);
+
+    if(CModuleConfiguration::GetIdlePageOutTimePeriod(context) > 0)
+    {
+        dwIdlePageOutTimePeriod = CModuleConfiguration::GetIdlePageOutTimePeriod(context);
+        if(dwInternalAppId == 0)
+        {
+            dwInternalAppId ++;
+            this->fEmptyW3WPWorkingSet = TRUE;
+        }
+        if(pIdleTimer == NULL)
+        {
+            pIdleTimer = new STTIMER;
+            ErrorIf(pIdleTimer == NULL, E_OUTOFMEMORY);
+            CheckError(pIdleTimer->InitializeTimer( CNodeApplication::IdleTimerCallback, this, 10000, 0));
+        }
+        else
+        {
+            pIdleTimer->SetTimer(10000, 0);
+        }
+    }
 
     DWORD len = wcslen(scriptName) + 1;
     ErrorIf(NULL == (this->scriptName = new WCHAR[len]), ERROR_NOT_ENOUGH_MEMORY);
@@ -72,6 +139,11 @@ Error:
 PCWSTR CNodeApplication::GetConfigPath()
 {
     return this->configPath;
+}
+
+HRESULT CNodeApplication::EmptyWorkingSet()
+{
+    return this->processManager->EmptyWorkingSet();
 }
 
 HRESULT CNodeApplication::SetConfigPath(IHttpContext * context)
@@ -108,6 +180,8 @@ HRESULT CNodeApplication::Dispatch(IHttpContext* context, IHttpEventProvider* pP
     CheckNull(ctx);
     CheckNull(context);
     CheckNull(pProvider);
+
+    fRequestsProcessedInLastIdleTimeoutPeriod = TRUE;
 
     ErrorIf(NULL == (*ctx = new CNodeHttpStoredContext(this, this->GetApplicationManager()->GetEventProvider(), context)), ERROR_NOT_ENOUGH_MEMORY);	
     IHttpModuleContextContainer* moduleContextContainer = context->GetModuleContextContainer();

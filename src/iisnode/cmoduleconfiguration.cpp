@@ -32,7 +32,8 @@ CModuleConfiguration::CModuleConfiguration()
       debuggerVirtualDirLength(0),
       debuggerVirtualDirPhysicalPath(NULL),
       recycleSignalEnabled(FALSE),
-      debuggerExtensionDll(NULL)
+      debuggerExtensionDll(NULL),
+      idlePageOutTimePeriod(0)
 {
     InitializeSRWLock(&this->srwlock);
 }
@@ -865,6 +866,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
     {
         CheckError(GetString(valueStart, &config->interceptor, TRUE));
     }
+    else if(0 == stricmp(keyStart, "idlePageOutTimePeriod"))
+    {
+        CheckError(GetDWORD(valueStart, &config->idlePageOutTimePeriod));
+    }
 
     return S_OK;
 Error:
@@ -1223,6 +1228,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
         CheckError(GetString(section, L"configOverrides", &c->configOverrides));
         CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
         CheckError(GetString(section, L"interceptor", &c->interceptor));
+        CheckError(GetDWORD(section, L"idlePageOutTimePeriod", &c->idlePageOutTimePeriod));
 
         // debuggerPathSegment
 
@@ -1297,6 +1303,11 @@ DWORD CModuleConfiguration::GetNodeProcessCountPerApplication(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)
 {
     GETCONFIG(nodeProcessCommandLine)
+}
+
+DWORD CModuleConfiguration::GetIdlePageOutTimePeriod(IHttpContext* ctx)
+{
+    GETCONFIG(idlePageOutTimePeriod)
 }
 
 LPWSTR CModuleConfiguration::GetInterceptor(IHttpContext* ctx)

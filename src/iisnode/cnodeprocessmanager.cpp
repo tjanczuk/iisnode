@@ -51,6 +51,23 @@ CNodeApplication* CNodeProcessManager::GetApplication()
     return this->application;
 }
 
+HRESULT CNodeProcessManager::EmptyWorkingSet()
+{
+    ENTER_SRW_EXCLUSIVE(this->srwlock)
+
+    for (int i = 0; i < this->processCount; i++)
+    {
+        if(this->processes[i] != NULL && !this->processes[i]->HasProcessExited())
+        {
+            SetProcessWorkingSetSize(this->processes[i]->GetProcess(), -1, -1);
+        }
+    }
+
+    LEAVE_SRW_EXCLUSIVE(this->srwlock)
+
+    return S_OK;
+}
+
 HRESULT CNodeProcessManager::Initialize(IHttpContext* context)
 {
     HRESULT hr;
