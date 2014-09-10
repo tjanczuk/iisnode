@@ -28,6 +28,7 @@ private:
     DWORD maxLogFiles;
     BOOL loggingEnabled;
     BOOL debuggingEnabled;
+    DWORD idlePageOutTimePeriod;
     PWSTR debuggerExtensionDll;
     BOOL debugHeaderEnabled;
     BOOL recycleSignalEnabled;
@@ -90,6 +91,7 @@ public:
 
     static HRESULT GetConfig(IHttpContext* context, CModuleConfiguration** config);
 
+    static DWORD GetIdlePageOutTimePeriod(IHttpContext* ctx);
     static DWORD GetAsyncCompletionThreadCount(IHttpContext* ctx); 
     static DWORD GetNodeProcessCountPerApplication(IHttpContext* ctx);
     static LPWSTR GetNodeProcessCommandLine(IHttpContext* ctx); 

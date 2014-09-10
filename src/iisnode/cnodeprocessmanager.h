@@ -40,6 +40,7 @@ public:
 	CNodeProcessManager(CNodeApplication* application, IHttpContext* context);
 	~CNodeProcessManager();
 
+    HRESULT EmptyWorkingSet();
 	CNodeApplication* GetApplication();
 	HRESULT Initialize(IHttpContext* context);	
 	HRESULT RecycleProcess(CNodeProcess* process);

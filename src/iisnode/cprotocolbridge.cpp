@@ -719,7 +719,11 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
     // to enable named pipe connection pooling
 
     request = context->GetHttpContext()->GetRequest();
-    CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
+
+    if(stricmp(request->GetHeader(HttpHeaderConnection), "upgrade") != 0)
+    {
+        CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
+    }
 
     // Expect: 100-continue has been processed by IIS - do not propagate it up to node.js since node will
     // attempt to process it again
