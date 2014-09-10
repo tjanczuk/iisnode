@@ -5,7 +5,6 @@ class CNodeHttpModuleFactory : public IHttpModuleFactory
 {
     CNodeApplicationManager* applicationManager;
 
-
 public:
 
     CNodeHttpModuleFactory(); 

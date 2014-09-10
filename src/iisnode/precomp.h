@@ -25,6 +25,7 @@
 //  Project header files
 #include "errors.h"
 #include "utils.h"
+#include "sttimer.h"
 #include "cconnectionpool.h"
 #include "cnodeeventprovider.h"
 #include "cnodeconstants.h"

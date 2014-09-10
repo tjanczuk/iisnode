@@ -73,7 +73,6 @@ public:
 
     CNodeApplicationManager(IHttpServer* server, HTTP_MODULE_ID moduleId); 
     ~CNodeApplicationManager();
-
     IHttpServer* GetHttpServer();
     HTTP_MODULE_ID GetModuleId();
     CAsyncManager* GetAsyncManager();
