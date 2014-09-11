@@ -704,6 +704,7 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
     HRESULT hr;
     DWORD length;
     IHttpRequest *request;
+    PCSTR pszConnectionHeader = NULL;
 
     // set the start time of the request
 
@@ -720,7 +721,8 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
 
     request = context->GetHttpContext()->GetRequest();
 
-    if(stricmp(request->GetHeader(HttpHeaderConnection), "upgrade") != 0)
+    pszConnectionHeader = request->GetHeader(HttpHeaderConnection);
+    if(pszConnectionHeader == NULL || stricmp(pszConnectionHeader, "upgrade") != 0)
     {
         CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
     }
