@@ -752,6 +752,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
     {
         CheckError(GetDWORD(valueStart, &config->maxConcurrentRequestsPerProcess));
     }
+	else if (0 == strcmpi(keyStart, "nodeProcessStickySessions"))
+    {
+        CheckError(GetDWORD(valueStart, &config->nodeProcessStickySessions));
+    }
     else if (0 == strcmpi(keyStart, "maxNamedPipeConnectionRetry"))
     {
         CheckError(GetDWORD(valueStart, &config->maxNamedPipeConnectionRetry));
@@ -1198,6 +1202,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
         CheckError(GetConfigSection(context, &section));		
         CheckError(GetDWORD(section, L"asyncCompletionThreadCount", &c->asyncCompletionThreadCount));
         CheckError(GetDWORD(section, L"nodeProcessCountPerApplication", &c->nodeProcessCountPerApplication));
+        CheckError(GetDWORD(section, L"nodeProcessStickySessions", &c->nodeProcessStickySessions));
         CheckError(GetDWORD(section, L"maxConcurrentRequestsPerProcess", &c->maxConcurrentRequestsPerProcess));
         CheckError(GetDWORD(section, L"maxNamedPipeConnectionRetry", &c->maxNamedPipeConnectionRetry));
         CheckError(GetDWORD(section, L"namedPipeConnectionRetryDelay", &c->namedPipeConnectionRetryDelay));
@@ -1298,6 +1303,11 @@ DWORD CModuleConfiguration::GetAsyncCompletionThreadCount(IHttpContext* ctx)
 DWORD CModuleConfiguration::GetNodeProcessCountPerApplication(IHttpContext* ctx)
 {
     GETCONFIG(nodeProcessCountPerApplication)
+}
+
+DWORD CModuleConfiguration::GetProcessStickySessions(IHttpContext* ctx)
+{
+    GETCONFIG(nodeProcessStickySessions)
 }
 
 LPWSTR CModuleConfiguration::GetNodeProcessCommandLine(IHttpContext* ctx)

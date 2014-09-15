@@ -7,10 +7,12 @@ CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpCon
     if (this->GetApplication()->IsDebugMode())
     {
         this->processCount = 1;
+		this->stickySessions = false;
     }
     else
     {
         this->processCount = CModuleConfiguration::GetNodeProcessCountPerApplication(context);
+		this->stickySessions = CModuleConfiguration::GetProcessStickySessions(context);
     }
 
     // cache event provider since the application can be disposed prior to CNodeProcessManager
@@ -107,10 +109,40 @@ Error:
     return hr;
 }
 
+int CNodeProcessManager::ExtractStickySessionsProcess( PCSTR pszCookie )
+{
+	const char* pszKey = "iisnode.p";
+	const char* pszDivider = "=";
+	const char* pszNext = ";";
+	char acProcess[10]; // characters needed for MAXDWORD64
+	memset(acProcess, 0, sizeof(acProcess));
+
+	const char* pStart = strstr(pszCookie, pszKey);
+	const char* pEnd = NULL;
+
+	if(pStart)
+	{
+		pStart = strstr(pStart, pszDivider); 
+		pEnd = strstr(pStart, pszNext);
+		if(!pEnd) 
+		{
+			while (pEnd) /* Works because end-of-string and FALSE are identical. */
+			{
+				pEnd++;
+			}
+		}
+		memcpy(acProcess, pStart, pEnd - pStart); // copy result
+		return atoi(acProcess);
+	}
+
+	return -1;
+}
+
 HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 {
     HRESULT hr;
     unsigned int tmpProcess, processToUse;
+	int processInCookie = -1;
 
     CheckNull(request);
 
@@ -122,20 +154,49 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 
         if (!this->isClosing)
         {
-            // employ a round robin routing logic to get a "ticket" to use a process with a specific ordinal number
-            
-            if (1 == this->processCount)
-            {
-                processToUse = 0;
-            }
-            else
-            {
-                do 
-                {
-                    tmpProcess = this->currentProcess;
-                    processToUse = (tmpProcess + 1) % this->processCount;
-                } while (tmpProcess != InterlockedCompareExchange(&this->currentProcess, processToUse, tmpProcess));
-            }
+			if(this->stickySessions) // sticky sessions
+			{
+				IHttpRequest *httpRequest;
+				PCSTR pszCookieHeader = NULL;
+
+				httpRequest = request->GetHttpContext()->GetRequest();
+
+				pszCookieHeader = httpRequest->GetHeader(HttpHeaderCookie);
+				if(pszCookieHeader != NULL) // There might be a sticky session
+				{
+					processInCookie = ExtractStickySessionsProcess(pszCookieHeader);
+				}
+			}
+			
+			if( processInCookie < 0) // employ a round robin routing logic to get a "ticket" to use a process with a specific ordinal number
+			{
+				if (1 == this->processCount)
+				{
+					processToUse = 0;
+				}
+				else
+				{
+					do 
+					{
+						tmpProcess = this->currentProcess;
+						processToUse = (tmpProcess + 1) % this->processCount;
+					} while (tmpProcess != InterlockedCompareExchange(&this->currentProcess, processToUse, tmpProcess));
+				}
+			}
+			else
+			{
+				processToUse = (unsigned int)processInCookie % this->processCount; // ensure the cookie did not carry a value outside of the possible processes
+			}
+
+			if(this->stickySessions && (processInCookie < 0))
+			{
+				// Set cookie for sticky session with selected process
+				char buffer [255];
+				int l = sprintf (buffer, "iisnode.p=%d", processToUse);
+				IHttpResponse *httpResponse;
+				httpResponse = request->GetHttpContext()->GetResponse();
+				CheckError(httpResponse->SetHeader(HttpHeaderSetCookie, buffer, l, FALSE));
+			}
 
             // try dispatch to that process
 
@@ -451,4 +512,9 @@ DWORD CNodeProcessManager::GetActiveRequestCount()
 DWORD CNodeProcessManager::GetProcessCount()
 {
     return this->processCount;
+}
+
+DWORD CNodeProcessManager::GetProcessStickySessions()
+{
+	return this->stickySessions;
 }

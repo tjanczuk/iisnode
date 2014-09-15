@@ -22,6 +22,7 @@ private:
 	CNodeApplication* application;
 	CNodeProcess** processes;
 	DWORD processCount;
+	BOOL stickySessions;
 	unsigned int currentProcess;
 	SRWLOCK srwlock;
 	DWORD gracefulShutdownTimeout;
@@ -51,6 +52,8 @@ public:
 	long DecRef();
 	DWORD GetActiveRequestCount();
 	DWORD GetProcessCount();
+	DWORD GetProcessStickySessions();
+	int ExtractStickySessionsProcess( PCSTR pszCookie );
 };
 
 #endif

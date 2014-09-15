@@ -62,6 +62,9 @@ console.log('Application started at location ' + process.env.PORT);</pre>
     * nodeProcessCountPerApplication - number of node.exe processes that IIS will start per application;
       setting this value to 0 results in creating one node.exe process per each processor on the machine
       
+    * nodeProcessStickySessions - boolean indicating whether all requests from one client should be routed
+      the same node.exe process by adding and evaluting a cookie carrying a hint for the target process
+
     * maxConcurrentRequestsPerProcess - maximum number of reqeusts one node process can 
       handle at a time
       
@@ -216,6 +219,11 @@ node_env:
 # setting this value to 0 results in creating one node.exe process per each processor on the machine
 
 nodeProcessCountPerApplication: 1
+
+# nodeProcessStickySessions - boolean indicating whether all requests from one cliet should always
+# be routed to the same node.exe process by adding and evaluting a sticky session cookie
+
+nodeProcessStickySessions: false
 
 # maxConcurrentRequestsPerProcess - maximum number of reqeusts one node process can
 # handle at a time
