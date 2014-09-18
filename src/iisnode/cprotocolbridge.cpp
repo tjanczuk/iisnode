@@ -722,7 +722,8 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
     request = context->GetHttpContext()->GetRequest();
 
     pszConnectionHeader = request->GetHeader(HttpHeaderConnection);
-    if(pszConnectionHeader == NULL || stricmp(pszConnectionHeader, "upgrade") != 0)
+    if( pszConnectionHeader == NULL || 
+        (pszConnectionHeader != NULL && stricmp(pszConnectionHeader, "upgrade") != 0))
     {
         CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
     }
