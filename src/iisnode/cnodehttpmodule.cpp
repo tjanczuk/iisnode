@@ -229,6 +229,7 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
 
         if(ctx->GetIsUpgrade() && value == 0)
         {
+            ctx->GetNodeProcess()->OnRequestCompleted( ctx );
             //
             // when the pending async count reaches 0,
             // need to return RQ_NOTIFICATION_CONTINUE 
