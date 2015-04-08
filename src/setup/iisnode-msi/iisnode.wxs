@@ -51,7 +51,7 @@
     <PropertyRef Id="IISMAJORVERSION" />
 
     <Condition Message="IIS 7.x or later must be installed before iisnode installation.">
-      <![CDATA[IISMAJORVERSION >= "#7"]]>
+      <![CDATA[ Installed OR ((VersionNT = 600 AND ServicePackLevel >= 1) OR (VersionNT > 600)) ]]>
     </Condition>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
