@@ -31,7 +31,7 @@ Hosting node.js applications in IIS on Windows
 
 **Installing for IIS 7.x/8.x**
 
-- Install iisnode for IIS 7.x/8.x: [x86](https://github.com/azure/iisnode/releases/download/v0.2.16/iisnode-full-v0.2.16-x86.msi) or [x64](https://github.com/azure/iisnode/releases/download/v0.2.16/iisnode-full-v0.2.16-x64.msi) - choose bitness matching your system
+- Install iisnode for IIS 7.x/8.x: [x86](https://github.com/azure/iisnode/releases/download/v0.2.18/iisnode-full-v0.2.18-x86.msi) or [x64](https://github.com/azure/iisnode/releases/download/v0.2.18/iisnode-full-v0.2.18-x64.msi) - choose bitness matching your system
 - To set up samples, from the administrative command prompt call `%programfiles%\iisnode\setupsamples.bat`
 - Go to `http://localhost/node`
 
