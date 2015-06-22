@@ -50,7 +50,6 @@ This can be a head-scratcher since IIS Express 8 gives you both 32-bit and 64-bi
 **Howtos**
 =======
 - [the basics](http://tomasz.janczuk.org/2011/08/hosting-nodejs-applications-in-iis-on.html)
-- [the basics (Pусский перевод)](http://softdroid.net/hosting-nodejs-applications-ru)
 - [**NEW: websockets**] (http://tomasz.janczuk.org/2012/11/how-to-use-websockets-with-nodejs-apps.html)
 - [using with express framework](http://tomasz.janczuk.org/2011/08/hosting-express-nodejs-applications-in.html)
 - [using with URL rewrite module](http://tomasz.janczuk.org/2011/08/using-url-rewriting-with-nodejs.html)
