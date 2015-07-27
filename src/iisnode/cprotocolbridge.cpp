@@ -775,11 +775,6 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
         hr = GetLastError();
         if (ERROR_IO_PENDING == hr)
         {
-            // will complete asynchronously
-
-            etw->Log(context->GetHttpContext(), L"iisnode initiated sending http request headers to the node.exe process and will complete asynchronously", 
-                WINEVENT_LEVEL_VERBOSE, 
-                &activityId);
         }
         else 
         {
@@ -901,8 +896,8 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
     }
     else
     {
-        context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(context->GetHttpContext(),
-            L"iisnode initiated reading http request body chunk and will complete asynchronously", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
+        //context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(context->GetHttpContext(),
+        //    L"iisnode initiated reading http request body chunk and will complete asynchronously", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
     }
 
     return;
@@ -1086,9 +1081,9 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
         {
             // will complete asynchronously
 
-            etw->Log(context->GetHttpContext(), L"iisnode initiated sending http request body chunk to the node.exe process and will complete asynchronously", 
-                WINEVENT_LEVEL_VERBOSE, 
-                &activityId);
+            //etw->Log(context->GetHttpContext(), L"iisnode initiated sending http request body chunk to the node.exe process and will complete asynchronously", 
+            //    WINEVENT_LEVEL_VERBOSE, 
+            //    &activityId);
         }
         else if (ERROR_NO_DATA == hr)
         {
@@ -1264,9 +1259,9 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
     {
         // read will complete asynchronously
 
-        etw->Log(context->GetHttpContext(), L"iisnode initiated reading http response chunk and will complete asynchronously", 
-            WINEVENT_LEVEL_VERBOSE, 
-            &activityId);
+        //etw->Log(context->GetHttpContext(), L"iisnode initiated reading http response chunk and will complete asynchronously", 
+        //    WINEVENT_LEVEL_VERBOSE, 
+        //    &activityId);
     }
     else if (ERROR_BROKEN_PIPE == hr && context->GetCloseConnection())
     {
