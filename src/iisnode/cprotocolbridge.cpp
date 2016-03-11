@@ -494,7 +494,18 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
         USHORT urlLength;
         IHttpRequest* request = context->GetHttpContext()->GetRequest();
 
-        if (NULL == (url = request->GetHeader("X-Original-URL", &urlLength)))
+        DWORD unencodedUrlLength;
+        if (S_OK == context->GetHttpContext()->GetServerVariable("UNENCODED_URL", &url, &unencodedUrlLength))
+        {
+            urlLength = static_cast<USHORT>(unencodedUrlLength);
+        }
+
+        if (NULL == url)
+        {
+            url = request->GetHeader("X-Original-URL", &urlLength);
+        }
+
+        if (NULL == url)
         {
             HTTP_REQUEST* raw = request->GetRawHttpRequest();
             
