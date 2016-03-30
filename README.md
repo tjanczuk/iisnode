@@ -101,6 +101,6 @@ msbuild /p:Platform=x64 src\iisnode\iisnode.sln
 
 **Resources & documentation**
 
-- [Releases](https://github.com/azure/iisnode/wiki/iisnode-releases)
+- [Releases](https://github.com/tjanczuk/iisnode/releases)
 - [Wiki](https://github.com/tjanczuk/iisnode/wiki)
 - [Blog](http://tomasz.janczuk.org)
