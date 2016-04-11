@@ -199,8 +199,26 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
     sprintf(tmpIndex, "IISNODE_VERSION=%s", IISNODE_VERSION);
     tmpIndex += strlen(IISNODE_VERSION) + 17;
 
+    //
+    // set NODE_PIPE_PENDING_INSTANCES because node.exe defaults to 4 concurrent requests
+    // and we get E_PIPEBUSY errors. Increasing this value to 50 to prevent E_PIPEBUSY.
+    //
+    WCHAR pszPendingPipeInstances[256];
+    DWORD dwPendingPipeInstancesLen = 256;
+    dwPendingPipeInstancesLen = GetEnvironmentVariableW( L"NODE_PENDING_PIPE_INSTANCES", 
+                                                         pszPendingPipeInstances, 
+                                                         dwPendingPipeInstancesLen);
+
+    if(dwPendingPipeInstancesLen <= 0)
+    {
+        ErrorIf((tmpSize - (tmpStart - tmpIndex) < 33), ERROR_NOT_ENOUGH_MEMORY);
+        sprintf(tmpIndex, "NODE_PENDING_PIPE_INSTANCES=5000");
+        tmpIndex += 33;
+    }
+
     if(CModuleConfiguration::GetRecycleSignalEnabled(ctx) && signalPipeName != NULL)
     {
+        ErrorIf((tmpSize - (tmpStart - tmpIndex) < (strlen(signalPipeName) + 22)), ERROR_NOT_ENOUGH_MEMORY);
         sprintf(tmpIndex, "IISNODE_CONTROL_PIPE=%s", signalPipeName);
         tmpIndex += strlen(signalPipeName) + 22;
     }
