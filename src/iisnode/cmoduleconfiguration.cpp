@@ -211,9 +211,9 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 
     if(dwPendingPipeInstancesLen <= 0)
     {
-        ErrorIf((tmpSize - (tmpStart - tmpIndex) < 31), ERROR_NOT_ENOUGH_MEMORY);
-        sprintf(tmpIndex, "NODE_PENDING_PIPE_INSTANCES=50");
-        tmpIndex += 31;
+        ErrorIf((tmpSize - (tmpStart - tmpIndex) < 33), ERROR_NOT_ENOUGH_MEMORY);
+        sprintf(tmpIndex, "NODE_PENDING_PIPE_INSTANCES=5000");
+        tmpIndex += 33;
     }
 
     if(CModuleConfiguration::GetRecycleSignalEnabled(ctx) && signalPipeName != NULL)
