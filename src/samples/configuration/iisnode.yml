@@ -23,6 +23,11 @@ node_env:
 
 nodeProcessCountPerApplication: 1
 
+# nodeProcessStickySessions - boolean indicating whether all requests from one client should be routed
+# the same node.exe process by adding and evaluting a cookie carrying a hint for the target process
+
+nodeProcessStickySessions: false
+
 # maxConcurrentRequestsPerProcess - maximum number of reqeusts one node process can
 # handle at a time
 

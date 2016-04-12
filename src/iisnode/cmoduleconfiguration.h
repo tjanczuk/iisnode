@@ -9,6 +9,7 @@ private:
 
     DWORD asyncCompletionThreadCount;
     DWORD nodeProcessCountPerApplication;
+    DWORD nodeProcessStickySessions;
     LPWSTR nodeProcessCommandLine;
     LPWSTR interceptor;
     DWORD maxConcurrentRequestsPerProcess;
@@ -94,6 +95,7 @@ public:
     static DWORD GetIdlePageOutTimePeriod(IHttpContext* ctx);
     static DWORD GetAsyncCompletionThreadCount(IHttpContext* ctx); 
     static DWORD GetNodeProcessCountPerApplication(IHttpContext* ctx);
+    static DWORD GetProcessStickySessions(IHttpContext* ctx);
     static LPWSTR GetNodeProcessCommandLine(IHttpContext* ctx); 
     static LPWSTR GetInterceptor(IHttpContext* ctx); 
     static DWORD GetMaxConcurrentRequestsPerProcess(IHttpContext* ctx);
