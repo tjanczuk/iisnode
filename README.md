@@ -1,11 +1,6 @@
 Hosting node.js applications in IIS on Windows
 ===
 
-**Branches**
-
-- master: stable version.
-- iisnode-dev: development branch.
-
 **Why would I want to do it?**
 
 [Benefits](https://github.com/tjanczuk/iisnode/wiki)
