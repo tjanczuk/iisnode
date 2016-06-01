@@ -60,5 +60,6 @@ Details at http://learn.iis.net/page.aspx/241/configuration-extensibility/
     <attribute name="configOverrides" type="string" expanded="true" defaultValue="iisnode.yml"/>
     <attribute name="recycleSignalEnabled" type="bool" defaultValue="false"/>
     <attribute name="idlePageOutTimePeriod" type="uint" defaultValue="0" /> <!-- disabled with default value 0 -->
+    <attribute name="useUnencodedRequestUrl" type="bool" defaultValue="false"/>
   </sectionSchema>
 </configSchema>

@@ -492,10 +492,12 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
 
         PCSTR url;
         USHORT urlLength;
-        IHttpRequest* request = context->GetHttpContext()->GetRequest();
+        IHttpContext* httpContext = context->GetHttpContext();
+        IHttpRequest* request = httpContext->GetRequest();
 
         DWORD unencodedUrlLength;
-        if (S_OK == context->GetHttpContext()->GetServerVariable("UNENCODED_URL", &url, &unencodedUrlLength))
+        if (CModuleConfiguration::GetUseUnencodedRequestUrl(httpContext) && 
+            S_OK == httpContext->GetServerVariable("UNENCODED_URL", &url, &unencodedUrlLength))
         {
             urlLength = static_cast<USHORT>(unencodedUrlLength);
         }

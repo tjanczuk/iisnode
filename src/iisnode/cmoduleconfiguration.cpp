@@ -33,7 +33,8 @@ CModuleConfiguration::CModuleConfiguration()
       debuggerVirtualDirPhysicalPath(NULL),
       recycleSignalEnabled(FALSE),
       debuggerExtensionDll(NULL),
-      idlePageOutTimePeriod(0)
+      idlePageOutTimePeriod(0),
+      useUnencodedRequestUrl(FALSE)
 {
     InitializeSRWLock(&this->srwlock);
 }
@@ -870,6 +871,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
     {
         CheckError(GetDWORD(valueStart, &config->idlePageOutTimePeriod));
     }
+    else if (0 == strcmpi(keyStart, "useUnencodedRequestUrl"))
+    {
+        CheckError(GetBOOL(valueStart, &config->useUnencodedRequestUrl));
+    }
 
     return S_OK;
 Error:
@@ -1229,6 +1234,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
         CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
         CheckError(GetString(section, L"interceptor", &c->interceptor));
         CheckError(GetDWORD(section, L"idlePageOutTimePeriod", &c->idlePageOutTimePeriod));
+        CheckError(GetBOOL(section, L"useUnencodedRequestUrl", &c->useUnencodedRequestUrl, FALSE));
 
         // debuggerPathSegment
 
@@ -1468,6 +1474,11 @@ BOOL CModuleConfiguration::GetEnableXFF(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetConfigOverrides(IHttpContext* ctx)
 {
     GETCONFIG(configOverrides)
+}
+
+BOOL CModuleConfiguration::GetUseUnencodedRequestUrl(IHttpContext * ctx)
+{
+    GETCONFIG(useUnencodedRequestUrl);
 }
 
 HRESULT CModuleConfiguration::GenerateDebuggerConfig(IHttpContext* context, CModuleConfiguration *config)

@@ -136,6 +136,12 @@ flushResponse: false
 
 enableXFF: false
 
+# useUnencodedRequestUrl - controls whether iisnode gets request url from X-Original-URL server variable that gets sanitized by http.sys
+# or from UNENCODED_URL, which represents an exact original url. Using the latter option means that the application itself will be
+# responsible for possible security issues
+
+useUnencodedRequestUrl: false
+
 # promoteServerVars - comma delimited list of IIS server variables that will be propagated to the node.exe process in the form of
 # x-iisnode-<server_variable_name>
 # HTTP request headers; for a list of IIS server variables available see
