@@ -187,7 +187,7 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 
     // allocate memory for new environment variables
 
-    tmpSize = 32767 - environmentSize;
+    tmpSize = 65536; // hard coded for now, change this to auto allocate based on the values.
     ErrorIf(NULL == (tmpIndex = tmpStart = new char[tmpSize]), ERROR_NOT_ENOUGH_MEMORY);
     RtlZeroMemory(tmpIndex, tmpSize);
 
