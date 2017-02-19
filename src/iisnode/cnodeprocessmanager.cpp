@@ -135,11 +135,19 @@ int CNodeProcessManager::ExtractStickySessionsProcess( PCSTR pszCookie )
                     pEnd = pStart;
                     while (*pEnd) /* Works because end-of-string and FALSE are identical. */
                     {
+                        if((pEnd - pStart) >= sizeof(acProcess))
+                        {
+                            break;
+                        }
                         pEnd++;
                     }
                 }
-                memcpy(acProcess, pStart, pEnd - pStart); // copy result
-                return atoi(acProcess);
+
+                if((pEnd - pStart) < sizeof(acProcess))
+                {
+                    memcpy(acProcess, pStart, pEnd - pStart); // copy result
+                    return atoi(acProcess);
+                }
             }
         }
     }
