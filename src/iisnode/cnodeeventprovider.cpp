@@ -107,10 +107,14 @@ HRESULT CNodeEventProvider::Log(IHttpContext *context, PCWSTR message, UCHAR lev
         }
     }
 
+    /* 
+    commented because there might be a race condition after calling PostCompletion and then using the IHttpContext object.
+    Uncomment this only after making sure there is no race condition. (IHttpContext cannot be used after calling PostCompletion)
     if( IsEnabled( context->GetTraceContext(), level ) )
     {
         CheckError( RaiseEvent( context->GetTraceContext(), message, level, activityId ) );
     }
+    */
 
     return S_OK;
 Error:

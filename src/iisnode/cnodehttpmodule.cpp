@@ -219,7 +219,9 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
                 bytesCompleted = async->bytesCompleteted;
                 async->bytesCompleteted = 0;
             }
-            async->completionProcessor(pCompletionInfo->GetCompletionStatus(), bytesCompleted, ctx->GetOverlapped());
+            BOOL fCompletionPosted = FALSE;
+            async->completionProcessor(pCompletionInfo->GetCompletionStatus(), bytesCompleted, ctx->GetOverlapped(), &fCompletionPosted);
+
             async->RunSynchronousContinuations();
         }
 
@@ -266,6 +268,8 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
             break;
         };
 
+		ctx->DereferenceNodeHttpStoredContext();
+	
         return result;
     }
 
