@@ -1804,6 +1804,7 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
     DWORD bytesSent;
     BOOL completionExpected = FALSE;
+    BOOL fReference = FALSE;
 
     CheckError(error);
 
@@ -1830,12 +1831,18 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
             ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
             ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
                 L"iisnode initiated flushing http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+            ctx->ReferenceNodeHttpStoredContext();
+            fReference = TRUE;
             ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
         }
 
         if (!completionExpected)
         {
             CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
+            if(fReference)
+            {
+                ctx->DereferenceNodeHttpStoredContext();
+            }
         }
     }
 
@@ -1864,18 +1871,20 @@ Error:
 
 void WINAPI CProtocolBridge::ProcessUpgradeResponse(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
-    BOOL completionExpected;
+    BOOL completionExpected = FALSE;
     DWORD bytesSent;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
     ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
     ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
         L"iisnode initiated flushing http upgrade response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+    ctx->ReferenceNodeHttpStoredContext();
     ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
 
     if (!completionExpected)
     {
         CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
+        ctx->DereferenceNodeHttpStoredContext();
     }
 }
 
