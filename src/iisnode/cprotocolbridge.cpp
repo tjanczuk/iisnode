@@ -539,11 +539,14 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
         CheckError(child->GetRequest()->SetUrl(context->GetTargetUrl(), context->GetTargetUrlLength(), FALSE));
         context->SetChildContext(child);
         context->SetNextProcessor(CProtocolBridge::ChildContextCompleted);
-        
+
+        context->ReferenceNodeHttpStoredContext();
+
         CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, 0, NULL, &completionExpected));
         if (!completionExpected)
         {
             CProtocolBridge::ChildContextCompleted(S_OK, 0, context->GetOverlapped(), &fCompletionPosted);
+            context->DereferenceNodeHttpStoredContext();
         }
     }
     else
