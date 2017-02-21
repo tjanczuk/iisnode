@@ -481,6 +481,7 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
     IHttpContext* child = NULL;
     BOOL completionExpected;
     BOOL fCompletionPosted = FALSE;
+    BOOL fReference = FALSE;
 
     // determine what the target path of the request is
 
@@ -541,12 +542,14 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
         context->SetNextProcessor(CProtocolBridge::ChildContextCompleted);
 
         context->ReferenceNodeHttpStoredContext();
+        fReference = TRUE;
 
         CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, 0, NULL, &completionExpected));
         if (!completionExpected)
         {
             CProtocolBridge::ChildContextCompleted(S_OK, 0, context->GetOverlapped(), &fCompletionPosted);
             context->DereferenceNodeHttpStoredContext();
+            fReference = FALSE;
         }
     }
     else
@@ -563,6 +566,11 @@ Error:
         child->ReleaseClonedContext();
         child = NULL;
         context->SetChildContext(NULL);
+    }
+
+    if(fReference)
+    {
+        context->DereferenceNodeHttpStoredContext();
     }
 
     return hr;
