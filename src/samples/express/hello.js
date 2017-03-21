@@ -1,6 +1,6 @@
 var express = require('express');
 
-var app = express.createServer();
+var app = express();
 
 app.get('/node/express/myapp/foo', function (req, res) {
     res.send('Hello from foo! [express sample]');
