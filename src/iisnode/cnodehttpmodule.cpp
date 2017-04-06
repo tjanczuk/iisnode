@@ -173,7 +173,7 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnExecuteRequestHandler(
             if (FAILED(hr))
             {
                 // Set the HTTP status.
-                pHttpResponse->SetStatus(500,"Server Error",0,hr);
+                pHttpResponse->SetStatus(500,"Server Error",0,hr,NULL,TRUE);
             }
 
             // End additional processing.
