@@ -888,6 +888,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
     {
         CheckError(GetDWORD(valueStart, &config->idlePageOutTimePeriod));
     }
+	else if(0 == stricmp(keyStart, "skipIISCustomErrors"))
+	{
+		CheckError(GetBOOL(valueStart, &config->skipIISCustomErrors));
+	}
 
     return S_OK;
 Error:
@@ -1247,6 +1251,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
         CheckError(GetString(section, L"nodeProcessCommandLine", &c->nodeProcessCommandLine));
         CheckError(GetString(section, L"interceptor", &c->interceptor));
         CheckError(GetDWORD(section, L"idlePageOutTimePeriod", &c->idlePageOutTimePeriod));
+		CheckError(GetBOOL(section, L"skipIISCustomErrors", &c->skipIISCustomErrors, FALSE));
 
         // debuggerPathSegment
 
@@ -1486,6 +1491,11 @@ BOOL CModuleConfiguration::GetEnableXFF(IHttpContext* ctx)
 LPWSTR CModuleConfiguration::GetConfigOverrides(IHttpContext* ctx)
 {
     GETCONFIG(configOverrides)
+}
+
+BOOL CModuleConfiguration::GetSkipIISCustomErrors(IHttpContext* ctx)
+{
+	GETCONFIG(skipIISCustomErrors)
 }
 
 HRESULT CModuleConfiguration::GenerateDebuggerConfig(IHttpContext* context, CModuleConfiguration *config)

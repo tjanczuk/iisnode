@@ -459,7 +459,15 @@ void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, US
     if (!httpCtx->GetResponseHeadersSent())
     {
         httpCtx->GetResponse()->Clear();
-        httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult, NULL, TRUE);
+		if (CModuleConfiguration::GetSkipIISCustomErrors(httpCtx))
+		{
+			httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult, NULL, TRUE);
+		}
+		else
+		{
+			httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult);
+		}
+       
         if (disableCache)
         {
             httpCtx->GetResponse()->SetHeader(HttpHeaderCacheControl, "no-cache", 8, TRUE);
