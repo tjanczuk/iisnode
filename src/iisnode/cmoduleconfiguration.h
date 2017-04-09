@@ -52,7 +52,7 @@ private:
     static BOOL invalid;
     SRWLOCK srwlock;
     LPWSTR configOverrides;
-	BOOL skipIISCustomErrors;
+    BOOL skipIISCustomErrors;
 
     static IHttpServer* server;
     static HTTP_MODULE_ID moduleId;
@@ -130,7 +130,7 @@ public:
     static BOOL GetEnableXFF(IHttpContext* ctx);
     static HRESULT GetPromoteServerVars(IHttpContext* ctx, char*** vars, int* count);
     static LPWSTR GetConfigOverrides(IHttpContext* ctx);
-	static BOOL GetSkipIISCustomErrors(IHttpContext* ctx);
+    static BOOL GetSkipIISCustomErrors(IHttpContext* ctx);
 
     static HRESULT CreateNodeEnvironment(IHttpContext* ctx, DWORD debugPort, PCH namedPipe, PCH signalPipeName, PCH* env);
 
