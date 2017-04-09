@@ -459,14 +459,10 @@ void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, US
     if (!httpCtx->GetResponseHeadersSent())
     {
         httpCtx->GetResponse()->Clear();
-		if (CModuleConfiguration::GetSkipIISCustomErrors(httpCtx))
-		{
-			httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult, NULL, TRUE);
-		}
-		else
-		{
-			httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult);
-		}
+
+        // Internal iisnode errors should probably not set fTrySkipCustomErrors since these are just empty status responses.
+        // Let IIS capture and replace these responses with more detailed messages depending on the custom error mode.
+		httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult);
        
         if (disableCache)
         {

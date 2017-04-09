@@ -367,6 +367,11 @@ HRESULT CHttpProtocol::ParseResponseStatusLine(CNodeHttpStoredContext* context)
 
 	if (CModuleConfiguration::GetSkipIISCustomErrors(context->GetHttpContext()))
 	{
+		// set fTrySkipCustomErrors so that error responses sent back from the node app through iisnode
+		// are passed through to the client instead of being intercepted by IIS when httpErrors existingResponse="Auto"
+		// this allows a mixed solution where custom error pages can be provided via IIS for errors that occur outside
+		// of iisnode's purview, while also allowing usually-more-helpful error responses from the node application
+		// to be passed through to the client rather than being intercepted by IIS.
 		response->SetStatus(statusCode, data + offset, subStatusCode, S_OK, NULL, TRUE);
 	}
 	else
