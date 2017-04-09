@@ -145,6 +145,8 @@ console.log('Application started at location ' + process.env.PORT);</pre>
             maxRequestBufferSize: 8192 # increasing from the default
             # maxConcurrentRequestsPerProcess: 512 - commented out setting
 
+    * skipIISCustomErrors - controls whether iisnode will try to skip IIS &gt;httpErrors&lt; custom error handling when existingResponse="Auto"
+
     --&gt;
     
     &lt;iisnode      
@@ -175,6 +177,7 @@ console.log('Application started at location ' + process.env.PORT);</pre>
       enableXFF="false"
       promoteServerVars=""
       configOverrides="node.conf"
+      skipIISCustomErrors="false"
      /&gt;
 
     &lt;!--     
@@ -335,6 +338,10 @@ enableXFF: false
 # HTTP request headers; for a list of IIS server variables available see
 # http://msdn.microsoft.com/en-us/library/ms524602(v=vs.90).aspx; for example "AUTH_USER,AUTH_TYPE"
 
-promoteServerVars:</pre>
+promoteServerVars:
+
+# skipIISCustomErrors - controls whether iisnode will try to skip IIS &gt;httpErrors&lt; custom error handling when existingResponse="Auto"
+skipIISCustomErrors: false
+</pre>
 </body>
 </html>
