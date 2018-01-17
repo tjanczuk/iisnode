@@ -239,6 +239,17 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
             //
             result = RQ_NOTIFICATION_CONTINUE;
         }
+        else
+        {
+            if (0 == value) // decreases ref count set to 1 in the ctor of CNodeHttpStoredContext
+            {
+                result = ctx->GetRequestNotificationStatus();
+            }
+            else
+            {
+                result = RQ_NOTIFICATION_PENDING;
+            }
+        }
 
         switch (result) 
         {
