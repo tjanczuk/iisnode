@@ -166,12 +166,12 @@
             }
             else {
                 data = data.toString().replace(/\n/g, '\r\n');
-		encoding = (typeof encoding === 'string' ? encoding : 'utf8');
-		if (Buffer.hasOwnProperty('from')) {
+                encoding = (typeof encoding === 'string' ? encoding : 'utf8');
+                if (Buffer.hasOwnProperty('from')) {
                     return Buffer.from(data, encoding);
-		} else {
-		    return new Buffer(data, encoding);	
-		}
+                } else {
+                    return new Buffer(data, encoding);
+                }
             }
         };
 
