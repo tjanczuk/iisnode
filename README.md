@@ -1,3 +1,13 @@
+
+NOTE: Official branch is [azure/iisnode](https://github.com/Azure/iisnode) 
+===
+
+TL;DR; I no longer maintain or monitor this repository. Please go to [azure/iisnode](https://github.com/Azure/iisnode) for the latest version of the stack and/or to file any issues. 
+
+I developed the iisnode technology to enable hosting Node.js applications in IIS, specifically in the Azure Websites, back when I was working at Microsoft. When I left the company in 2013, Microsoft decided to retain ownership of the stack. While I cannot speak to the current state of affairs or plans going forward, as of this writing, iisnode appears to still power execution of Node.js apps in Azure, and the [azure/iisnode](https://github.com/Azure/iisnode) fork is where the action happens. Happy Noding!
+
+-- @tjanczuk, 9/21/2018
+
 Hosting node.js applications in IIS on Windows
 ===
 
