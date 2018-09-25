@@ -60,11 +60,24 @@
       <?endif?>
     </Directory>
 
+    <DirectoryRef Id="TARGETDIR">
+      <Component Id="RegistryEntries" Guid="{204F256A-E453-453B-AFC6-49844892EE62}">
+        <RegistryKey Root="HKLM"
+                     Key="Software\Microsoft\IIS Extensions\iisnode"
+              Action="createAndRemoveOnUninstall">
+          <RegistryValue Type="integer" Name="Install" Value="1" KeyPath="yes"/>
+          <RegistryValue Type="string" Name="Version" Value="$(var.version)"/>
+          <RegistryValue Type="string" Value=""/>
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>    
+
     <Feature Id="iisnode4iis" Title="Hosting node.js applications in IIS 7.x" Level="1" Description="IIS 7.x native module for hosting node.js applications in IIS">
       <ComponentGroupRef Id="allfiles" />
       <?if $(var.isWin64) = "yes" ?>
       <ComponentGroupRef Id="allfileswow" />
       <?endif?>
+      <ComponentRef Id="RegistryEntries" /> 
     </Feature>
 
     <?if $(var.ProjectName) = iisnode-msi-full ?>
