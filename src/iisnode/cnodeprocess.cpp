@@ -20,6 +20,18 @@ CNodeProcess::~CNodeProcess()
         this->process = NULL;
     }
 
+    if (NULL != this->startupInfo.hStdOutput && INVALID_HANDLE_VALUE != this->startupInfo.hStdOutput)
+    {
+        CloseHandle(this->startupInfo.hStdOutput);		
+        this->startupInfo.hStdOutput = INVALID_HANDLE_VALUE;
+    }
+
+    if (NULL != this->startupInfo.hStdError && INVALID_HANDLE_VALUE != this->startupInfo.hStdError)
+    {
+        CloseHandle(this->startupInfo.hStdError);
+        this->startupInfo.hStdError = INVALID_HANDLE_VALUE;
+    }
+
     if (NULL != this->processWatcher)
     {
         // The following check prevents a dead-lock between process watcher thread calling OnProcessExited 

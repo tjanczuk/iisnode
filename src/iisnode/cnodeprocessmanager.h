@@ -22,6 +22,7 @@ private:
 	CNodeApplication* application;
 	CNodeProcess** processes;
 	DWORD processCount;
+    BOOL stickySessions;
 	unsigned int currentProcess;
 	SRWLOCK srwlock;
 	DWORD gracefulShutdownTimeout;
@@ -40,6 +41,7 @@ public:
 	CNodeProcessManager(CNodeApplication* application, IHttpContext* context);
 	~CNodeProcessManager();
 
+    int ExtractStickySessionsProcess( PCSTR pszCookie );
     HRESULT EmptyWorkingSet();
 	CNodeApplication* GetApplication();
 	HRESULT Initialize(IHttpContext* context);	

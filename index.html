@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>iisnode-debug</title>
+    <style type="text/css">
+        body
+        {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        table
+        {
+            border-collapse: collapse;
+        }
+        td, th
+        {
+            border: none; 
+            padding: 3px 7px 2px 7px;
+        }
+        th
+        {
+            text-align: left;
+            padding-top: 5px;
+            padding-bottom: 4px;
+            background-color: Gray;
+            color: #ffffff;
+        }
+        td.value
+        {
+            text-align: right
+        }
+    </style>
+</head>
+<body>
+    <h2>HTTP response diagnostics for iisnode</h2>    
+
+    <h3>This request</h3>
+
+    <table>
+        <tr>
+            <td>Processing time [ms]</td>
+            <td id="req_time" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Named pipe connection retry count</td>
+            <td id="np_retry" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>HRESULT</td>
+            <td id="hresult" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Server DNS name</td>
+            <td id="dns" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>w3wp.exe PID</td>
+            <td id="worker_pid" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>node.exe PID</td>
+            <td id="node_pid" class="value">N/A</td>
+        </tr>
+    </table>
+
+    <h3>Memory</h3>
+
+    <img id="memoryChart" src="" width="400px" height="300px" alt="Memory consumption chart" />
+
+    <h3>Counters</h3>
+
+    <table>
+        <tr>
+            <td>Active node.exe processes serving this application</td>
+            <td id="app_processes" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Active HTTP requests in this application</td>
+            <td id="app_active_req" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Active HTTP requests in this node.exe process</td>
+            <td id="process_active_req" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Total node.js requests processed by w3wp.exe</td>
+            <td id="worker_total_req" class="value">N/A</td>
+        </tr>
+    </table>
+
+    <h3>Environment</h3>
+
+    <table>
+        <tr>
+            <td>Version of iisnode</td>
+            <td id="iisnode_ver" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Server full DNS name</td>
+            <td id="dns_full" class="value">N/A</td>
+        </tr>
+        <tr>
+            <td>Full node.exe path</td>
+            <td id="node" class="value">N/A</td>
+        </tr>
+    </table>
+
+    <h3>Actions</h3>
+
+    <a href="https://github.com/tjanczuk/issues/new">Bugs, feedback, questions</a><br />
+    <a href="https://github.com/tjanczuk/iisnode">iisnode project home page</a><br />
+    <a href="http://tomasz.janczuk.org/2011/11/debug-nodejs-applications-on-windows.html">
+        Debug node.js applications hosted in IIS using iisnode
+    </a><br />
+    <a href="http://tomasz.janczuk.org/2011/09/using-event-tracing-for-windows-to.html">
+        Use Event Tracing for Windows (ETW) to get more diagnostics information
+    </a><br />
+    <a href="http://www.windowsazure.com/en-us/develop/nodejs/">
+        Windows Azure node.js developer center
+    </a>
+
+    <script type="text/javascript">
+
+        var memoryChartTemplate =
+            'http://chart.apis.google.com/chart?chxl=1:|w3wp.exe|node.exe|2:|%5BKB%5D&chxp=2,50&chxr=0,0,#MAX#'
+            + '&chxs=0,676767,9.833,0,lt,676767|1,676767,11.5,0,l,00000000&chxt=y,x,y&chbh=a,4,25&chs=400x300&cht=bvg'
+            + '&chco=80C65A,FF9900&chds=0,#MAX#,0,#MAX#&chd=t:#WS#|#PAGE#&chdl=working+set|pagefile&chdlp=b'
+            + '&chma=0,0,0,2|0,7&chtt=Memory+usage&chts=000000,11.5&chm=N,676767,0,-1,11|N,676767,1,-1,11';
+
+        // parse data from fragment
+
+        var fragment = window.location.hash.substring(1);
+        var data = {};
+        fragment.split('&').forEach(function (item) {
+            var i = item.indexOf('=');
+            data[item.substring(0, i)] = item.substring(i + 1);
+        });
+
+        data.dns_full = data.dns;
+
+        // create memory chart URL
+
+        var max = Math.max(data.node_mem_ws, data.node_mem_pagefile, data.worker_mem_ws, data.worker_mem_pagefile);
+        max = (Math.floor(max / 1000) + 1) * 1000;
+        var chartUrl = memoryChartTemplate
+            .replace(/#MAX#/g, max)
+            .replace('#WS#', data.worker_mem_ws + ',' + data.node_mem_ws)
+            .replace('#PAGE#', data.worker_mem_pagefile + ',' + data.node_mem_pagefile);
+
+        document.getElementById('memoryChart').setAttribute('src', chartUrl);
+
+        // fill out other pieces of data
+
+        for (var piece in data) {
+            var elem = document.getElementById(piece);
+            if (elem) {
+                elem.innerHTML = (piece === 'dns' && data[piece].indexOf('.') > 0)
+                    ? data[piece].substring(0, data[piece].indexOf('.'))
+                    : data[piece];
+            }
+        }
+
+    </script>
+</body>
+</html>

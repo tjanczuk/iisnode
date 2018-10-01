@@ -87,15 +87,21 @@ CModuleConfiguration::~CModuleConfiguration()
         this->debuggerPathSegment = NULL;
     }
 
+    if( NULL != this->debugPortRange )
+    {
+        delete [] this->debugPortRange;
+        this->debugPortRange = NULL;
+    }
+
     if (NULL != this->node_env)
     {
-        delete this->node_env;
+        delete [] this->node_env;
         this->node_env = NULL;
     }
 
     if (NULL != this->watchedFiles)
     {
-        delete this->watchedFiles;
+        delete [] this->watchedFiles;
         this->watchedFiles = NULL;
     }
 
@@ -187,7 +193,7 @@ HRESULT CModuleConfiguration::CreateNodeEnvironment(IHttpContext* ctx, DWORD deb
 
     // allocate memory for new environment variables
 
-    tmpSize = 32767 - environmentSize;
+    tmpSize = 65536; // hard coded for now, change this to auto allocate based on the values.
     ErrorIf(NULL == (tmpIndex = tmpStart = new char[tmpSize]), ERROR_NOT_ENOUGH_MEMORY);
     RtlZeroMemory(tmpIndex, tmpSize);
 
@@ -814,6 +820,10 @@ HRESULT CModuleConfiguration::ApplyConfigOverrideKeyValue(IHttpContext* context,
     {
         CheckError(GetDWORD(valueStart, &config->maxLogFiles));
     }
+    else if (0 == strcmpi(keyStart, "nodeProcessStickySessions"))
+    {
+        CheckError(GetBOOL(valueStart, &config->nodeProcessStickySessions));
+    }
     else if (0 == strcmpi(keyStart, "loggingEnabled"))
     {
         CheckError(GetBOOL(valueStart, &config->loggingEnabled));
@@ -1232,6 +1242,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
         CheckError(GetDWORD(section, L"maxTotalLogFileSizeInKB", &c->maxTotalLogFileSizeInKB));
         CheckError(GetDWORD(section, L"maxLogFileSizeInKB", &c->maxLogFileSizeInKB));
         CheckError(GetDWORD(section, L"maxLogFiles", &c->maxLogFiles));
+        CheckError(GetBOOL(section, L"nodeProcessStickySessions", &c->nodeProcessStickySessions, FALSE));
         CheckError(GetBOOL(section, L"loggingEnabled", &c->loggingEnabled, TRUE));
         CheckError(GetBOOL(section, L"devErrorsEnabled", &c->devErrorsEnabled, TRUE));
         CheckError(GetBOOL(section, L"flushResponse", &c->flushResponse, FALSE));
@@ -1240,7 +1251,7 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
         CheckError(GetString(section, L"debuggerExtensionDll", &c->debuggerExtensionDll));
         CheckError(GetBOOL(section, L"debugHeaderEnabled", &c->debugHeaderEnabled, FALSE));
         CheckError(GetBOOL(section, L"recycleSignalEnabled", &c->recycleSignalEnabled, FALSE));
-        CheckError(GetString(section, L"debuggerVirtualDir", &c->debuggerVirtualDir));  
+        CheckError(GetString(section, L"debuggerVirtualDir", &c->debuggerVirtualDir));
         c->debuggerVirtualDirLength = wcslen(c->debuggerVirtualDir);
         CheckError(GetString(section, L"node_env", &c->node_env));
         CheckError(GetString(section, L"debuggerPortRange", &c->debugPortRange));
@@ -1436,6 +1447,11 @@ BOOL CModuleConfiguration::GetLoggingEnabled(IHttpContext* ctx)
 BOOL CModuleConfiguration::GetDebuggingEnabled(IHttpContext* ctx)
 {
     GETCONFIG(debuggingEnabled)
+}
+
+BOOL CModuleConfiguration::GetProcessStickySessions(IHttpContext* ctx)
+{
+    GETCONFIG(nodeProcessStickySessions)
 }
 
 PWSTR CModuleConfiguration::GetDebuggerExtensionDll(IHttpContext* ctx)

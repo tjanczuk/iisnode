@@ -2,7 +2,7 @@
 
 CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpContext* context)
     : application(application), processes(NULL), currentProcess(0), isClosing(FALSE),
-    refCount(1), gracefulShutdownProcessCount(0)
+    refCount(1), gracefulShutdownProcessCount(0), stickySessions(FALSE)
 {
     if (this->GetApplication()->IsDebugMode())
     {
@@ -12,6 +12,8 @@ CNodeProcessManager::CNodeProcessManager(CNodeApplication* application, IHttpCon
     {
         this->processCount = CModuleConfiguration::GetNodeProcessCountPerApplication(context);
     }
+
+    this->stickySessions = CModuleConfiguration::GetProcessStickySessions(context);
 
     // cache event provider since the application can be disposed prior to CNodeProcessManager
     this->eventProvider = this->GetApplication()->GetApplicationManager()->GetEventProvider();
@@ -107,10 +109,57 @@ Error:
     return hr;
 }
 
+int CNodeProcessManager::ExtractStickySessionsProcess( PCSTR pszCookie )
+{
+    const CHAR* pszKey = "iisnode.session.cookie";
+    const CHAR* pszDivider = "=";
+    const CHAR* pszNext = ";";
+    CHAR acProcess[10]; // characters needed for MAXDWORD64
+    memset(acProcess, 0, sizeof(acProcess));
+
+    const CHAR* pStart = strstr(pszCookie, pszKey);
+    const CHAR* pEnd = NULL;
+
+    if( pStart != NULL )
+    {
+        pStart = strstr(pStart, pszDivider); 
+        if( pStart != NULL )
+        {
+            // skip the '=';
+            pStart++;
+            if( pStart != NULL )
+            {
+                pEnd = strstr(pStart, pszNext);
+                if(!pEnd)
+                {
+                    pEnd = pStart;
+                    while (*pEnd) /* Works because end-of-string and FALSE are identical. */
+                    {
+                        if((pEnd - pStart) >= sizeof(acProcess))
+                        {
+                            break;
+                        }
+                        pEnd++;
+                    }
+                }
+
+                if((pEnd - pStart) < sizeof(acProcess))
+                {
+                    memcpy(acProcess, pStart, pEnd - pStart); // copy result
+                    return atoi(acProcess);
+                }
+            }
+        }
+    }
+
+    return -1;
+}
+
 HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 {
     HRESULT hr;
     unsigned int tmpProcess, processToUse;
+    int processInCookie = -1;
 
     CheckNull(request);
 
@@ -122,23 +171,56 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
 
         if (!this->isClosing)
         {
+            //
+            // if sticky sessions is enabled, use the process specified in the cookie else
             // employ a round robin routing logic to get a "ticket" to use a process with a specific ordinal number
-            
-            if (1 == this->processCount)
+            //
+
+            if(this->stickySessions) // sticky sessions
             {
-                processToUse = 0;
+                PCSTR pszCookieHeader = NULL;
+                pszCookieHeader = request->GetHttpContext()->GetRequest()->GetHeader(HttpHeaderCookie);
+                if(pszCookieHeader != NULL) // There might be a sticky session
+                {
+                    processInCookie = ExtractStickySessionsProcess(pszCookieHeader);
+                }
+            }
+
+            if( processInCookie < 0)
+            {
+                //
+                // employ a round robin routing logic to get a "ticket" to use a process with a specific ordinal number
+                //
+
+                if (1 == this->processCount)
+                {
+                    processToUse = 0;
+                }
+                else
+                {
+                    do 
+                    {
+                        tmpProcess = this->currentProcess;
+                        processToUse = (tmpProcess + 1) % this->processCount;
+                    } while (tmpProcess != InterlockedCompareExchange(&this->currentProcess, processToUse, tmpProcess));
+                }
             }
             else
             {
-                do 
-                {
-                    tmpProcess = this->currentProcess;
-                    processToUse = (tmpProcess + 1) % this->processCount;
-                } while (tmpProcess != InterlockedCompareExchange(&this->currentProcess, processToUse, tmpProcess));
+                // ensure the cookie did not carry a value outside of the possible processes
+                processToUse = (unsigned int)processInCookie % this->processCount;
+            }
+
+            if(this->stickySessions && (processInCookie < 0))
+            {
+                // Set cookie for sticky session with selected process
+                CHAR buffer [255];
+                int cCount = sprintf (buffer, "iisnode.session.cookie=%d", processToUse);
+                ErrorIf( cCount < 0, E_OUTOFMEMORY );
+                CheckError(request->GetHttpContext()->GetResponse()->SetHeader(HttpHeaderSetCookie, buffer, cCount, FALSE));
             }
 
             // try dispatch to that process
-
             if (NULL != this->processes[processToUse]) 
             {
                 CheckError(this->processes[processToUse]->AcceptRequest(request));
@@ -172,7 +254,9 @@ HRESULT CNodeProcessManager::Dispatch(CNodeHttpStoredContext* request)
     if (request)
     {
         this->GetEventProvider()->Log(request->GetHttpContext(), L"iisnode failed to accept a request beacuse the application is recycling", WINEVENT_LEVEL_ERROR, request->GetActivityId());
-        CProtocolBridge::SendEmptyResponse(request, 503, CNodeConstants::IISNODE_ERROR_FAILED_ACCEPT_REQUEST_APP_RECYCLE, _T("Service Unavailable"), IISNODE_ERROR_APPLICATION_IS_RECYCLING);
+
+        BOOL fCompletionPosted = FALSE;
+        CProtocolBridge::SendEmptyResponse(request, 503, CNodeConstants::IISNODE_ERROR_FAILED_ACCEPT_REQUEST_APP_RECYCLE, _T("Service Unavailable"), IISNODE_ERROR_APPLICATION_IS_RECYCLING, &fCompletionPosted);
     }
 
     this->DecRef(); // incremented at the beginning of this method
@@ -185,7 +269,8 @@ Error:
 
     if (!CProtocolBridge::SendIisnodeError(request, hr))
     {
-        CProtocolBridge::SendEmptyResponse(request, 503, CNodeConstants::IISNODE_ERROR_INIT_PROCESS_REQUEST, _T("Service Unavailable"), hr);
+        BOOL fCompletionPosted = FALSE;
+        CProtocolBridge::SendEmptyResponse(request, 503, CNodeConstants::IISNODE_ERROR_INIT_PROCESS_REQUEST, _T("Service Unavailable"), hr, &fCompletionPosted);
     }
 
     this->DecRef(); // incremented at the beginning of this method

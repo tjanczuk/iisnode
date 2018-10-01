@@ -6,7 +6,7 @@ CNodeHttpStoredContext::CNodeHttpStoredContext(CNodeApplication* nodeApplication
     requestNotificationStatus(RQ_NOTIFICATION_PENDING), connectionRetryCount(0), pendingAsyncOperationCount(1),
     targetUrl(NULL), targetUrlLength(0), childContext(NULL), isConnectionFromPool(FALSE), expectResponseBody(TRUE),
     closeConnection(FALSE), isUpgrade(FALSE), upgradeContext(NULL), opaqueFlagSet(FALSE), requestPumpStarted(FALSE),
-    responseChunkBufferSize(0)
+    responseChunkBufferSize(0), m_cRefs(1)
 {
     IHttpTraceContext* tctx;
     LPCGUID pguid;
@@ -75,7 +75,7 @@ CNodeApplication* CNodeHttpStoredContext::GetNodeApplication()
     return this->nodeApplication; 
 }
 
-void CNodeHttpStoredContext::SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor)
+void CNodeHttpStoredContext::SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE_IISNODE processor)
 {
     this->asyncContext.completionProcessor = processor;
     this->SetContinueSynchronously(FALSE);
@@ -95,7 +95,7 @@ LPOVERLAPPED CNodeHttpStoredContext::InitializeOverlapped()
 
 void CNodeHttpStoredContext::CleanupStoredContext()
 {	
-    delete this;
+	DereferenceNodeHttpStoredContext();
 }
 
 CNodeProcess* CNodeHttpStoredContext::GetNodeProcess()
