@@ -142,3 +142,6 @@ enableXFF: false
 # http://msdn.microsoft.com/en-us/library/ms524602(v=vs.90).aspx; for example "AUTH_USER,AUTH_TYPE"
 
 promoteServerVars:     
+
+# skipIISCustomErrors - controls whether iisnode will try to skip IIS <httpErrors> custom error handling when existingResponse="Auto"
+skipIISCustomErrors: false

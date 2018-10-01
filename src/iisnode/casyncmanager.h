@@ -1,9 +1,18 @@
 #ifndef __CASYNCMANAGER_H__
 #define __CASYNCMANAGER_H__
 
+typedef
+VOID
+(WINAPI *LPOVERLAPPED_COMPLETION_ROUTINE_IISNODE)(
+    _In_    DWORD dwErrorCode,
+    _In_    DWORD dwNumberOfBytesTransfered,
+    _Inout_ LPOVERLAPPED lpOverlapped,
+    _Inout_ BOOL * fCompletionPosted
+    );
+
 typedef struct {
 	OVERLAPPED overlapped; // this member must be first in the struct
-	LPOVERLAPPED_COMPLETION_ROUTINE completionProcessor;	
+	LPOVERLAPPED_COMPLETION_ROUTINE_IISNODE completionProcessor;	
 	BOOL continueSynchronously;
 	void* data;
 	HANDLE timer;

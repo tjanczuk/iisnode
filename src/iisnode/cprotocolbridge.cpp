@@ -7,6 +7,9 @@ HRESULT CProtocolBridge::PostponeProcessing(CNodeHttpStoredContext* context, DWO
     delay.QuadPart = dueTime;
     delay.QuadPart *= -10000; // convert from ms to 100ns units
 
+	// will be dereferenced in AsynManager::Worker 
+	context->ReferenceNodeHttpStoredContext();
+
     return async->SetTimer(context->GetAsyncContext(), &delay);
 }
 
@@ -193,10 +196,12 @@ BOOL CProtocolBridge::SendIisnodeError(CNodeHttpStoredContext* ctx, HRESULT hr)
             ctx->SetPipe(INVALID_HANDLE_VALUE);
         }
 
+        BOOL fCompletionPosted = FALSE;
         CProtocolBridge::FinalizeResponseCore(
             ctx, 
             RQ_NOTIFICATION_FINISH_REQUEST, 
             hr, 
+            &fCompletionPosted,
             ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider(),
             L"iisnode posts completion from SendIisnodeError", 
             WINEVENT_LEVEL_VERBOSE);
@@ -405,7 +410,7 @@ Error:
     return false;
 }
 
-HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, USHORT subStatus, PCTSTR reason, HRESULT hresult, BOOL disableCache)
+HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHORT status, USHORT subStatus, PCTSTR reason, HRESULT hresult, BOOL *pfCompletionPosted, BOOL disableCache)
 {
     context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(context->GetHttpContext(),
         L"iisnode request processing failed for reasons unrecognized by iisnode", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
@@ -427,6 +432,7 @@ HRESULT CProtocolBridge::SendEmptyResponse(CNodeHttpStoredContext* context, USHO
         context, 
         RQ_NOTIFICATION_FINISH_REQUEST, 
         hresult, 
+        pfCompletionPosted,
         context->GetNodeApplication()->GetApplicationManager()->GetEventProvider(),
         L"iisnode posts completion from SendEmtpyResponse", 
         WINEVENT_LEVEL_VERBOSE);
@@ -459,7 +465,11 @@ void CProtocolBridge::SendEmptyResponse(IHttpContext* httpCtx, USHORT status, US
     if (!httpCtx->GetResponseHeadersSent())
     {
         httpCtx->GetResponse()->Clear();
+
+        // Internal iisnode errors should probably not set fTrySkipCustomErrors since these are just empty status responses.
+        // Let IIS capture and replace these responses with more detailed messages depending on the custom error mode.
         httpCtx->GetResponse()->SetStatus(status, reason, subStatus, hresult);
+       
         if (disableCache)
         {
             httpCtx->GetResponse()->SetHeader(HttpHeaderCacheControl, "no-cache", 8, TRUE);
@@ -474,6 +484,8 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
     BOOL mainDebuggerPage = FALSE;
     IHttpContext* child = NULL;
     BOOL completionExpected;
+    BOOL fCompletionPosted = FALSE;
+    BOOL fReference = FALSE;
 
     // determine what the target path of the request is
 
@@ -532,17 +544,22 @@ HRESULT CProtocolBridge::InitiateRequest(CNodeHttpStoredContext* context)
         CheckError(child->GetRequest()->SetUrl(context->GetTargetUrl(), context->GetTargetUrlLength(), FALSE));
         context->SetChildContext(child);
         context->SetNextProcessor(CProtocolBridge::ChildContextCompleted);
-        
+
+        context->ReferenceNodeHttpStoredContext();
+        fReference = TRUE;
+
         CheckError(context->GetHttpContext()->ExecuteRequest(TRUE, child, 0, NULL, &completionExpected));
         if (!completionExpected)
         {
-            CProtocolBridge::ChildContextCompleted(S_OK, 0, context->GetOverlapped());
+            CProtocolBridge::ChildContextCompleted(S_OK, 0, context->GetOverlapped(), &fCompletionPosted);
+            context->DereferenceNodeHttpStoredContext();
+            fReference = FALSE;
         }
     }
     else
     {
         context->SetNextProcessor(CProtocolBridge::CreateNamedPipeConnection);
-        CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->InitializeOverlapped());
+        CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->InitializeOverlapped(), &fCompletionPosted);
     }
 
     return S_OK; 
@@ -555,10 +572,15 @@ Error:
         context->SetChildContext(NULL);
     }
 
+    if(fReference)
+    {
+        context->DereferenceNodeHttpStoredContext();
+    }
+
     return hr;
 }
 
-void WINAPI CProtocolBridge::ChildContextCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ChildContextCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
@@ -584,6 +606,7 @@ void WINAPI CProtocolBridge::ChildContextCompleted(DWORD error, DWORD bytesTrans
         ctx, 
         RQ_NOTIFICATION_CONTINUE, 
         error, 
+        pfCompletionPosted,
         ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider(), 
         L"iisnode posts completion from ChildContextCompleted", 
         WINEVENT_LEVEL_VERBOSE);
@@ -591,7 +614,7 @@ void WINAPI CProtocolBridge::ChildContextCompleted(DWORD error, DWORD bytesTrans
     return;
 }
 
-void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -635,7 +658,7 @@ void WINAPI CProtocolBridge::CreateNamedPipeConnection(DWORD error, DWORD bytesT
     ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(),
         L"iisnode created named pipe connection to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
-    CProtocolBridge::SendHttpRequestHeaders(ctx);
+    CProtocolBridge::SendHttpRequestHeaders(ctx, pfCompletionPosted);
 
     return;
 
@@ -649,7 +672,7 @@ Error:
             {
                 ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(),
                     L"iisnode was unable to establish named pipe connection to the node.exe process because the named pipe server is too busy", WINEVENT_LEVEL_ERROR, ctx->GetActivityId());
-                CProtocolBridge::SendEmptyResponse(ctx, 503, CNodeConstants::IISNODE_ERROR_PIPE_CONNECTION_TOO_BUSY, _T("Service Unavailable"), hr);
+                CProtocolBridge::SendEmptyResponse(ctx, 503, CNodeConstants::IISNODE_ERROR_PIPE_CONNECTION_TOO_BUSY, _T("Service Unavailable"), hr, pfCompletionPosted);
             }
             else
             {
@@ -659,7 +682,8 @@ Error:
                                                     500, 
                                                     CNodeConstants::IISNODE_ERROR_PIPE_CONNECTION, 
                                                     _T("Internal Server Error"), 
-                                                    hr );
+                                                    hr,
+                                                    pfCompletionPosted);
             }
         }
         else if (ctx->GetNodeProcess()->HasProcessExited()) 
@@ -673,7 +697,8 @@ Error:
                                                 500, 
                                                 CNodeConstants::IISNODE_ERROR_PIPE_CONNECTION_BEFORE_PROCESS_TERMINATED, 
                                                 _T("Internal Server Error"), 
-                                                hr );
+                                                hr,
+                                                pfCompletionPosted);
         }
         else 
         {
@@ -693,13 +718,14 @@ Error:
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_CONFIGURE_PIPE_CONNECTION, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
 }
 
-void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
+void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context, BOOL *pfCompletionPosted)
 {
     HRESULT hr;
     DWORD length;
@@ -754,10 +780,14 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
     CheckError(CHttpProtocol::SerializeRequestHeaders(context, context->GetBufferRef(), context->GetBufferSizeRef(), &length));
 
     context->SetNextProcessor(CProtocolBridge::SendHttpRequestHeadersCompleted);
+
+	context->ReferenceNodeHttpStoredContext();
     
     if (WriteFile(context->GetPipe(), context->GetBuffer(), length, NULL, context->InitializeOverlapped()))
     {
         // completed synchronously
+
+        context->DereferenceNodeHttpStoredContext();
 
         etw->Log(context->GetHttpContext(), L"iisnode initiated sending http request headers to the node.exe process and completed synchronously", 
             WINEVENT_LEVEL_VERBOSE, 
@@ -768,16 +798,18 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
         // - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
         // and http://msdn.microsoft.com/en-us/library/windows/desktop/aa365538(v=vs.85).aspx
 
-        CProtocolBridge::SendHttpRequestHeadersCompleted(S_OK, 0, context->GetOverlapped());
+        CProtocolBridge::SendHttpRequestHeadersCompleted(S_OK, 0, context->GetOverlapped(), pfCompletionPosted);
     }
     else 
     {
         hr = GetLastError();
         if (ERROR_IO_PENDING == hr)
         {
+			// async WriteFile - will be dereferenced in AsyncManager::Worker
         }
         else 
         {
+			context->DereferenceNodeHttpStoredContext();
             // error
 
             if (context->GetIsConnectionFromPool())
@@ -786,7 +818,7 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
                 // try to create a brand new connection instead
 
                 context->SetConnectionRetryCount(1);
-                CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->GetOverlapped());
+                CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, context->GetOverlapped(), pfCompletionPosted);
             }
             else
             {
@@ -798,7 +830,8 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
                                                     500, 
                                                     CNodeConstants::IISNODE_ERROR_FAILED_INIT_SEND_HTTP_HEADERS, 
                                                     _T("Internal Server Error"), 
-                                                    hr );
+                                                    hr ,
+                                                    pfCompletionPosted);
             }
         }
     }
@@ -815,12 +848,13 @@ Error:
                                         500, 
                                         CNodeConstants::IISNODE_ERROR_FAILED_SERIALIZE_HTTP_HEADERS, 
                                         _T("Internal Server Error"), 
-                                        hr );
+                                        hr,
+                                        pfCompletionPosted);
 
     return;
 }
 
-void WINAPI CProtocolBridge::SendHttpRequestHeadersCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::SendHttpRequestHeadersCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -828,7 +862,7 @@ void WINAPI CProtocolBridge::SendHttpRequestHeadersCompleted(DWORD error, DWORD 
     CheckError(error);
     ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
         L"iisnode finished sending http request headers to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-    CProtocolBridge::ReadRequestBody(ctx);
+    CProtocolBridge::ReadRequestBody(ctx, pfCompletionPosted);
 
     return;
 Error:
@@ -839,7 +873,7 @@ Error:
         // try to create a brand new connection instead
 
         ctx->SetConnectionRetryCount(1);
-        CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, ctx->GetOverlapped());
+        CProtocolBridge::CreateNamedPipeConnection(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
     }
     else
     {
@@ -849,22 +883,28 @@ Error:
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_FAILED_SEND_HTTP_HEADERS, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
 }
 
-void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
+void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context, BOOL *pfCompletionPosted)
 {
     HRESULT hr;	
     DWORD bytesReceived = 0;
     BOOL completionPending = FALSE;
     BOOL continueSynchronouslyNow = TRUE;
+	BOOL fReferenced = FALSE;
 
     if (0 < context->GetHttpContext()->GetRequest()->GetRemainingEntityBytes() || context->GetIsUpgrade())
     {
         context->SetNextProcessor(CProtocolBridge::ReadRequestBodyCompleted);
+
+		// if async, will be dereferenced in OnAsyncCompletion
+		context->ReferenceNodeHttpStoredContext();
+		fReferenced = TRUE;
         
         if (context->GetIsChunked())
         {
@@ -877,6 +917,8 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
 
         if (!completionPending)
         {
+			context->DereferenceNodeHttpStoredContext();
+
             context->SetContinueSynchronously(TRUE);
             continueSynchronouslyNow = FALSE;
             context->SetBytesCompleted(bytesReceived);
@@ -891,7 +933,7 @@ void CProtocolBridge::ReadRequestBody(CNodeHttpStoredContext* context)
         context->SetBytesCompleted(bytesReceived);
         if (continueSynchronouslyNow)
         {
-            CProtocolBridge::ReadRequestBodyCompleted(S_OK, 0, context->GetOverlapped());
+            CProtocolBridge::ReadRequestBodyCompleted(S_OK, 0, context->GetOverlapped(), pfCompletionPosted);
         }
     }
     else
@@ -910,17 +952,16 @@ Error:
 
         if (context->GetIsUpgrade())
         {
-            CProtocolBridge::FinalizeUpgradeResponse(context, S_OK);
+            CProtocolBridge::FinalizeUpgradeResponse(context, S_OK, pfCompletionPosted);
         }
         else if (context->GetIsChunked() && !context->GetIsLastChunk())
         {
             // send the terminating zero-length chunk
-
-            CProtocolBridge::ReadRequestBodyCompleted(S_OK, 0, context->GetOverlapped());
+            CProtocolBridge::ReadRequestBodyCompleted(S_OK, 0, context->GetOverlapped(), pfCompletionPosted);
         }
         else
         {
-            CProtocolBridge::StartReadResponse(context);
+            CProtocolBridge::StartReadResponse(context, pfCompletionPosted);
         }
     }
     else
@@ -930,7 +971,7 @@ Error:
 
         if (context->GetIsUpgrade()) 
         {
-            CProtocolBridge::FinalizeUpgradeResponse(context, HRESULT_FROM_WIN32(hr));
+            CProtocolBridge::FinalizeUpgradeResponse(context, HRESULT_FROM_WIN32(hr), pfCompletionPosted);
         }
         else
         {
@@ -938,14 +979,20 @@ Error:
                                                 500, 
                                                 CNodeConstants::IISNODE_ERROR_FAILED_READ_REQ_BODY, 
                                                 _T("Internal Server Error"), 
-                                                HRESULT_FROM_WIN32(hr) );
+                                                HRESULT_FROM_WIN32(hr),
+                                                pfCompletionPosted);
         }
     }
+
+	if (fReferenced)
+	{
+		context->DereferenceNodeHttpStoredContext();
+	}
 
     return;
 }
 
-void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {	
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
@@ -953,7 +1000,7 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
     {
         ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
             L"iisnode read a chunk of http request body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-        CProtocolBridge::SendRequestBody(ctx, bytesTransfered);
+        CProtocolBridge::SendRequestBody(ctx, bytesTransfered, pfCompletionPosted);
     }
     else if (ERROR_HANDLE_EOF == error || 0 == bytesTransfered)
     {	
@@ -962,17 +1009,17 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 
         if (ctx->GetIsUpgrade()) 
         {
-            CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK);
+            CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK, pfCompletionPosted);
         }
         else if (ctx->GetIsChunked() && !ctx->GetIsLastChunk()) 
         {
             // send the zero-length last chunk to indicate the end of a chunked entity body
 
-            CProtocolBridge::SendRequestBody(ctx, 0);
+            CProtocolBridge::SendRequestBody(ctx, 0, pfCompletionPosted);
         }
         else
         {
-            CProtocolBridge::StartReadResponse(ctx);
+            CProtocolBridge::StartReadResponse(ctx, pfCompletionPosted);
         }
     }
     else 
@@ -982,7 +1029,7 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
 
         if (ctx->GetIsUpgrade())
         {
-            CProtocolBridge::FinalizeUpgradeResponse(ctx, error);
+            CProtocolBridge::FinalizeUpgradeResponse(ctx, error, pfCompletionPosted);
         }
         else
         {
@@ -990,12 +1037,13 @@ void WINAPI CProtocolBridge::ReadRequestBodyCompleted(DWORD error, DWORD bytesTr
                                                 500, 
                                                 CNodeConstants::IISNODE_ERROR_FAILED_READ_REQ_BODY_COMPLETED, 
                                                 _T("Internal Server Error"), 
-                                                error );
+                                                error,
+                                                pfCompletionPosted);
         }
     }
 }
 
-void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chunkLength)
+void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chunkLength, BOOL *pfCompletionPosted)
 {
     // capture ETW provider since after a successful call to WriteFile the context may be asynchronously deleted
 
@@ -1058,9 +1106,14 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 
     context->SetNextProcessor(CProtocolBridge::SendRequestBodyCompleted);
 
+	// will derefence in AsyncManager::Worker
+	context->ReferenceNodeHttpStoredContext();
+
     if (WriteFile(context->GetPipe(), (void*)buffer, length, NULL, context->InitializeOverlapped()))
     {
         // completed synchronously
+
+		context->DereferenceNodeHttpStoredContext();
 
         etw->Log(context->GetHttpContext(), L"iisnode initiated sending http request body chunk to the node.exe process and completed synchronously", 
             WINEVENT_LEVEL_VERBOSE, 
@@ -1071,7 +1124,7 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
         // - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
         // and http://msdn.microsoft.com/en-us/library/windows/desktop/aa365538(v=vs.85).aspx
 
-        CProtocolBridge::SendRequestBodyCompleted(S_OK, 0, context->GetOverlapped());
+        CProtocolBridge::SendRequestBodyCompleted(S_OK, 0, context->GetOverlapped(), pfCompletionPosted);
     }
     else 
     {
@@ -1087,7 +1140,7 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
         }
         else if (ERROR_NO_DATA == hr)
         {
-            // Node.exe has closed the named pipe. This means it does not expect any more request data, but it does not mean there is no response.
+			context->DereferenceNodeHttpStoredContext();            // Node.exe has closed the named pipe. This means it does not expect any more request data, but it does not mean there is no response.
             // This may happen even for POST requests if the node.js application does not register event handlers for the 'data' or 'end' request events.
             // Ignore the write error and attempt to read the response instead (which might have been written by node.exe before the named pipe connection 
             // was closed). This may also happen for WebSocket traffic. 
@@ -1098,16 +1151,17 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 
             if (context->GetIsUpgrade()) 
             {
-                CProtocolBridge::FinalizeUpgradeResponse(context, S_OK);
+                CProtocolBridge::FinalizeUpgradeResponse(context, S_OK, pfCompletionPosted);
             }
             else
             {
-                CProtocolBridge::StartReadResponse(context);
+                CProtocolBridge::StartReadResponse(context, pfCompletionPosted);
             }
         }
         else
         {
             // error
+			context->DereferenceNodeHttpStoredContext();
 
             etw->Log(context->GetHttpContext(), L"iisnode failed to initiate sending http request body chunk to the node.exe process", 
                 WINEVENT_LEVEL_ERROR, 
@@ -1115,7 +1169,7 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
 
             if (context->GetIsUpgrade())
             {
-                CProtocolBridge::FinalizeUpgradeResponse(context, hr);
+                CProtocolBridge::FinalizeUpgradeResponse(context, hr, pfCompletionPosted);
             }
             else
             {
@@ -1123,7 +1177,8 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
                                                     500, 
                                                     CNodeConstants::IISNODE_ERROR_FAILED_INIT_SEND_REQ_BODY, 
                                                     _T("Internal Server Error"), 
-                                                    hr );
+                                                    hr,
+                                                    pfCompletionPosted );
             }
         }
     }
@@ -1131,7 +1186,7 @@ void CProtocolBridge::SendRequestBody(CNodeHttpStoredContext* context, DWORD chu
     return;
 }
 
-void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
@@ -1139,7 +1194,7 @@ void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTr
     {
         ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(),
             L"iisnode finished sending http request body chunk to the node.exe process", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
-        CProtocolBridge::ReadRequestBody(ctx);
+        CProtocolBridge::ReadRequestBody(ctx, pfCompletionPosted);
     }
     else 
     {
@@ -1148,7 +1203,7 @@ void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTr
 
         if (ctx->GetIsUpgrade())
         {
-            CProtocolBridge::FinalizeUpgradeResponse(ctx, error);
+            CProtocolBridge::FinalizeUpgradeResponse(ctx, error, pfCompletionPosted);
         }
         else
         {
@@ -1156,19 +1211,20 @@ void WINAPI CProtocolBridge::SendRequestBodyCompleted(DWORD error, DWORD bytesTr
                                                 500, 
                                                 CNodeConstants::IISNODE_ERROR_FAILED_SEND_REQ_BODY, 
                                                 _T("Internal Server Error"), 
-                                                error );
+                                                error,
+                                                pfCompletionPosted);
         }
     }
 }
 
-void CProtocolBridge::StartReadResponse(CNodeHttpStoredContext* context)
+void CProtocolBridge::StartReadResponse(CNodeHttpStoredContext* context, BOOL *pfCompletionPosted)
 {
     context->SetDataSize(0);
     context->SetParsingOffset(0);
     context->SetNextProcessor(CProtocolBridge::ProcessResponseStatusLine);
     context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(context->GetHttpContext(),
         L"iisnode starting to read http response", WINEVENT_LEVEL_VERBOSE, context->GetActivityId());
-    CProtocolBridge::ContinueReadResponse(context);
+    CProtocolBridge::ContinueReadResponse(context, pfCompletionPosted);
 }
 
 HRESULT CProtocolBridge::EnsureBuffer(CNodeHttpStoredContext* context)
@@ -1222,7 +1278,7 @@ Error:
 
 }
 
-void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
+void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context, BOOL *pfCompletionPosted)
 {
     HRESULT hr;
     DWORD bytesRead = 0;
@@ -1235,6 +1291,9 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
 
     CheckError(CProtocolBridge::EnsureBuffer(context));
 
+	// will dereference in AsyncManager::Worker
+	context->ReferenceNodeHttpStoredContext();
+
     if (ReadFile(
             context->GetPipe(), 
             (char*)context->GetBuffer() + context->GetDataSize(), 
@@ -1243,6 +1302,7 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
             context->InitializeOverlapped()))
     {
         // read completed synchronously 
+		context->DereferenceNodeHttpStoredContext();
 
         etw->Log(context->GetHttpContext(), L"iisnode initiated reading http response chunk and completed synchronously", 
             WINEVENT_LEVEL_VERBOSE, 
@@ -1253,7 +1313,7 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
         // - see http://msdn.microsoft.com/en-us/library/windows/desktop/aa365683(v=vs.85).aspx
         // and http://msdn.microsoft.com/en-us/library/windows/desktop/aa365538(v=vs.85).aspx
 
-        context->GetAsyncContext()->completionProcessor(S_OK, bytesRead, context->GetOverlapped());
+        context->GetAsyncContext()->completionProcessor(S_OK, bytesRead, context->GetOverlapped(), pfCompletionPosted);
     }
     else if (ERROR_IO_PENDING == (hr = GetLastError()))
     {
@@ -1265,13 +1325,15 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
     }
     else if (ERROR_BROKEN_PIPE == hr && context->GetCloseConnection())
     {
+		context->DereferenceNodeHttpStoredContext();
         // Termination of a connection indicates the end of the response body if Connection: close response header was present
 
-        CProtocolBridge::FinalizeResponse(context);
+        CProtocolBridge::FinalizeResponse(context, pfCompletionPosted);
     }
     else
     {
         // error
+		context->DereferenceNodeHttpStoredContext();
 
         etw->Log(context->GetHttpContext(), L"iisnode failed to initialize reading of http response chunk", 
             WINEVENT_LEVEL_ERROR, 
@@ -1281,7 +1343,8 @@ void CProtocolBridge::ContinueReadResponse(CNodeHttpStoredContext* context)
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_FAILED_INIT_READ_RESPONSE, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
@@ -1294,12 +1357,13 @@ Error:
                                         500, 
                                         CNodeConstants::IISNODE_ERROR_FAILED_ALLOC_MEM_READ_RESPONSE, 
                                         _T("Internal Server Error"), 
-                                        hr );
+                                        hr,
+                                        pfCompletionPosted);
 
     return;
 }
 
-void WINAPI CProtocolBridge::ProcessResponseStatusLine(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ProcessResponseStatusLine(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -1315,14 +1379,14 @@ void WINAPI CProtocolBridge::ProcessResponseStatusLine(DWORD error, DWORD bytesT
         L"iisnode finished processing http response status line", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
     ctx->SetNextProcessor(CProtocolBridge::ProcessResponseHeaders);
-    CProtocolBridge::ProcessResponseHeaders(S_OK, 0, ctx->GetOverlapped());
+    CProtocolBridge::ProcessResponseHeaders(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
 
     return;
 Error:
 
     if (ERROR_MORE_DATA == hr)
     {
-        CProtocolBridge::ContinueReadResponse(ctx);
+        CProtocolBridge::ContinueReadResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1332,7 +1396,8 @@ Error:
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_FAILED_PROCESS_HTTP_STATUS_LINE, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
@@ -1450,7 +1515,7 @@ Error:
     return hr;
 }
 
-void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -1474,7 +1539,7 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
         ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
             L"iisnode determined the HTTP response does not have entity body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
-        CProtocolBridge::FinalizeResponse(ctx);
+        CProtocolBridge::FinalizeResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1523,7 +1588,7 @@ void WINAPI CProtocolBridge::ProcessResponseHeaders(DWORD error, DWORD bytesTran
         ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
             L"iisnode finished processing http response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
-        ctx->GetAsyncContext()->completionProcessor(S_OK, 0, ctx->GetOverlapped());
+        ctx->GetAsyncContext()->completionProcessor(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
     }
 
     return;
@@ -1531,7 +1596,7 @@ Error:
 
     if (ERROR_MORE_DATA == hr)
     {
-        CProtocolBridge::ContinueReadResponse(ctx);
+        CProtocolBridge::ContinueReadResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1541,13 +1606,14 @@ Error:
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_FAILED_PROCESS_HTTP_HEADERS, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
 }
 
-void WINAPI CProtocolBridge::ProcessChunkHeader(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ProcessChunkHeader(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -1564,7 +1630,8 @@ void WINAPI CProtocolBridge::ProcessChunkHeader(DWORD error, DWORD bytesTransfer
         L"iisnode finished processing http response body chunk header", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
 
     ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
-    CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
+
+    CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
 
     return;
 
@@ -1572,7 +1639,7 @@ Error:
 
     if (ERROR_MORE_DATA == hr)
     {
-        CProtocolBridge::ContinueReadResponse(ctx);
+        CProtocolBridge::ContinueReadResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1582,13 +1649,14 @@ Error:
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_FAILED_PROCESS_RESPONSE_BODY_CHUNK_HEADER, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
 }
 
-void CProtocolBridge::EnsureRequestPumpStarted(CNodeHttpStoredContext* context) 
+void CProtocolBridge::EnsureRequestPumpStarted(CNodeHttpStoredContext* context, BOOL *pfCompletionPosted) 
 {
     if (context->GetOpaqueFlagSet() && !context->GetRequestPumpStarted())
     {
@@ -1596,19 +1664,20 @@ void CProtocolBridge::EnsureRequestPumpStarted(CNodeHttpStoredContext* context)
         // only after the 101 Switching Protocols response had been sent. 
 
         context->SetRequestPumpStarted();
-        CProtocolBridge::ReadRequestBody(context->GetUpgradeContext());
+        CProtocolBridge::ReadRequestBody(context->GetUpgradeContext(), pfCompletionPosted);
         ASYNC_CONTEXT* async = context->GetUpgradeContext()->GetAsyncContext();
         async->RunSynchronousContinuations();
     }
 }
 
-void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
     HTTP_DATA_CHUNK* chunk;
     DWORD bytesSent;
     BOOL completionExpected;
+	BOOL fReferenced = FALSE;
 
     ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
         L"iisnode starting to process http response body", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
@@ -1646,6 +1715,10 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
             ctx->SetNextProcessor(CProtocolBridge::SendResponseBodyCompleted);
             ctx->SetBytesCompleted(bytesToSend);
 
+			// will be dereferenced in OnAsyncCompletion
+			ctx->ReferenceNodeHttpStoredContext();
+			fReferenced = TRUE;
+
             CheckError(ctx->GetHttpContext()->GetResponse()->WriteEntityChunks(
                 chunk,
                 1,
@@ -1659,6 +1732,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
         
             if (!completionExpected)
             {
+				ctx->DereferenceNodeHttpStoredContext();
                 ctx->SetContinueSynchronously(TRUE);
             }
         }
@@ -1667,7 +1741,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
             // process next chunk of the chunked encoding
 
             ctx->SetNextProcessor(CProtocolBridge::ProcessChunkHeader);
-            CProtocolBridge::ProcessChunkHeader(S_OK, 0, ctx->GetOverlapped());
+            CProtocolBridge::ProcessChunkHeader(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
         }
         else
         {
@@ -1680,7 +1754,7 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
     {
         // read more body data
 
-        CProtocolBridge::ContinueReadResponse(ctx);
+        CProtocolBridge::ContinueReadResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1688,11 +1762,11 @@ void WINAPI CProtocolBridge::ProcessResponseBody(DWORD error, DWORD bytesTransfe
 
         if (ctx->GetIsUpgrade())
         {
-            CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK);
+            CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK, pfCompletionPosted);
         }
         else
         {
-            CProtocolBridge::FinalizeResponse(ctx);
+            CProtocolBridge::FinalizeResponse(ctx, pfCompletionPosted);
         }
     }
 
@@ -1703,13 +1777,13 @@ Error:
     {
         // Termination of a connection indicates the end of the upgraded request 
 
-        CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK);
+        CProtocolBridge::FinalizeUpgradeResponse(ctx, S_OK, pfCompletionPosted);
     }
     else if (ERROR_BROKEN_PIPE == hr && ctx->GetCloseConnection())
     {
         // Termination of a connection indicates the end of the response body if Connection: close response header was present
 
-        CProtocolBridge::FinalizeResponse(ctx);
+        CProtocolBridge::FinalizeResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1718,7 +1792,7 @@ Error:
 
         if (ctx->GetIsUpgrade())
         {
-            CProtocolBridge::FinalizeUpgradeResponse(ctx, hr);
+            CProtocolBridge::FinalizeUpgradeResponse(ctx, hr, pfCompletionPosted);
         }
         else
         {
@@ -1726,19 +1800,26 @@ Error:
                                                 500, 
                                                 CNodeConstants::IISNODE_ERROR_FAILED_SEND_RESPONSE_BODY_CHUNK, 
                                                 _T("Internal Server Error"), 
-                                                hr );
+                                                hr,
+                                                pfCompletionPosted);
         }
     }
+
+	if (fReferenced)
+	{
+		ctx->DereferenceNodeHttpStoredContext();
+	}
 
     return;
 }
 
-void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
     DWORD bytesSent;
     BOOL completionExpected = FALSE;
+    BOOL fReference = FALSE;
 
     CheckError(error);
 
@@ -1754,7 +1835,7 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
 
     if (ctx->GetIsLastChunk() && ctx->GetChunkLength() == ctx->GetChunkTransmitted())
     {
-        CProtocolBridge::FinalizeResponse(ctx);
+        CProtocolBridge::FinalizeResponse(ctx, pfCompletionPosted);
     }
     else
     {
@@ -1765,12 +1846,18 @@ void WINAPI CProtocolBridge::SendResponseBodyCompleted(DWORD error, DWORD bytesT
             ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
             ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
                 L"iisnode initiated flushing http response body chunk", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+            ctx->ReferenceNodeHttpStoredContext();
+            fReference = TRUE;
             ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
         }
 
         if (!completionExpected)
         {
-            CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped());
+            CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
+            if(fReference)
+            {
+                ctx->DereferenceNodeHttpStoredContext();
+            }
         }
     }
 
@@ -1782,7 +1869,7 @@ Error:
 
     if (ctx->GetIsUpgrade())
     {
-        CProtocolBridge::FinalizeUpgradeResponse(ctx, hr);
+        CProtocolBridge::FinalizeUpgradeResponse(ctx, hr, pfCompletionPosted);
     }
     else 
     {
@@ -1790,31 +1877,34 @@ Error:
                                             500, 
                                             CNodeConstants::IISNODE_ERROR_FAILED_FLUSH_RESPONSE_BODY, 
                                             _T("Internal Server Error"), 
-                                            hr );
+                                            hr,
+                                            pfCompletionPosted);
     }
 
     return;
 }
 
-void WINAPI CProtocolBridge::ProcessUpgradeResponse(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ProcessUpgradeResponse(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
-    BOOL completionExpected;
+    BOOL completionExpected = FALSE;
     DWORD bytesSent;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
 
     ctx->SetNextProcessor(CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush);
     ctx->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(ctx->GetHttpContext(), 
         L"iisnode initiated flushing http upgrade response headers", WINEVENT_LEVEL_VERBOSE, ctx->GetActivityId());
+    ctx->ReferenceNodeHttpStoredContext();
     ctx->GetHttpContext()->GetResponse()->Flush(TRUE, TRUE, &bytesSent, &completionExpected);
 
     if (!completionExpected)
     {
-        CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped());
+        CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
+        ctx->DereferenceNodeHttpStoredContext();
     }
 }
 
 
-void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped)
+void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD error, DWORD bytesTransfered, LPOVERLAPPED overlapped, BOOL * pfCompletionPosted)
 {
     HRESULT hr;
     CNodeHttpStoredContext* ctx = CNodeHttpStoredContext::Get(overlapped);
@@ -1822,11 +1912,11 @@ void WINAPI CProtocolBridge::ContinueProcessResponseBodyAfterPartialFlush(DWORD 
     CheckError(error);	
 
     // Start reading the request bytes if the request was an accepted HTTP Upgrade
-    CProtocolBridge::EnsureRequestPumpStarted(ctx);
+    CProtocolBridge::EnsureRequestPumpStarted(ctx, pfCompletionPosted);
 
     // Continue on to reading the response body
     ctx->SetNextProcessor(CProtocolBridge::ProcessResponseBody);
-    CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped());
+    CProtocolBridge::ProcessResponseBody(S_OK, 0, ctx->GetOverlapped(), pfCompletionPosted);
 
     return;
 Error:
@@ -1837,12 +1927,13 @@ Error:
                                         500, 
                                         CNodeConstants::IISNODE_ERROR_FAILED_FLUSH_RESPONSE_BODY_PARTIAL_FLUSH, 
                                         _T("Internal Server Error"), 
-                                        hr );
+                                        hr,
+                                        pfCompletionPosted);
 
     return;
 }
 
-void CProtocolBridge::FinalizeUpgradeResponse(CNodeHttpStoredContext* context, HRESULT hresult)
+void CProtocolBridge::FinalizeUpgradeResponse(CNodeHttpStoredContext* context, HRESULT hresult, BOOL *pfCompletionPosted)
 {
     context->SetNextProcessor(NULL);
     context->SetHresult(hresult);	
@@ -1858,7 +1949,12 @@ void CProtocolBridge::FinalizeUpgradeResponse(CNodeHttpStoredContext* context, H
         CloseHandle(context->GetPipe());
         context->SetPipe(INVALID_HANDLE_VALUE);
         context->GetHttpContext()->GetResponse()->SetNeedDisconnect();
+
+		// will dereference in OnAsyncCompletion
+		context->ReferenceNodeHttpStoredContext();
+
         context->GetHttpContext()->PostCompletion(0);
+        *pfCompletionPosted = TRUE;
     }
     else
     {
@@ -1869,7 +1965,7 @@ void CProtocolBridge::FinalizeUpgradeResponse(CNodeHttpStoredContext* context, H
     }
 }
 
-void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
+void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context, BOOL *pfCompletionPosted)
 {
     context->GetNodeApplication()->GetApplicationManager()->GetEventProvider()->Log(context->GetHttpContext(),
 
@@ -1889,12 +1985,13 @@ void CProtocolBridge::FinalizeResponse(CNodeHttpStoredContext* context)
         context, 
         RQ_NOTIFICATION_CONTINUE, 
         S_OK, 
+        pfCompletionPosted,
         context->GetNodeApplication()->GetApplicationManager()->GetEventProvider(),
         L"iisnode posts completion from FinalizeResponse", 
         WINEVENT_LEVEL_VERBOSE);
 }
 
-HRESULT CProtocolBridge::FinalizeResponseCore(CNodeHttpStoredContext* context, REQUEST_NOTIFICATION_STATUS status, HRESULT error, CNodeEventProvider* log, PCWSTR etw, UCHAR level)
+HRESULT CProtocolBridge::FinalizeResponseCore(CNodeHttpStoredContext* context, REQUEST_NOTIFICATION_STATUS status, HRESULT error, BOOL *pfCompletionPosted, CNodeEventProvider* log, PCWSTR etw, UCHAR level)
 {
     context->SetRequestNotificationStatus(status);
     context->SetNextProcessor(NULL);
@@ -1910,8 +2007,12 @@ HRESULT CProtocolBridge::FinalizeResponseCore(CNodeHttpStoredContext* context, R
 
     if (0 == context->DecreasePendingAsyncOperationCount()) // decreases ref count increased in the ctor of CNodeApplication::Dispatch
     {
+		// will be dereferenced in OnAsyncCompletion
+		context->ReferenceNodeHttpStoredContext();
+
         log->Log(etw, level, context->GetActivityId());	
         context->GetHttpContext()->PostCompletion(0);
+        *pfCompletionPosted = TRUE;
     }
 
     return S_OK;
@@ -1937,10 +2038,14 @@ HRESULT CProtocolBridge::SendDebugRedirect(CNodeHttpStoredContext* context, CNod
 
     response->SetStatus(301, "Moved Permanently"); 
     CheckError(context->GetHttpContext()->GetResponse()->Redirect(path, FALSE, TRUE));
+
+    BOOL fCompletionPosted = FALSE;
+
     CProtocolBridge::FinalizeResponseCore(
         context, 
         RQ_NOTIFICATION_FINISH_REQUEST, 
         S_OK, 
+        &fCompletionPosted,
         log,
         L"iisnode redirected debugging request", 
         WINEVENT_LEVEL_VERBOSE);

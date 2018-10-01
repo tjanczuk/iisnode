@@ -219,7 +219,9 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
                 bytesCompleted = async->bytesCompleteted;
                 async->bytesCompleteted = 0;
             }
-            async->completionProcessor(pCompletionInfo->GetCompletionStatus(), bytesCompleted, ctx->GetOverlapped());
+            BOOL fCompletionPosted = FALSE;
+            async->completionProcessor(pCompletionInfo->GetCompletionStatus(), bytesCompleted, ctx->GetOverlapped(), &fCompletionPosted);
+
             async->RunSynchronousContinuations();
         }
 
@@ -236,6 +238,17 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
             // to indicate websocket connection close.
             //
             result = RQ_NOTIFICATION_CONTINUE;
+        }
+        else
+        {
+            if (0 == value) // decreases ref count set to 1 in the ctor of CNodeHttpStoredContext
+            {
+                result = ctx->GetRequestNotificationStatus();
+            }
+            else
+            {
+                result = RQ_NOTIFICATION_PENDING;
+            }
         }
 
         switch (result) 
@@ -266,6 +279,8 @@ REQUEST_NOTIFICATION_STATUS CNodeHttpModule::OnAsyncCompletion(
             break;
         };
 
+		ctx->DereferenceNodeHttpStoredContext();
+	
         return result;
     }
 

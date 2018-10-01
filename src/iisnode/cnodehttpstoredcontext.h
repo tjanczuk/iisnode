@@ -40,12 +40,35 @@ private:
 	HTTP_DATA_CHUNK responseChunk;
 	DWORD responseChunkBufferSize;
 	CNodeEventProvider* eventProvider;
+    ~CNodeHttpStoredContext();
+
+	mutable LONG m_cRefs;
 
 public:
 
 	// Context is owned by the caller
 	CNodeHttpStoredContext(CNodeApplication* nodeApplication, CNodeEventProvider* eventProvider, IHttpContext* context);
-	~CNodeHttpStoredContext();
+
+	VOID
+	ReferenceNodeHttpStoredContext(
+		VOID
+	)
+	{
+		InterlockedIncrement(&m_cRefs);
+	}
+
+	VOID
+	DereferenceNodeHttpStoredContext(
+		VOID
+	)
+	{
+		_ASSERT(m_cRefs != 0);
+
+		if (InterlockedDecrement(&m_cRefs) == 0)
+		{
+			delete this;
+		}
+	}
 
 	IHttpContext* GetHttpContext();
 	CNodeApplication* GetNodeApplication();
@@ -78,7 +101,7 @@ public:
 	IHttpContext* GetChildContext();
 	DWORD GetBytesCompleted();
 
-	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE processor);	
+	void SetNextProcessor(LPOVERLAPPED_COMPLETION_ROUTINE_IISNODE processor);	
 	void SetNodeProcess(CNodeProcess* process);
 	void SetPipe(HANDLE pipe);
 	void SetConnectionRetryCount(DWORD count);
