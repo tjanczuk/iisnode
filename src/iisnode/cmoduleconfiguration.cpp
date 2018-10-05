@@ -1257,6 +1257,19 @@ HRESULT CModuleConfiguration::GetConfig(IHttpContext* context, CModuleConfigurat
 
         CheckError(CModuleConfiguration::ApplyYamlConfigOverrides(context, c));
 
+		if (c->nodeProcessCommandLine && c->nodeProcessCommandLine[0] == L'.')
+		{
+			LPWSTR origcmd = c->nodeProcessCommandLine;
+			DWORD scriptTranslatedLength = 0;
+			LPCWSTR scriptTranslated = context->GetScriptTranslated(&scriptTranslatedLength);
+			ErrorIf(NULL == (c->nodeProcessCommandLine = new WCHAR[scriptTranslatedLength + wcslen(origcmd) + 1]), ERROR_NOT_ENOUGH_MEMORY);
+			wcscpy(c->nodeProcessCommandLine, scriptTranslated);
+			while (scriptTranslatedLength > 0 && c->nodeProcessCommandLine[scriptTranslatedLength] != L'\\')
+				scriptTranslatedLength--;
+			wcscpy(c->nodeProcessCommandLine + scriptTranslatedLength + 1, origcmd);
+			delete [] origcmd;
+		}
+
         // generate debugger related config based on debuggerVirtualDir value.
         CheckError(CModuleConfiguration::GenerateDebuggerConfig(context, c));
 
