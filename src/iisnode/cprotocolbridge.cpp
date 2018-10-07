@@ -722,11 +722,35 @@ void CProtocolBridge::SendHttpRequestHeaders(CNodeHttpStoredContext* context)
     request = context->GetHttpContext()->GetRequest();
 
     pszConnectionHeader = request->GetHeader(HttpHeaderConnection);
-    if( pszConnectionHeader == NULL || 
-        (pszConnectionHeader != NULL && stricmp(pszConnectionHeader, "upgrade") != 0))
+
+	if (pszConnectionHeader == NULL) {
+		CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
+	}
+	else
+	{
+		char str2[40];
+		strcpy(str2, pszConnectionHeader);
+
+		bool containsUpgrade = false;
+		char * pch;
+		pch = strtok(str2, ", ");
+		while (pch != NULL)
+		{
+			containsUpgrade = containsUpgrade || stricmp(pch, "upgrade") == 0;
+			pch = strtok(NULL, ", ");
+		}
+
+		if (!containsUpgrade)
+		{
+			CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
+		}
+	}
+
+    /*if( pszConnectionHeader == NULL || 
+        (pszConnectionHeader != NULL && strstr(pszConnectionHeader, "upgrade") == NULL))
     {
         CheckError(request->SetHeader(HttpHeaderConnection, "keep-alive", 10, TRUE));
-    }
+    }*/
 
     // Expect: 100-continue has been processed by IIS - do not propagate it up to node.js since node will
     // attempt to process it again
