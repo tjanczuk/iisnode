@@ -48,7 +48,7 @@ Hosting node.js applications in IIS on Windows
 **Installing for IIS Express/WebMatrix**
 
 - [Install WebMatrix using the Web Platform Installer](http://www.microsoft.com/web/webmatrix/)
-- Open WebMatrix, choose “Site from folder”, enter %localappdata%\iisnode\www, start the site, and play with the iisnode samples, or
+- Open WebMatrix, choose “Site from folder”, enter `%localappdata%\iisnode\www`, start the site, and play with the iisnode samples, or
 - Use node.js templates to get started quickly with an Express application or a skeleton Hello World
 
 **Installing for IIS Express 8 on Windows x64**
